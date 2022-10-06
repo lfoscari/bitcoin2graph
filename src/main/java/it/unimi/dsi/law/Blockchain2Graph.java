@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Context;
@@ -24,11 +26,16 @@ import org.bitcoinj.utils.BriefLogFormatter;
 
 public class Blockchain2Graph  {
     Map<TransactionOutPoint, Address[]> incomplete = new HashMap<>();
-    Map<Sha256Hash, ArrayList<TransactionOutPoint>> topMapping = new HashMap<>();
-    Map<Address, ArrayList<Address>> edges = new HashMap<>();
-    NetworkParameters np;
+    MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
+    MultiValuedMap<Address, Address> edges = new ArrayListValuedHashMap<>();
+    
+    final NetworkParameters np;
 
-    // Usa una Multimap
+    public Blockchain2Graph() {
+        BriefLogFormatter.init();
+        this.np = new MainNetParams();
+        new Context(np);
+    }
 
     Address[] outputsToAddresses(Transaction t) {
         List<Address> receivers = new ArrayList<>();
@@ -44,9 +51,9 @@ public class Blockchain2Graph  {
         return receivers.toArray(Address[]::new);
     }
 
-    void serializeEdgeMap() {
+    void serializeEdgeMap(String destination) {
         try {
-            FileOutputStream myFileOutStream = new FileOutputStream("./edgelist.txt");
+            FileOutputStream myFileOutStream = new FileOutputStream(destination);
             ObjectOutputStream myObjectOutStream = new ObjectOutputStream(myFileOutStream);
   
             myObjectOutStream.writeObject(this.edges);
@@ -59,12 +66,9 @@ public class Blockchain2Graph  {
         }
     }
 
-    public void buildGraph() {
-        this.np = new MainNetParams();
-        new Context(np);
-
+    public void buildGraph(String blockfile) {
         List<File> blockchainFiles =  new ArrayList<File>();
-        blockchainFiles.add(new File("src/main/resources/blk00000.dat"));
+        blockchainFiles.add(new File(blockfile));
         BlockFileLoader bfl = new BlockFileLoader(np, blockchainFiles);
 
         for (Block block: bfl) {
@@ -111,12 +115,7 @@ public class Blockchain2Graph  {
                     Address[] receivers = outputsToAddresses(t);
 
                     incomplete.put(top, receivers);
-
-                    if (topMapping.containsKey(t.getTxId())) {
-                        topMapping.get(t.getTxId()).add(top);
-                    } else {
-                        topMapping.put(t.getTxId(), new ArrayList<>(List.of(top)));
-                    }
+                    topMapping.put(t.getTxId(),top);
                 }
 
                 // System.out.println();
@@ -136,21 +135,15 @@ public class Blockchain2Graph  {
                 }
 
                 for (TransactionOutPoint top: topMapping.get(txId)) {
-                    Address[] receivers = incomplete.get(top);
                     int index = (int) top.getIndex();
 
                     if (index == -1) { // Coinbase
                         continue;
                     }
 
-                    for (Address receiver: receivers) {
-                        Address source = senders[index];
-
-                        if (edges.containsKey(source)) {
-                            edges.get(source).add(receiver);
-                        } else {
-                            edges.put(source, new ArrayList<>(List.of(receiver)));
-                        }
+                    for (Address receiver: incomplete.get(top)) {
+                        Address sender = senders[index];
+                        edges.put(sender, receiver);
                     }
                 }
             }
@@ -162,8 +155,7 @@ public class Blockchain2Graph  {
     public static void main(String[] args) {
         Blockchain2Graph a = new Blockchain2Graph();
 
-        BriefLogFormatter.init();
-        a.buildGraph();
-        a.serializeEdgeMap();
+        a.buildGraph("src/main/resources/blk00000.dat");
+        a.serializeEdgeMap("src/main/resources/edgelist.txt");
     }
 }
