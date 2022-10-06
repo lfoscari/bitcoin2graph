@@ -1,7 +1,4 @@
 .vscode
-edgelist.txt
-*.dat
-
 target/
 pom.xml.tag
 pom.xml.releaseBackup

@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -21,16 +23,28 @@ import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.bitcoinj.utils.BriefLogFormatter;
+
+/* Avoid looping two times over the blocks,
+ * because every time they must be loaded from disk.
+ */
 
 public class Blockchain2Graph  {
     Map<TransactionOutPoint, Address[]> incomplete = new HashMap<>();
     MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
+    
     MultiValuedMap<Address, Address> edges = new ArrayListValuedHashMap<>();
+    final static String edgesFilename = "edges.multivaluedmap";
+
+    Set<Address> uniqueAddresses = new HashSet<>();
+    final static String uniqueAddressesFilename = "addresses.hashset";
     
     final NetworkParameters np;
     // final String coinbaseAddress = ???;
+
+    final static String defaultLocation = "src/main/resources/";
 
     public Blockchain2Graph() {
         BriefLogFormatter.init();
@@ -43,8 +57,13 @@ public class Blockchain2Graph  {
                     
         for (TransactionOutput to: t.getOutputs()) {
             try {
-                receivers.add(to.getScriptPubKey().getToAddress(this.np, true));
-            } catch (Exception e) {
+                Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
+
+                this.uniqueAddresses.add(receiver);
+                receivers.add(receiver);
+            } catch (ScriptException e) {
+                receivers.add(null); // Don't mess up the indexing
+                // TODO: find out what these addresses actually are
                 System.out.println(e.getMessage() + " at " + t.getTxId());
             }
         }
@@ -52,15 +71,17 @@ public class Blockchain2Graph  {
         return receivers.toArray(Address[]::new);
     }
 
-    void serializeEdgeMap(String destination) {
+    void serializeObject(String location, Object o) {
         try {
-            FileOutputStream myFileOutStream = new FileOutputStream(destination);
-            ObjectOutputStream myObjectOutStream = new ObjectOutputStream(myFileOutStream);
+            FileOutputStream fos = new FileOutputStream(location);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
   
-            myObjectOutStream.writeObject(this.edges);
+            oos.writeObject(o);
   
-            myObjectOutStream.close();
-            myFileOutStream.close();
+            oos.close();
+            fos.close();
+
+            System.out.println("Saved results as " + location);
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -68,9 +89,9 @@ public class Blockchain2Graph  {
     }
 
     public void buildGraph(String blockfile) {
-        List<File> blockchainFiles =  new ArrayList<File>();
+        List<File> blockchainFiles = new ArrayList<File>();
         blockchainFiles.add(new File(blockfile));
-        BlockFileLoader bfl = new BlockFileLoader(np, blockchainFiles);
+        BlockFileLoader bfl = new BlockFileLoader(this.np, blockchainFiles);
 
         for (Block block: bfl) {
             for(Transaction t: block.getTransactions()) {
@@ -83,18 +104,19 @@ public class Blockchain2Graph  {
                     // and use it as a sender for all coinbase transactions.
                     continue;
                 }
+                
+                Address[] receivers = outputsToAddresses(t);
 
                 for (TransactionInput ti: t.getInputs()) {
                     TransactionOutPoint top = ti.getOutpoint();
-                    Address[] receivers = outputsToAddresses(t);
 
                     incomplete.put(top, receivers);
-                    topMapping.put(t.getTxId(),top);
+                    topMapping.put(top.getHash(), top);
                 }
             }
         }
 
-        bfl = new BlockFileLoader(np, blockchainFiles);
+        bfl = new BlockFileLoader(this.np, blockchainFiles);
 
         for (Block block: bfl) {
             for (Transaction t: block.getTransactions()) {
@@ -123,6 +145,8 @@ public class Blockchain2Graph  {
         Blockchain2Graph a = new Blockchain2Graph();
 
         a.buildGraph("src/main/resources/blk00000.dat");
-        a.serializeEdgeMap("src/main/resources/edgelist.txt");
+
+        a.serializeObject(defaultLocation + "edges.multivaluedmap", a.edges);
+        a.serializeObject(defaultLocation + "addresses.hashset", a.uniqueAddresses);
     }
 }
