@@ -30,6 +30,7 @@ public class Blockchain2Graph  {
     MultiValuedMap<Address, Address> edges = new ArrayListValuedHashMap<>();
     
     final NetworkParameters np;
+    // final String coinbaseAddress = ???;
 
     public Blockchain2Graph() {
         BriefLogFormatter.init();
@@ -72,43 +73,16 @@ public class Blockchain2Graph  {
         BlockFileLoader bfl = new BlockFileLoader(np, blockchainFiles);
 
         for (Block block: bfl) {
-
-            // if (block.getTransactions().stream().allMatch((Transaction t) -> t.isCoinBase())) {
-            //     // Skip these only because they are boring.
-            //     continue;
-            // }
-
-            // System.out.println("============== " + block.getHashAsString() + " ==============");
-
             for(Transaction t: block.getTransactions()) {
-                // Sha256Hash txId = t.getTxId();
-
-                // if (t.isCoinBase()) {
-                //     System.out.println("*** transaction (coinbase) " + txId + " ***");
-                // } else {
-                //     System.out.println("*** transaction " + txId +  " - "
-                //         + t.getOutputSum().toBtc().stripTrailingZeros().toPlainString() + " BTC ***");
-                // }
-
-                // System.out.println("Inputs: ");
-                // for (TransactionInput ti: t.getInputs()) {
-                //     TransactionOutPoint top = ti.getOutpoint();
-
-                //     if (incomplete.containsKey(top)) {
-                //         Address source = incomplete.get(top);
-                //         edges.put(, null);
-                //     }
-
-                //     if (!t.isCoinBase()) {
-                //         System.out.println("\t" + "txid: " + top.getHash() + ", index: " + top.getIndex());
-                //     }
-                // }
-
-                // System.out.println("Outputs: ");
-                // for (TransactionOutput to: t.getOutputs()) {
-                //     Address receiver = to.getScriptPubKey().getToAddress(np, true);
-                //     System.out.println("\t" + receiver);
-                // }
+                if (t.isCoinBase()) {
+                    // Address[] outputs = outputsToAddresses(t);
+                    // Address sender = Address.fromString(np, coinbaseAddress);
+                    // edges.putAll(sender, List.of(outputs));
+                    
+                    // Ignore these for now, but we might want to add a special coinbase node
+                    // and use it as a sender for all coinbase transactions.
+                    continue;
+                }
 
                 for (TransactionInput ti: t.getInputs()) {
                     TransactionOutPoint top = ti.getOutpoint();
@@ -117,9 +91,6 @@ public class Blockchain2Graph  {
                     incomplete.put(top, receivers);
                     topMapping.put(t.getTxId(),top);
                 }
-
-                // System.out.println();
-                
             }
         }
 
@@ -136,10 +107,6 @@ public class Blockchain2Graph  {
 
                 for (TransactionOutPoint top: topMapping.get(txId)) {
                     int index = (int) top.getIndex();
-
-                    if (index == -1) { // Coinbase
-                        continue;
-                    }
 
                     for (Address receiver: incomplete.get(top)) {
                         Address sender = senders[index];
