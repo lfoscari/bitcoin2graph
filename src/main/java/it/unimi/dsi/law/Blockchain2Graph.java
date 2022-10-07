@@ -3,13 +3,11 @@ package it.unimi.dsi.law;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -27,8 +25,6 @@ import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.bitcoinj.utils.BriefLogFormatter;
 
-import it.unimi.dsi.fastutil.Hash;
-
 /* Avoid looping two times over the blocks,
  * because every time they must be loaded from disk.
  */
@@ -41,7 +37,7 @@ public class Blockchain2Graph  {
     final static String edgesFilename = "edges.multivaluedmap";
 
     HashMap<Address, Long> addressConversion = new HashMap<>();
-    public static long progression = 1;
+    public static long totalNodes = 0;
 
     final NetworkParameters np;
     final static String defaultLocation = "src/main/resources/";
@@ -63,8 +59,8 @@ public class Blockchain2Graph  {
             return addressConversion.get(a);
         }
 
-        addressConversion.put(a, progression);
-        return progression++;
+        addressConversion.put(a, totalNodes);
+        return totalNodes++;
     }
 
     Long[] outputAddressesToLongs(Transaction t) {
@@ -90,22 +86,26 @@ public class Blockchain2Graph  {
         return receivers.toArray(Long[]::new);
     }
 
-    void serializeObject(Object o, String location) {
-        try {
-            FileOutputStream fos = new FileOutputStream(location);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-  
-            oos.writeObject(o);
-  
-            oos.close();
-            fos.close();
+    void multiValuedMap2ASCII(String destination, long totalNodes) throws IOException {
+		FileOutputStream os = new FileOutputStream(destination);
+        StringBuffer sb = new StringBuffer();
+		
+		os.write((totalNodes + "\n").getBytes());
 
-            System.out.println("Saved results as " + location);
+        for (Long node = 0L; node < totalNodes; node++) {
+            sb.append(node + " ");
+            edges.get(node).forEach(s -> sb.append(s + " "));
+            sb.deleteCharAt(sb.length() - 1);
+            sb.append("\n");
         }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+
+        sb.deleteCharAt(sb.length() - 1);
+        
+        os.write(sb.toString().getBytes());
+		os.close();
+
+		System.out.println("ASCIIGraph saved in " + destination);
+	}
 
     public void buildGraph(String blockfile) {
         /**
@@ -164,10 +164,9 @@ public class Blockchain2Graph  {
         System.out.println("Done with " + edges.size() + " edges");
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Blockchain2Graph a = new Blockchain2Graph();
-        a.buildGraph("src/main/resources/blk00000.dat");
-        a.serializeObject(a.edges, defaultLocation + "edges.multivaluedmap");
-        // a.serializeObject(defaultLocation + "addresses.hashset", a.uniqueAddresses);
+        a.buildGraph(defaultLocation + "blk00000.dat");
+        a.multiValuedMap2ASCII(defaultLocation + "ascii.graph-txt", a.totalNodes);
     }
 }
