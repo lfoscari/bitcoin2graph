@@ -2,7 +2,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.unimi.dsi.law</groupId>
-  <artifactId>bitcoinj-playground</artifactId>
+  <artifactId>bitcoin2webgraph</artifactId>
   <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
   <name>bitcoinj-playground</name>

@@ -17,15 +17,8 @@ public class Graph2Webgraph {
 		File ascii = new File(Blockchain2Graph.defaultLocation + "ascii.graph-txt");
 
 		System.out.println("Converting to BVGraph");
-		
 
 		ASCIIGraph graph = ASCIIGraph.loadOnce(new FileInputStream(ascii));
-		ASCIIGraph.store(graph, destination + "bitcoin");
-
-		// BVGraph.main(new String[] {
-		// 	"-g", "ASCIIGraph",
-		// 	Blockchain2Graph.defaultLocation + "ascii",
-		// 	Blockchain2Graph.defaultLocation + "webgraph/bitcoin"
-		// });
+		BVGraph.store(graph, destination + "bitcoin");
 	}
 }
