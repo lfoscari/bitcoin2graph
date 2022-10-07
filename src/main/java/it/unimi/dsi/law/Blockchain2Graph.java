@@ -27,19 +27,24 @@ import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.bitcoinj.utils.BriefLogFormatter;
 
+import it.unimi.dsi.fastutil.Hash;
+
 /* Avoid looping two times over the blocks,
  * because every time they must be loaded from disk.
  */
 
 public class Blockchain2Graph  {
-    Map<TransactionOutPoint, Address[]> incomplete = new HashMap<>();
+    Map<TransactionOutPoint, Long[]> incomplete = new HashMap<>();
     MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
     
-    MultiValuedMap<Address, Address> edges = new ArrayListValuedHashMap<>();
+    MultiValuedMap<Long, Long> edges = new ArrayListValuedHashMap<>();
     final static String edgesFilename = "edges.multivaluedmap";
 
-    Set<Address> uniqueAddresses = new HashSet<>();
-    final static String uniqueAddressesFilename = "addresses.hashset";
+    HashMap<Address, Long> addressConversion = new HashMap<>();
+    public static long progression = 1;
+
+    // Set<Address> uniqueAddresses = new HashSet<>();
+    // final static String uniqueAddressesFilename = "addresses.hashset";
     
     final NetworkParameters np;
     // final String coinbaseAddress = ???;
@@ -52,15 +57,30 @@ public class Blockchain2Graph  {
         new Context(np);
     }
 
-    Address[] outputsToAddresses(Transaction t) {
-        List<Address> receivers = new ArrayList<>();
+    Long addressToLong(Address a) {
+        /* Map addresses into integers, but without collisions.
+         * If a new address is presented generate a new integer not seen before.
+         * If an old address is presented return the old integer association.
+         */
+
+        if (addressConversion.containsKey(a)) {
+            return addressConversion.get(a);
+        }
+
+        addressConversion.put(a, progression);
+        return progression++;
+    }
+
+    Long[] outputsToIntAddresses(Transaction t) {
+        List<Long> receivers = new ArrayList<>();
                     
         for (TransactionOutput to: t.getOutputs()) {
             try {
                 Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
+                Long receiverInt = addressToLong(receiver);
 
-                this.uniqueAddresses.add(receiver);
-                receivers.add(receiver);
+                // this.uniqueAddresses.add(receiverInt);
+                receivers.add(receiverInt);
             } catch (ScriptException e) {
                 receivers.add(null); // Don't mess up the indexing
                 // TODO: find out what these addresses actually are
@@ -68,7 +88,7 @@ public class Blockchain2Graph  {
             }
         }
 
-        return receivers.toArray(Address[]::new);
+        return receivers.toArray(Long[]::new);
     }
 
     void serializeObject(String location, Object o) {
@@ -105,7 +125,7 @@ public class Blockchain2Graph  {
                     continue;
                 }
                 
-                Address[] receivers = outputsToAddresses(t);
+                Long[] receivers = outputsToIntAddresses(t);
 
                 for (TransactionInput ti: t.getInputs()) {
                     TransactionOutPoint top = ti.getOutpoint();
@@ -121,7 +141,7 @@ public class Blockchain2Graph  {
         for (Block block: bfl) {
             for (Transaction t: block.getTransactions()) {
                 Sha256Hash txId = t.getTxId();
-                Address[] senders = outputsToAddresses(t);
+                Long[] senders = outputsToIntAddresses(t);
                 
                 if (!topMapping.containsKey(txId)) {
                     continue;
@@ -130,8 +150,8 @@ public class Blockchain2Graph  {
                 for (TransactionOutPoint top: topMapping.get(txId)) {
                     int index = (int) top.getIndex();
 
-                    for (Address receiver: incomplete.get(top)) {
-                        Address sender = senders[index];
+                    for (Long receiver: incomplete.get(top)) {
+                        Long sender = senders[index];
                         edges.put(sender, receiver);
                     }
                 }
@@ -147,6 +167,6 @@ public class Blockchain2Graph  {
         a.buildGraph("src/main/resources/blk00000.dat");
 
         a.serializeObject(defaultLocation + "edges.multivaluedmap", a.edges);
-        a.serializeObject(defaultLocation + "addresses.hashset", a.uniqueAddresses);
+        // a.serializeObject(defaultLocation + "addresses.hashset", a.uniqueAddresses);
     }
 }
