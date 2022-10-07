@@ -43,12 +43,7 @@ public class Blockchain2Graph  {
     HashMap<Address, Long> addressConversion = new HashMap<>();
     public static long progression = 1;
 
-    // Set<Address> uniqueAddresses = new HashSet<>();
-    // final static String uniqueAddressesFilename = "addresses.hashset";
-    
     final NetworkParameters np;
-    // final String coinbaseAddress = ???;
-
     final static String defaultLocation = "src/main/resources/";
 
     public Blockchain2Graph() {
@@ -58,9 +53,10 @@ public class Blockchain2Graph  {
     }
 
     Long addressToLong(Address a) {
-        /* Map addresses into integers, but without collisions.
-         * If a new address is presented generate a new integer not seen before.
-         * If an old address is presented return the old integer association.
+        /**
+         * Map an address to an long without collisions.
+         * If a new address is presented generate a new long not seen before.
+         * If an old address is presented return the old long association.
          */
 
         if (addressConversion.containsKey(a)) {
@@ -71,7 +67,10 @@ public class Blockchain2Graph  {
         return progression++;
     }
 
-    Long[] outputsToIntAddresses(Transaction t) {
+    Long[] outputAddressesToLongs(Transaction t) {
+        /**
+         * Extract the output addresses from a Transaction and map them to longs.
+         */
         List<Long> receivers = new ArrayList<>();
                     
         for (TransactionOutput to: t.getOutputs()) {
@@ -91,7 +90,7 @@ public class Blockchain2Graph  {
         return receivers.toArray(Long[]::new);
     }
 
-    void serializeObject(String location, Object o) {
+    void serializeObject(Object o, String location) {
         try {
             FileOutputStream fos = new FileOutputStream(location);
             ObjectOutputStream oos = new ObjectOutputStream(fos);
@@ -109,6 +108,10 @@ public class Blockchain2Graph  {
     }
 
     public void buildGraph(String blockfile) {
+        /**
+         * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
+         */
+
         List<File> blockchainFiles = new ArrayList<File>();
         blockchainFiles.add(new File(blockfile));
         BlockFileLoader bfl = new BlockFileLoader(this.np, blockchainFiles);
@@ -125,7 +128,7 @@ public class Blockchain2Graph  {
                     continue;
                 }
                 
-                Long[] receivers = outputsToIntAddresses(t);
+                Long[] receivers = outputAddressesToLongs(t);
 
                 for (TransactionInput ti: t.getInputs()) {
                     TransactionOutPoint top = ti.getOutpoint();
@@ -141,7 +144,7 @@ public class Blockchain2Graph  {
         for (Block block: bfl) {
             for (Transaction t: block.getTransactions()) {
                 Sha256Hash txId = t.getTxId();
-                Long[] senders = outputsToIntAddresses(t);
+                Long[] senders = outputAddressesToLongs(t);
                 
                 if (!topMapping.containsKey(txId)) {
                     continue;
@@ -163,10 +166,8 @@ public class Blockchain2Graph  {
 
     public static void main(String[] args) {
         Blockchain2Graph a = new Blockchain2Graph();
-
         a.buildGraph("src/main/resources/blk00000.dat");
-
-        a.serializeObject(defaultLocation + "edges.multivaluedmap", a.edges);
+        a.serializeObject(a.edges, defaultLocation + "edges.multivaluedmap");
         // a.serializeObject(defaultLocation + "addresses.hashset", a.uniqueAddresses);
     }
 }
