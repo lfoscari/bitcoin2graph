@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -34,7 +33,6 @@ public class Blockchain2Graph  {
     MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
     
     MultiValuedMap<Long, Long> edges = new ArrayListValuedHashMap<>();
-    final static String edgesFilename = "edges.multivaluedmap";
 
     HashMap<Address, Long> addressConversion = new HashMap<>();
     public static long totalNodes = 0;
@@ -45,12 +43,12 @@ public class Blockchain2Graph  {
     public Blockchain2Graph() {
         BriefLogFormatter.init();
         this.np = new MainNetParams();
-        new Context(np);
+        new Context(this.np);
     }
 
     Long addressToLong(Address a) {
         /**
-         * Map an address to an long without collisions.
+         * Map an address to a long without collisions.
          * If a new address is presented generate a new long not seen before.
          * If an old address is presented return the old long association.
          */
@@ -67,8 +65,9 @@ public class Blockchain2Graph  {
         /**
          * Extract the output addresses from a Transaction and map them to longs.
          */
+
         List<Long> receivers = new ArrayList<>();
-                    
+
         for (TransactionOutput to: t.getOutputs()) {
             try {
                 Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
@@ -89,12 +88,14 @@ public class Blockchain2Graph  {
     void multiValuedMap2ASCII(String destination, long totalNodes) throws IOException {
 		FileOutputStream os = new FileOutputStream(destination);
         StringBuffer sb = new StringBuffer();
-		
-		os.write((totalNodes + "\n").getBytes());
+
+        sb.append(totalNodes + "\n");
 
         for (Long node = 0L; node < totalNodes; node++) {
             sb.append(node + " ");
-            edges.get(node).forEach(s -> sb.append(s + " "));
+            edges.get(node).forEach(s -> {
+                if (s != null) sb.append(s + " ");
+            });
             sb.deleteCharAt(sb.length() - 1);
             sb.append("\n");
         }
@@ -115,7 +116,7 @@ public class Blockchain2Graph  {
         List<File> blockchainFiles = new ArrayList<File>();
         blockchainFiles.add(new File(blockfile));
         BlockFileLoader bfl = new BlockFileLoader(this.np, blockchainFiles);
-
+ 
         for (Block block: bfl) {
             for(Transaction t: block.getTransactions()) {
                 if (t.isCoinBase()) {
@@ -160,13 +161,11 @@ public class Blockchain2Graph  {
                 }
             }
         }
-
-        System.out.println("Done with " + edges.size() + " edges");
     }
 
     public static void main(String[] args) throws IOException {
         Blockchain2Graph a = new Blockchain2Graph();
         a.buildGraph(defaultLocation + "blk00000.dat");
-        a.multiValuedMap2ASCII(defaultLocation + "ascii.graph-txt", a.totalNodes);
+        a.multiValuedMap2ASCII(defaultLocation + "ascii.graph-txt", totalNodes);
     }
 }
