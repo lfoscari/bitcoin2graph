@@ -11,7 +11,7 @@ import org.apache.commons.collections4.MultiValuedMap;
 
 import com.martiansoftware.jsap.JSAPException;
 
-import it.unimi.dsi.big.webgraph.BVGraph;
+import it.unimi.dsi.webgraph.BVGraph;
 
 public class Graph2Webgraph {
 	MultiValuedMap<Long, Long> graph;
@@ -57,6 +57,11 @@ public class Graph2Webgraph {
 		gw.multiValuedMap2ASCII(Blockchain2Graph.defaultLocation + "ascii.graph-txt", totalNodes);
 
 		System.out.println("Converting to BVGraph");
-		BVGraph.main(new String[] {"-g", "ASCIIGraph", Blockchain2Graph.defaultLocation + "ascii", "bitcoin"});
+		
+		BVGraph.main(new String[] {
+			"-g", "ASCIIGraph",
+			Blockchain2Graph.defaultLocation + "ascii",
+			Blockchain2Graph.defaultLocation + "webgraph/bitcoin"
+		});
 	}
 }
