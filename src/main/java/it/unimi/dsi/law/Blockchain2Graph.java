@@ -92,21 +92,15 @@ public class Blockchain2Graph  {
         sb.append(totalNodes + "\n");
 
         for (Long node = 0L; node < totalNodes; node++) {
-            // sb.append(node + " ");
-
-            edges
+            String edgesString = edges
                 .get(node)
                 .stream()
                 .filter(s -> s != null)
                 .sorted()
-                .distinct()
-                .forEach(s -> sb.append(s + " "));
+                .distinct() // Multigraph -> graph
+                .reduce("", (a, b) -> a + " " + b, String::concat);
 
-            if (edges.containsKey(node)) {
-                sb.deleteCharAt(sb.length() - 1);
-            }
-
-            sb.append("\n");
+            sb.append(edgesString + "\n");
         }
 
         os.write(sb.toString().getBytes());

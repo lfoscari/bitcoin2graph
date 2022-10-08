@@ -13,7 +13,9 @@ import it.unimi.dsi.webgraph.BVGraph;
 public class Graph2Webgraph {
 	public static void main(String[] args) throws IOException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, JSAPException, ClassNotFoundException, InstantiationException {
 		String destination = Blockchain2Graph.defaultLocation + "webgraph/";
-		(new File(destination)).mkdir();
+		File destinationFolder = new File(destination);
+
+		destinationFolder.mkdir();
 		File ascii = new File(Blockchain2Graph.defaultLocation + "ascii.graph-txt");
 
 		System.out.println("Converting to BVGraph");
