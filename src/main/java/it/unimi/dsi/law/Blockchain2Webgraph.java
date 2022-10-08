@@ -1,14 +1,10 @@
 package it.unimi.dsi.law;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -30,10 +26,6 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import it.unimi.dsi.webgraph.ArrayListMutableGraph;
 import it.unimi.dsi.webgraph.BVGraph;
 
-/* Avoid looping two times over the blocks,
- * because every time they must be loaded from disk.
- */
-
 public class Blockchain2Webgraph  {
     public ArrayListMutableGraph graph;
 
@@ -49,13 +41,12 @@ public class Blockchain2Webgraph  {
         new Context(this.np);
     }
 
+    /**
+     * Map an address to a Integer without collisions.
+     * If a new address is presented generate a new Integer not seen before.
+     * If an old address is presented return the old Integer association.
+     */
     Integer addressToInteger(Address a) {
-        /**
-         * Map an address to a Integer without collisions.
-         * If a new address is presented generate a new Integer not seen before.
-         * If an old address is presented return the old Integer association.
-         */
-
         if (addressConversion.containsKey(a)) {
             return addressConversion.get(a);
         }
@@ -64,11 +55,10 @@ public class Blockchain2Webgraph  {
         return totalNodes++;
     }
 
+    /**
+     * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
+     */
     List<Integer> outputAddressesToIntegers(Transaction t) {
-        /**
-         * Extract the output addresses from a Transaction and map them to Integers.
-         */
-
         List<Integer> receivers = new ArrayList<>();
 
         for (TransactionOutput to: t.getOutputs()) {
@@ -86,23 +76,21 @@ public class Blockchain2Webgraph  {
         return receivers;
     }
 
+    /**
+     * If needed increase the amount of nodes in the graph,
+     * by calculating the difference between the max provided node and the current amount.
+     */
     public void increaseNodes(Integer... sortedNodes) {
-        /**
-         * If needed increase the amount of nodes in the graph,
-         * by calculating the difference between the max provided node and the current amount.
-         */
-
         Integer max = sortedNodes[sortedNodes.length - 1];
         if (max >= graph.numNodes()) {
             graph.addNodes(max - graph.numNodes() + 1);
         }
     }
 
+    /**
+     * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
+     */
     public void buildGraph(String blockfile) {
-        /**
-         * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
-         */
-
         List<File> blockchainFiles = new ArrayList<File>();
         blockchainFiles.add(new File(blockfile));
         BlockFileLoader bfl = new BlockFileLoader(this.np, blockchainFiles);
