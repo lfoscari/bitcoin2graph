@@ -73,16 +73,21 @@ public class Blockchain2Webgraph  {
             }
         }
 
+        increaseNodes();
         return receivers;
     }
+    
     /**
      * If needed increase the amount of nodes in the graph,
      * by calculating the difference between the max provided node and the current amount.
      */
-    public void increaseNodes(Integer... sortedNodes) {
-        Integer max = sortedNodes[sortedNodes.length - 1];
-        if (max >= graph.numNodes()) {
-            graph.addNodes(max - graph.numNodes() + 1);
+    public void increaseNodes() {
+        if (graph == null) {
+            return;
+        }
+
+        if (totalNodes >= graph.numNodes()) {
+            graph.addNodes(totalNodes - graph.numNodes() + 1);
         }
     }
 
@@ -142,12 +147,8 @@ public class Blockchain2Webgraph  {
                         .distinct()
                         .collect(Collectors.toList());
 
-                    increaseNodes(dedupReceivers.toArray(Integer[]::new));
-
                     for (Integer receiver: dedupReceivers) {
                         Integer sender = senders.get(index);
-
-                        increaseNodes(sender);
 
                         try {
                             graph.addArc(sender, receiver);
