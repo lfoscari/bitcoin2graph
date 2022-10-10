@@ -1,12 +1,11 @@
 package it.unimi.dsi.law;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -24,35 +23,30 @@ import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.bitcoinj.utils.BriefLogFormatter;
 
-/* Avoid looping two times over the blocks,
- * because every time they must be loaded from disk.
- */
+import it.unimi.dsi.webgraph.ArrayListMutableGraph;
+import it.unimi.dsi.webgraph.BVGraph;
 
-public class Blockchain2Graph  {
-    Map<TransactionOutPoint, Long[]> incomplete = new HashMap<>();
-    MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
-    
-    MultiValuedMap<Long, Long> edges = new ArrayListValuedHashMap<>();
+public class Blockchain2Webgraph  {
+    public ArrayListMutableGraph graph;
 
-    HashMap<Address, Long> addressConversion = new HashMap<>();
-    public static long totalNodes = 0;
+    public HashMap<Address, Integer> addressConversion = new HashMap<>();
+    public static int totalNodes = 0;
 
     final NetworkParameters np;
     final static String defaultLocation = "src/main/resources/";
 
-    public Blockchain2Graph() {
+    public Blockchain2Webgraph() {
         BriefLogFormatter.init();
         this.np = new MainNetParams();
         new Context(this.np);
     }
 
-    Long addressToLong(Address a) {
-        /**
-         * Map an address to a long without collisions.
-         * If a new address is presented generate a new long not seen before.
-         * If an old address is presented return the old long association.
-         */
-
+    /**
+     * Map an address to a Integer without collisions.
+     * If a new address is presented generate a new Integer not seen before.
+     * If an old address is presented return the old Integer association.
+     */
+    Integer addressToInteger(Address a) {
         if (addressConversion.containsKey(a)) {
             return addressConversion.get(a);
         }
@@ -61,20 +55,17 @@ public class Blockchain2Graph  {
         return totalNodes++;
     }
 
-    Long[] outputAddressesToLongs(Transaction t) {
-        /**
-         * Extract the output addresses from a Transaction and map them to longs.
-         */
-
-        List<Long> receivers = new ArrayList<>();
+    /**
+     * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
+     */
+    List<Integer> outputAddressesToIntegers(Transaction t) {
+        List<Integer> receivers = new ArrayList<>();
 
         for (TransactionOutput to: t.getOutputs()) {
             try {
                 Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
-                Long receiverInt = addressToLong(receiver);
-
-                // this.uniqueAddresses.add(receiverInt);
-                receivers.add(receiverInt);
+                Integer receiverInteger = addressToInteger(receiver);
+                receivers.add(receiverInteger);
             } catch (ScriptException e) {
                 receivers.add(null); // Don't mess up the indexing
                 // TODO: find out what these addresses actually are
@@ -82,46 +73,30 @@ public class Blockchain2Graph  {
             }
         }
 
-        return receivers.toArray(Long[]::new);
+        return receivers;
+    }
+    /**
+     * If needed increase the amount of nodes in the graph,
+     * by calculating the difference between the max provided node and the current amount.
+     */
+    public void increaseNodes(Integer... sortedNodes) {
+        Integer max = sortedNodes[sortedNodes.length - 1];
+        if (max >= graph.numNodes()) {
+            graph.addNodes(max - graph.numNodes() + 1);
+        }
     }
 
-    void multiValuedMap2ASCII(String destination, long totalNodes) throws IOException {
-		FileOutputStream os = new FileOutputStream(destination);
-        StringBuffer sb = new StringBuffer();
-
-        sb.append(totalNodes + "\n");
-
-        for (Long node = 0L; node < totalNodes; node++) {
-            edges
-                .get(node)
-                .stream()
-                .filter(s -> s != null)
-                .sorted()
-                .distinct() // NOT A MULTIGRAPH
-                .forEach(s -> sb.append(s + " "));
-
-            if (edges.containsKey(node)) {
-                sb.deleteCharAt(sb.length() - 1);
-            }
-
-            sb.append("\n");
-        }
-
-        os.write(sb.toString().getBytes());
-		os.close();
-
-		System.out.println("ASCIIGraph saved in " + destination);
-	}
-
+    /**
+     * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
+     */
     public void buildGraph(String blockfile) {
-        /**
-         * Read the blockfile and convert it to a graph in the form of a MultiValuedMap.
-         */
-
         List<File> blockchainFiles = new ArrayList<File>();
         blockchainFiles.add(new File(blockfile));
         BlockFileLoader bfl = new BlockFileLoader(this.np, blockchainFiles);
  
+        MultiValuedMap<TransactionOutPoint, Integer> incomplete = new ArrayListValuedHashMap<>();
+        MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
+
         for (Block block: bfl) {
             for(Transaction t: block.getTransactions()) {
                 if (t.isCoinBase()) {
@@ -134,34 +109,53 @@ public class Blockchain2Graph  {
                     continue;
                 }
                 
-                Long[] receivers = outputAddressesToLongs(t);
+                List<Integer> receivers = outputAddressesToIntegers(t);
 
                 for (TransactionInput ti: t.getInputs()) {
                     TransactionOutPoint top = ti.getOutpoint();
 
-                    incomplete.put(top, receivers);
+                    incomplete.putAll(top, receivers);
                     topMapping.put(top.getHash(), top);
                 }
             }
         }
 
+        graph = new ArrayListMutableGraph(totalNodes);
         bfl = new BlockFileLoader(this.np, blockchainFiles);
 
         for (Block block: bfl) {
             for (Transaction t: block.getTransactions()) {
                 Sha256Hash txId = t.getTxId();
-                Long[] senders = outputAddressesToLongs(t);
-                
+                List<Integer> senders = outputAddressesToIntegers(t);
+
                 if (!topMapping.containsKey(txId)) {
                     continue;
                 }
 
                 for (TransactionOutPoint top: topMapping.get(txId)) {
                     int index = (int) top.getIndex();
+                    List<Integer> dedupReceivers = incomplete
+                        .get(top)
+                        .stream()
+                        .filter(n -> n != null && n != index)
+                        .sorted()
+                        .distinct()
+                        .collect(Collectors.toList());
 
-                    for (Long receiver: incomplete.get(top)) {
-                        Long sender = senders[index];
-                        edges.put(sender, receiver);
+                    increaseNodes(dedupReceivers.toArray(Integer[]::new));
+
+                    for (Integer receiver: dedupReceivers) {
+                        Integer sender = senders.get(index);
+
+                        increaseNodes(sender);
+
+                        try {
+                            graph.addArc(sender, receiver);
+                        } catch(IllegalArgumentException e) {
+                            if(!e.getMessage().equals("Node " + receiver + " is already a successor of node " + sender)) {
+                                throw new IllegalArgumentException(e.getMessage());
+                            }
+                        }
                     }
                 }
             }
@@ -169,8 +163,8 @@ public class Blockchain2Graph  {
     }
 
     public static void main(String[] args) throws IOException {
-        Blockchain2Graph a = new Blockchain2Graph();
+        Blockchain2Webgraph a = new Blockchain2Webgraph();
         a.buildGraph(defaultLocation + "blk00000.dat");
-        a.multiValuedMap2ASCII(defaultLocation + "ascii.graph-txt", totalNodes);
+        BVGraph.store(a.graph.immutableView(), defaultLocation + "webgraph/bitcoin");
     }
 }
