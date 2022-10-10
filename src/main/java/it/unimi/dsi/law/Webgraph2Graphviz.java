@@ -12,8 +12,10 @@ import java.net.*;
 import java.util.*;
 
 public class Webgraph2Graphviz {
-	public static void main(String[] args) throws URISyntaxException, IOException {
-        BVGraph webgraph = BVGraph.load(Blockchain2Webgraph.defaultLocation + "webgraph/bitcoin");
+    public static final String graphBasename = Blockchain2Webgraph.defaultLocation + "webgraph/bitcoin";
+
+    public static void main(String[] args) throws IOException {
+        BVGraph webgraph = BVGraph.load(graphBasename);
         Graph<Integer, DefaultEdge> graphviz = new DefaultDirectedGraph<>(DefaultEdge.class);
 
         for (int i = 0; i < webgraph.numNodes(); i++) {
@@ -35,10 +37,14 @@ public class Webgraph2Graphviz {
             return map;
         });
 
-        File dot = new File(Blockchain2Webgraph.defaultLocation + "webgraph/bitcoin.dot");
+        File dot = new File(graphBasename + ".dot");
         FileWriter dotWriter = new FileWriter(dot);
-
         exporter.exportGraph(graphviz, dotWriter);
-        System.out.println("Dot file exported in " + Blockchain2Webgraph.defaultLocation + "webgraph/bitcoin.dot");
+
+        System.out.println(
+            "Dot file exported in " + dot.getPath() + "\n" +
+            "To visualize run (it may take a lot!)" + "\n" +
+            "$ dot -Tpdf " + dot.getPath() + " > " + graphBasename + ".pdf"
+        );
 	}
 }
