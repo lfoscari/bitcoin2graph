@@ -16,18 +16,18 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
-    public final String blockfile;
     public final NetworkParameters np;
+    public final String blockfilePath;
 
     public static void main(String[] args) throws IOException {
-        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Blockchain2ArrayListMutableGraph.defaultLocation + "blk00000.dat");
+        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile);
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 1000, null, null);
-        BVGraph.store(graph, Blockchain2ArrayListMutableGraph.defaultLocation + "ScatteredArcsASCIIGraph/bitcoin");
-        System.out.println("Results saved in " + Blockchain2ArrayListMutableGraph.defaultLocation + "ScatteredArcsASCIIGraph/bitcoin");
+        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+        System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
     }
 
-    public Blockchain2ScatteredArcsASCIIGraph(String blockfile) {
-        this.blockfile = blockfile;
+    public Blockchain2ScatteredArcsASCIIGraph(String blockfilePath) {
+        this.blockfilePath = blockfilePath;
         this.np = new MainNetParams();
 
         BriefLogFormatter.init();
@@ -36,7 +36,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
     @Override
     public Iterator<long[]> iterator() {
-        return new CustomBlockchainIterator<long[]>(blockfile, np);
+        return new CustomBlockchainIterator<long[]>(blockfilePath, np);
     }
 
     private static class CustomBlockchainIterator<T> implements Iterator<long[]> {
@@ -51,11 +51,11 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final MultiValuedMap<TransactionOutPoint, Long> incomplete = new ArrayListValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
 
-        public CustomBlockchainIterator(String blockfile, NetworkParameters np) {
+        public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) {
             this.np = np;
 
             // First pass to populate mappings
-            BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(new File(blockfile)));
+            BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(new File(blockfilePath)));
             for (Block block: bflTemp) {
                 if (!block.hasTransactions())
                     continue;
@@ -69,7 +69,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 }
             }
 
-            this.bfl = new BlockFileLoader(np, List.of(new File(blockfile)));;
+            this.bfl = new BlockFileLoader(np, List.of(new File(blockfilePath)));;
         }
 
         Long addressToLong(Address a) {

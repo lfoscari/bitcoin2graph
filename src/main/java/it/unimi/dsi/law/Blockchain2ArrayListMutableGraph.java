@@ -33,7 +33,6 @@ public class Blockchain2ArrayListMutableGraph {
     public static int totalNodes = 0;
 
     final NetworkParameters np;
-    final static String defaultLocation = "src/main/resources/";
 
     public Blockchain2ArrayListMutableGraph() {
         BriefLogFormatter.init();
@@ -137,10 +136,10 @@ public class Blockchain2ArrayListMutableGraph {
                     continue;
                 }
 
-                for (TransactionOutPoint top: topMapping.get(txId)) {
+                for (TransactionOutPoint top: topMapping.remove(txId)) {
                     int index = (int) top.getIndex();
                     List<Integer> dedupReceivers = incomplete
-                        .get(top)
+                        .remove(top)
                         .stream()
                         .filter(n -> n != null && n != index)
                         .sorted()
@@ -152,7 +151,7 @@ public class Blockchain2ArrayListMutableGraph {
 
                         try {
                             graph.addArc(sender, receiver);
-                        } catch(IllegalArgumentException e) {
+                        } catch(IllegalArgumentException e) { // This wastes a LOT of time
                             if(!e.getMessage().equals("Node " + receiver + " is already a successor of node " + sender)) {
                                 throw new IllegalArgumentException(e.getMessage());
                             }
@@ -165,7 +164,7 @@ public class Blockchain2ArrayListMutableGraph {
 
     public static void main(String[] args) throws IOException {
         Blockchain2ArrayListMutableGraph a = new Blockchain2ArrayListMutableGraph();
-        a.buildGraph(defaultLocation + "blk00000.dat");
-        BVGraph.store(a.graph.immutableView(), defaultLocation + "ArrayListMutableGraph/bitcoin");
+        a.buildGraph(Parameters.resources + Parameters.blockfile);
+        BVGraph.store(a.graph.immutableView(), Parameters.resources + "ArrayListMutableGraph/" + Parameters.basename);
     }
 }
