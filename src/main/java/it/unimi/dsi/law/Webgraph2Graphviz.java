@@ -8,11 +8,10 @@ import org.jgrapht.nio.dot.*;
 import it.unimi.dsi.webgraph.BVGraph;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 public class Webgraph2Graphviz {
-    public static final String graphBasename = Blockchain2Webgraph.defaultLocation + "webgraph/bitcoin";
+    public static final String graphBasename = Blockchain2ArrayListMutableGraph.defaultLocation + "ArrayListMutableGraph/bitcoin";
 
     public static void main(String[] args) throws IOException {
         BVGraph webgraph = BVGraph.load(graphBasename);

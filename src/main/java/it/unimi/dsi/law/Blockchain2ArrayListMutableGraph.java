@@ -26,7 +26,7 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import it.unimi.dsi.webgraph.ArrayListMutableGraph;
 import it.unimi.dsi.webgraph.BVGraph;
 
-public class Blockchain2Webgraph  {
+public class Blockchain2ArrayListMutableGraph {
     public ArrayListMutableGraph graph;
 
     public HashMap<Address, Integer> addressConversion = new HashMap<>();
@@ -35,7 +35,7 @@ public class Blockchain2Webgraph  {
     final NetworkParameters np;
     final static String defaultLocation = "src/main/resources/";
 
-    public Blockchain2Webgraph() {
+    public Blockchain2ArrayListMutableGraph() {
         BriefLogFormatter.init();
         this.np = new MainNetParams();
         new Context(this.np);
@@ -164,8 +164,8 @@ public class Blockchain2Webgraph  {
     }
 
     public static void main(String[] args) throws IOException {
-        Blockchain2Webgraph a = new Blockchain2Webgraph();
+        Blockchain2ArrayListMutableGraph a = new Blockchain2ArrayListMutableGraph();
         a.buildGraph(defaultLocation + "blk00000.dat");
-        BVGraph.store(a.graph.immutableView(), defaultLocation + "webgraph/bitcoin");
+        BVGraph.store(a.graph.immutableView(), defaultLocation + "ArrayListMutableGraph/bitcoin");
     }
 }
