@@ -1,14 +1,18 @@
 package it.unimi.dsi.law;
 
-import org.jgrapht.*;
-import org.jgrapht.graph.*;
-import org.jgrapht.nio.*;
-import org.jgrapht.nio.dot.*;
-
 import it.unimi.dsi.webgraph.BVGraph;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.nio.Attribute;
+import org.jgrapht.nio.DefaultAttribute;
+import org.jgrapht.nio.dot.DOTExporter;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Webgraph2Graphviz {
     public static final String graphBasename = Parameters.resources + "ArrayListMutableGraph/bitcoin";
@@ -17,18 +21,16 @@ public class Webgraph2Graphviz {
         BVGraph webgraph = BVGraph.load(graphBasename);
         Graph<Integer, DefaultEdge> graphviz = new DefaultDirectedGraph<>(DefaultEdge.class);
 
-        for (int i = 0; i < webgraph.numNodes(); i++) {
+        for (int i = 0; i < webgraph.numNodes(); i++)
             graphviz.addVertex(i);
-        }
 
         webgraph.nodeIterator().forEachRemaining((node) -> {
             int[] successors = webgraph.successorArray(node);
-            for (int i = 0; i < successors.length; i++) {
-                graphviz.addEdge(node, successors[i]);
-            }
+            for (int successor : successors)
+                graphviz.addEdge(node, successor);
         });
 
-		DOTExporter<Integer, DefaultEdge> exporter = new DOTExporter<>();
+        DOTExporter<Integer, DefaultEdge> exporter = new DOTExporter<>();
 
         exporter.setVertexAttributeProvider((v) -> {
             Map<String, Attribute> map = new LinkedHashMap<>();
@@ -41,9 +43,9 @@ public class Webgraph2Graphviz {
         exporter.exportGraph(graphviz, dotWriter);
 
         System.out.println(
-            "Dot file exported in " + dot.getPath() + "\n" +
-            "To visualize run (it may take a lot!)" + "\n" +
-            "$ dot -Tpdf " + dot.getPath() + " > " + graphBasename + ".pdf"
+                "Dot file exported in " + dot.getPath() + "\n" +
+                        "To visualize run (it may take a lot!)" + "\n" +
+                        "$ dot -Tpdf " + dot.getPath() + " > " + graphBasename + ".pdf"
         );
-	}
+    }
 }

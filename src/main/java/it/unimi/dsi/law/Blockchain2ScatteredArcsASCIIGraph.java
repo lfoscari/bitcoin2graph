@@ -4,6 +4,7 @@ import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.ScriptException;
@@ -19,13 +20,6 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     public final NetworkParameters np;
     public final String blockfilePath;
 
-    public static void main(String[] args) throws IOException {
-        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile);
-        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 1000, null, null);
-        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
-        System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
-    }
-
     public Blockchain2ScatteredArcsASCIIGraph(String blockfilePath) {
         this.blockfilePath = blockfilePath;
         this.np = new MainNetParams();
@@ -34,33 +28,37 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         new Context(this.np);
     }
 
+    public static void main(String[] args) throws IOException {
+        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile);
+        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 1000, null, null);
+        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+        System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+    }
+
     @Override
     public Iterator<long[]> iterator() {
         return new CustomBlockchainIterator<long[]>(blockfilePath, np);
     }
 
     private static class CustomBlockchainIterator<T> implements Iterator<long[]> {
+        public static long totalNodes = 0;
         private final BlockFileLoader bfl;
         private final NetworkParameters np;
-
         private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
-
-        public HashMap<Address, Long> addressConversion = new HashMap<>();
-        public static long totalNodes = 0;
-
-        private final MultiValuedMap<TransactionOutPoint, Long> incomplete = new ArrayListValuedHashMap<>();
-        private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new ArrayListValuedHashMap<>();
+        private final MultiValuedMap<TransactionOutPoint, Long> incomplete = new HashSetValuedHashMap<>();
+        private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
+        public RocksBDWrapper addressConversion = new RocksBDWrapper();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) {
             this.np = np;
 
             // First pass to populate mappings
             BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(new File(blockfilePath)));
-            for (Block block: bflTemp) {
+            for (Block block : bflTemp) {
                 if (!block.hasTransactions())
                     continue;
 
-                for (Transaction transaction: block.getTransactions()) {
+                for (Transaction transaction : block.getTransactions()) {
                     if (transaction.isCoinBase())
                         continue;
 
@@ -69,7 +67,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 }
             }
 
-            this.bfl = new BlockFileLoader(np, List.of(new File(blockfilePath)));;
+            this.bfl = new BlockFileLoader(np, List.of(new File(blockfilePath)));
         }
 
         Long addressToLong(Address a) {
@@ -84,7 +82,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         List<Long> outputAddressesToLongs(Transaction t) {
             List<Long> outputs = new ArrayList<>();
 
-            for (TransactionOutput to: t.getOutputs()) {
+            for (TransactionOutput to : t.getOutputs()) {
                 try {
                     Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
                     Long receiverLong = addressToLong(receiver);
@@ -99,7 +97,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         private void populateMappings(Transaction transaction, List<Long> receivers) {
-            for (TransactionInput ti: transaction.getInputs()) {
+            for (TransactionInput ti : transaction.getInputs()) {
                 TransactionOutPoint top = ti.getOutpoint();
 
                 incomplete.putAll(top, receivers);
@@ -113,19 +111,19 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             if (!topMapping.containsKey(txId))
                 return;
 
-            for (TransactionOutPoint top: topMapping.get(txId)) {
+            for (TransactionOutPoint top : topMapping.remove(txId)) {
                 int index = (int) top.getIndex();
                 List<Long> dedupReceivers = incomplete
-                        .get(top)
+                        .remove(top)
                         .stream()
                         .filter(Objects::nonNull)
                         .sorted()
-                        .distinct()
+                        // .distinct() // the HashSetValuedHashMap ensures this
                         .collect(Collectors.toList());
 
-                for (Long receiver: dedupReceivers) {
+                for (Long receiver : dedupReceivers) {
                     Long sender = senders.get(index);
-                    transactionArcs.add(new long[] {sender, receiver});
+                    transactionArcs.add(new long[]{sender, receiver});
                 }
             }
         }
@@ -141,7 +139,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 if (!block.hasTransactions())
                     continue;
 
-                for (Transaction transaction: block.getTransactions()) {
+                for (Transaction transaction : block.getTransactions()) {
                     if (transaction.isCoinBase())
                         continue;
 
@@ -150,6 +148,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 }
             }
 
+            addressConversion.close();
             return false;
         }
 
