@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.apache.commons.collections4.MultiValuedMap;
@@ -46,7 +47,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
         private final MultiValuedMap<TransactionOutPoint, Long> incomplete = new HashSetValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
-        public AddressConversion addressConversion = new AddressConversion();
+        public PersistenceLayer persistenceLayer = PersistenceLayer.getInstance();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) {
             this.np = np;
@@ -75,7 +76,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             for (TransactionOutput to : t.getOutputs()) {
                 try {
                     Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
-                    Long receiverLong = addressConversion.map(receiver);
+                    Long receiverLong = addressConversion.mapAddress(receiver);
                     outputs.add(receiverLong);
                 } catch (ScriptException e) {
                     outputs.add(null); // Don't mess up the indexing

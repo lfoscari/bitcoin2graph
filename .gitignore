@@ -1,6 +1,7 @@
 .vscode
 .idea
 .DS_Store
+.fleet
 
 target/
 pom.xml.tag
