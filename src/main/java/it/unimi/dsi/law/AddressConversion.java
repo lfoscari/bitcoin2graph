@@ -1,18 +1,26 @@
 package it.unimi.dsi.law;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Sha256Hash;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+
+import java.io.Closeable;
 
 // TODO: implement strong persistence in case of crash, check out column families.
 // https://github.com/facebook/rocksdb/wiki/RocksJava-Basics
 // https://github.com/facebook/rocksdb/wiki/Tuning-RocksDB-from-Java
 
-public class RocksBDWrapper {
+/**
+ * Map addresses by assigning an increasing index.
+ * Keep the association in a RocksDB instance
+ */
+public class AddressConversion implements Closeable {
     private final RocksDB db;
+    private long count = 0;
 
-    public RocksBDWrapper() {
+    public AddressConversion() {
         RocksDB.loadLibrary();
 
         try (final Options options = new Options().setCreateIfMissing(true)) {
@@ -22,27 +30,18 @@ public class RocksBDWrapper {
         }
     }
 
-    public void put(Address key, Long value) {
-        try {
-            db.put(key.getHash(), long2bytes(value));
-        } catch (RocksDBException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    public long map(Address a) {
+        byte[] key = a.getHash();
 
-    public Long get(Address key) {
         try {
-            byte[] value = db.get(key.getHash());
+            byte[] value = db.get(key);
+
+            if (value == null) {
+                db.put(key, long2bytes(count));
+                return count++;
+            }
+
             return bytes2long(value);
-        } catch (RocksDBException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public boolean containsKey(Address key) {
-        // TODO: optimize by saving this result
-        try {
-            return db.get(key.getHash()) != null;
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
@@ -53,19 +52,19 @@ public class RocksBDWrapper {
     }
 
     private byte[] long2bytes(long l) {
-        byte[] array = new byte[8];
+        byte[] bb = new byte[8];
         int i, shift;
         for (i = 0, shift = 56; i < 8; i++, shift -= 8)
-            array[i] = (byte) (0xFF & (l >> shift));
-        return array;
+            bb[i] = (byte) (0xFF & (l >> shift));
+        return bb;
     }
 
-    private long bytes2long(byte[] b) {
-        long value = 0L;
-        for (int i = 0; i < b.length; i++) {
-            value <<= 8;
-            value |= (b[i] & 0xff);
+    private long bytes2long(byte[] bb) {
+        long n = 0L;
+        for (byte b : bb) {
+            n <<= 8;
+            n |= (b & 0xff);
         }
-        return value;
+        return n;
     }
 }

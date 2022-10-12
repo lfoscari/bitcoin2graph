@@ -3,7 +3,6 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
@@ -47,7 +46,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
         private final MultiValuedMap<TransactionOutPoint, Long> incomplete = new HashSetValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
-        public RocksBDWrapper addressConversion = new RocksBDWrapper();
+        public AddressConversion addressConversion = new AddressConversion();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) {
             this.np = np;
@@ -70,22 +69,13 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             this.bfl = new BlockFileLoader(np, List.of(new File(blockfilePath)));
         }
 
-        Long addressToLong(Address a) {
-            if (addressConversion.containsKey(a)) {
-                return addressConversion.get(a);
-            }
-
-            addressConversion.put(a, totalNodes);
-            return totalNodes++;
-        }
-
         List<Long> outputAddressesToLongs(Transaction t) {
             List<Long> outputs = new ArrayList<>();
 
             for (TransactionOutput to : t.getOutputs()) {
                 try {
                     Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
-                    Long receiverLong = addressToLong(receiver);
+                    Long receiverLong = addressConversion.map(receiver);
                     outputs.add(receiverLong);
                 } catch (ScriptException e) {
                     outputs.add(null); // Don't mess up the indexing
