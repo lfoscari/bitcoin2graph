@@ -35,7 +35,7 @@ public class PersistenceLayerUnitTest {
     @MethodSource("provideByteArrays")
     void convertFromBytes(byte[] bb) {
         long l = AddressConversion.bytes2long(bb);
-        assertThat(AddressConversion.long2bytes(l)).containsExactly(bb);
+        assertThat(AddressConversion.trim(AddressConversion.long2bytes(l))).containsExactly(bb);
     }
 
     private static Stream<byte[]> provideByteArrays() {
@@ -57,15 +57,14 @@ public class PersistenceLayerUnitTest {
     private static Stream<List<Long>> provideLongList() {
         return Stream.of(
                 List.of(1L, 2L, 3L, 4L, 5L),
-                List.of(0L, -5L),
-                List.of(-1000L, -1L),
-                List.of(Long.MAX_VALUE, Long.MIN_VALUE)
+                List.of(0L, 5L),
+                List.of(Long.MAX_VALUE, 1000L, 2L)
         );
     }
 
     @ParameterizedTest
     @MethodSource("provideByteList")
-    void convertFromLongList(byte[] bb) {
+    void convertFromByteList(byte[] bb) {
         List<Long> ll = AddressConversion.bytes2longList(bb);
         assertThat(AddressConversion.longList2bytes(ll)).isEqualTo(bb);
     }
@@ -75,7 +74,8 @@ public class PersistenceLayerUnitTest {
                 AddressConversion.longList2bytes(List.of(1L, 2L, 3L, 4L, 5L, 3L, 4L, 5L)),
                 AddressConversion.longList2bytes(List.of(0L, -5L, 0L, -5L, 0L, -5L, 0L, -5L)),
                 AddressConversion.longList2bytes(List.of(-1000L, -1L, -1000L, -1L, -1000L, -1L, -1000L, -1L)),
-                AddressConversion.longList2bytes(List.of(Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE))
+                AddressConversion.longList2bytes(List.of(Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE,
+                        Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE))
         );
     }
 }

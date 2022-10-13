@@ -40,9 +40,12 @@ public class AddressConversion {
         for (int i = 0, shift = 56; i < 8; i++, shift -= 8)
             bb[i] = (byte) (0xFF & (l >> shift));
 
+        return bb;
+    }
+
+    public static byte[] trim(byte[] bb) {
         int z = 0;
         while(z < 8 && bb[z++] == 0);
-
         return Arrays.copyOfRange(bb, z - 1, 8);
     }
 
@@ -56,25 +59,27 @@ public class AddressConversion {
     }
 
     public static byte[] longList2bytes(List<Long> ll) {
-        byte[] value = new byte[8 * ll.size()];
+        byte[] bb = new byte[8 * ll.size()];
 
         for (int i = 0; i < ll.size(); i++) {
             Long v = ll.get(i);
-            byte[] ad = AddressConversion.long2bytes(v == null ? -1L : v);
-            System.arraycopy(ad, 0, value, i * 8, 8);
+            byte[] tt = AddressConversion.long2bytes(v != null ? v : -1L);
+            System.arraycopy(tt, 0, bb, i * 8, 8);
         }
 
-        return value;
+        return bb;
     }
 
     public static List<Long> bytes2longList(byte[] bb) {
-        List<Long> result = new ArrayList<>();
+        List<Long> l = new ArrayList<>();
+
         for (int i = 0; i < bb.length; i += 8) {
             byte[] el = new byte[8];
             System.arraycopy(bb, i, el, 0, 8);
             long t = AddressConversion.bytes2long(el);
-            result.add(t == -1L ? null : t);
+            l.add(t == -1L ? null : t);
         }
-        return result;
+
+        return l;
     }
 }
