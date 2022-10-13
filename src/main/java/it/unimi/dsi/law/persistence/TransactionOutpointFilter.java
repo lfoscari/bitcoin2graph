@@ -11,4 +11,7 @@ public class TransactionOutpointFilter {
         this.db = db;
         this.column = column;
     }
+
+
+    // WIP
 }

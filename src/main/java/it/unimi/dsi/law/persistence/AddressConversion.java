@@ -18,7 +18,9 @@ public class AddressConversion {
 
     public long mapAddress(Address a) throws RocksDBException {
         byte[] key = a.getHash();
-        byte[] value = db.get(column, key);
+        byte[] value;
+
+        value = db.get(column, key);
 
         if (value == null) {
             db.put(column, key, long2bytes(count));
