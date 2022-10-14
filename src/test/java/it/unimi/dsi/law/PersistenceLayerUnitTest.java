@@ -57,6 +57,7 @@ public class PersistenceLayerUnitTest {
     private static Stream<List<Long>> provideLongList() {
         return Stream.of(
                 List.of(1L, 2L, 3L, 4L, 5L),
+                List.of(),
                 List.of(0L, 5L),
                 List.of(Long.MAX_VALUE, 1000L, 2L)
         );
@@ -71,6 +72,7 @@ public class PersistenceLayerUnitTest {
 
     private static Stream<byte[]> provideByteList() {
         return Stream.of(
+                AddressConversion.longList2bytes(List.of()),
                 AddressConversion.longList2bytes(List.of(1L, 2L, 3L, 4L, 5L, 3L, 4L, 5L)),
                 AddressConversion.longList2bytes(List.of(0L, -5L, 0L, -5L, 0L, -5L, 0L, -5L)),
                 AddressConversion.longList2bytes(List.of(-1000L, -1L, -1000L, -1L, -1000L, -1L, -1000L, -1L)),

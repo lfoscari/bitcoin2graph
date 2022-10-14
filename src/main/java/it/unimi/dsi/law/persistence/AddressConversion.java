@@ -62,8 +62,7 @@ public class AddressConversion {
         byte[] bb = new byte[8 * ll.size()];
 
         for (int i = 0; i < ll.size(); i++) {
-            Long v = ll.get(i);
-            byte[] tt = AddressConversion.long2bytes(v != null ? v : -1L);
+            byte[] tt = AddressConversion.long2bytes(ll.get(i));
             System.arraycopy(tt, 0, bb, i * 8, 8);
         }
 
@@ -76,8 +75,7 @@ public class AddressConversion {
         for (int i = 0; i < bb.length; i += 8) {
             byte[] el = new byte[8];
             System.arraycopy(bb, i, el, 0, 8);
-            long t = AddressConversion.bytes2long(el);
-            l.add(t == -1L ? null : t);
+            l.add(AddressConversion.bytes2long(el));
         }
 
         return l;

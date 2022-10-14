@@ -6,13 +6,11 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class IncompleteMappings {
     private final RocksDB db;
     private final ColumnFamilyHandle column;
-
-    // This class has some issue
-    // Maybe to some testing
 
     public IncompleteMappings(RocksDB db, ColumnFamilyHandle column) {
         this.db = db;
@@ -20,8 +18,10 @@ public class IncompleteMappings {
     }
 
     public void put(TransactionOutPoint top, List<Long> addresses) throws RocksDBException {
+        List<Long> ll = addresses.stream().map(a -> a != null ? a : -1L).collect(Collectors.toList());
+
         byte[] key = top.getHash().getBytes();
-        byte[] value = AddressConversion.longList2bytes(addresses);
+        byte[] value = AddressConversion.longList2bytes(ll);
 
         db.put(column, key, value);
     }
@@ -30,6 +30,7 @@ public class IncompleteMappings {
         byte[] key = top.getHash().getBytes();
         byte[] value = db.get(column, key);
 
-        return AddressConversion.bytes2longList(value);
+        List<Long> ll = AddressConversion.bytes2longList(value);
+        return ll.stream().map(a -> a == -1L ? null : a).collect(Collectors.toList());
     }
 }
