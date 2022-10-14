@@ -5,6 +5,7 @@ import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +14,7 @@ public class AddressConversion {
     private final RocksDB db;
     private final ColumnFamilyHandle column;
 
-    private long count = 0;
+    public long count = 0;
 
     public AddressConversion(RocksDB db, ColumnFamilyHandle column) {
         this.db = db;
@@ -22,9 +23,7 @@ public class AddressConversion {
 
     public long mapAddress(Address a) throws RocksDBException {
         byte[] key = a.getHash();
-        byte[] value;
-
-        value = db.get(column, key);
+        byte[] value = db.get(column, key);
 
         if (value == null) {
             db.put(column, key, long2bytes(count));
@@ -35,12 +34,11 @@ public class AddressConversion {
     }
 
     public static byte[] long2bytes(long l) {
-        byte[] bb = new byte[8];
+        return ByteBuffer.allocate(8).putLong(l).array();
+    }
 
-        for (int i = 0, shift = 56; i < 8; i++, shift -= 8)
-            bb[i] = (byte) (0xFF & (l >> shift));
-
-        return bb;
+    public static byte[] int2bytes(int n) {
+        return ByteBuffer.allocate(4).putInt(n).array();
     }
 
     public static byte[] trim(byte[] bb) {

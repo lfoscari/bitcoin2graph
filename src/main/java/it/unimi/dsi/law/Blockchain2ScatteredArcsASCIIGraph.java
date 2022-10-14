@@ -6,6 +6,7 @@ import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
@@ -54,8 +55,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
-        // private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
-        private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
+        private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
+        // private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
@@ -102,7 +103,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             for (TransactionInput ti : transaction.getInputs()) {
                 TransactionOutPoint top = ti.getOutpoint();
 
-                incompleteMappings.putAll(top, receivers);
+                incompleteMappings.put(top, receivers);
                 topMapping.put(top.getHash(), top);
             }
         }
@@ -118,7 +119,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 List<Long> dedupReceivers = incompleteMappings.get(top)
                         .stream()
                         .filter(Objects::nonNull)
-                        .sorted()
+                        .sorted(Long::compare)
                         .distinct() // the HashSetValuedHashMap ensures this
                         .collect(Collectors.toList());
 
