@@ -54,8 +54,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
-        private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
-        // private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
+        // private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
+        private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
@@ -102,7 +102,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             for (TransactionInput ti : transaction.getInputs()) {
                 TransactionOutPoint top = ti.getOutpoint();
 
-                incompleteMappings.put(top, receivers);
+                incompleteMappings.putAll(top, receivers);
                 topMapping.put(top.getHash(), top);
             }
         }

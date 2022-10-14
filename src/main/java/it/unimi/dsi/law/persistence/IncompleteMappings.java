@@ -25,13 +25,16 @@ public class IncompleteMappings {
         // byte[] value = AddressConversion.longList2bytes(ll);
 
         byte[] oldValue = new byte[] {};
-        // !!! la get copia in value il valore conservato nel db !!!
-        if (db.get(column, key, oldValue) != RocksDB.NOT_FOUND) {
-            byte[] newValue = AddressConversion.longList2bytes(ll);
 
-            byte[] res = Arrays.copyOf(oldValue, oldValue.length + newValue.length);
-            System.arraycopy(newValue, 0, res, oldValue.length, newValue.length);
-            oldValue = res;
+        if (db.get(column, key) != null) {
+            oldValue = db.get(column, key);
+            byte[] newValue = AddressConversion.longList2bytes(ll);
+            byte[] result = new byte[oldValue.length + newValue.length];
+
+            System.arraycopy(oldValue, 0, result, 0, oldValue.length);
+            System.arraycopy(newValue, 0, result, oldValue.length, newValue.length);
+
+            oldValue = result;
         } else {
             oldValue = AddressConversion.longList2bytes(ll);
         }
