@@ -28,7 +28,7 @@ public class PersistenceLayer implements Closeable {
     private final IncompleteMappings im;
     private final TransactionOutpointFilter tof;
 
-    public PersistenceLayer() throws RocksDBException {
+    private PersistenceLayer(String location) throws RocksDBException {
         RocksDB.loadLibrary();
 
         columnOptions = new ColumnFamilyOptions().optimizeUniversalStyleCompaction();
@@ -43,16 +43,16 @@ public class PersistenceLayer implements Closeable {
         columnFamilyHandleList = new ArrayList<>();
 
         options = new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true);
-        db = RocksDB.open(options, "/tmp/bitcoin-rocksdb", columnFamilyDescriptors, columnFamilyHandleList);
+        db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
 
         ac = new AddressConversion(db, columnFamilyHandleList.get(1));
         im = new IncompleteMappings(db, columnFamilyHandleList.get(2));
         tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(3));
     }
 
-    public static PersistenceLayer getInstance() throws RocksDBException {
+    public static PersistenceLayer getInstance(String location) throws RocksDBException {
         if (pl == null)
-            pl = new PersistenceLayer();
+            pl = new PersistenceLayer(location);
 
         return pl;
     }

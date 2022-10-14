@@ -1,24 +1,55 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.law.persistence.AddressConversion;
+import it.unimi.dsi.law.persistence.IncompleteMappings;
+import it.unimi.dsi.law.persistence.PersistenceLayer;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.TransactionOutPoint;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.extractProperty;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class PersistenceLayerUnitTest {
-    @Mock
-    TransactionOutPoint top;
+    @Mock TransactionOutPoint top;
+    @Mock Address address;
 
-    @Mock
-    Address address;
+    static PersistenceLayer pl;
+    static IncompleteMappings im;
+    static AddressConversion ac;
+
+    static RocksDB db;
+
+    @BeforeAll
+    static void setup() throws RocksDBException, NoSuchFieldException, IllegalAccessException {
+        pl = PersistenceLayer.getInstance("/tmp/testing");
+        im = pl.getIncompleteMappings();
+        ac = pl.getAddressConversion();
+
+        Field fdb = PersistenceLayer.class.getDeclaredField("db");
+        fdb.setAccessible(true);
+        db = (RocksDB) fdb.get(pl);
+    }
+
 
     @ParameterizedTest
     @MethodSource("provideLongs")
@@ -27,15 +58,62 @@ public class PersistenceLayerUnitTest {
         assertThat(AddressConversion.bytes2long(bb)).isEqualTo(l);
     }
 
-    private static Stream<Long> provideLongs() {
-        return Stream.of(4L, 5L, 6L, 7L, 1L, 0L, -4L, -100L, Long.MAX_VALUE, Long.MIN_VALUE);
-    }
-
     @ParameterizedTest
     @MethodSource("provideByteArrays")
     void convertFromBytes(byte[] bb) {
         long l = AddressConversion.bytes2long(bb);
         assertThat(AddressConversion.trim(AddressConversion.long2bytes(l))).containsExactly(bb);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideLongList")
+    void convertFromLongList(List<Long> ll) {
+        byte[] bb = AddressConversion.longList2bytes(ll);
+        assertThat(AddressConversion.bytes2longList(bb)).isEqualTo(ll);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideByteList")
+    void convertFromByteList(byte[] bb) {
+        List<Long> ll = AddressConversion.bytes2longList(bb);
+        assertThat(AddressConversion.longList2bytes(ll)).isEqualTo(bb);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideLongList")
+    void putIncompleteMapping(List<Long> ll) throws RocksDBException {
+        when(top.getHash()).thenReturn(Sha256Hash.ZERO_HASH);
+
+        im.put(top, ll);
+        assertThat(im.get(top)).containsExactlyElementsOf(ll);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideLongList")
+    void multiplePutIncompleteMapping(List<Long> ll) throws RocksDBException {
+        when(top.getHash()).thenReturn(Sha256Hash.ZERO_HASH);
+
+        List<Long> ll1 = ll.subList(0, ll.size() / 2);
+        List<Long> ll2 = ll.subList(ll.size() / 2, ll.size());
+
+        im.put(top, ll1);
+        im.put(top, ll2);
+
+        assertThat(im.get(top)).containsAll(ll);
+    }
+
+    @AfterEach
+    void cleanup() throws RocksDBException {
+        db.delete(Sha256Hash.ZERO_HASH.getBytes());
+    }
+
+    @AfterAll
+    static void teardown() {
+        pl.close();
+    }
+
+    private static Stream<Long> provideLongs() {
+        return Stream.of(4L, 5L, 6L, 7L, 1L, 0L, -4L, -100L, Long.MAX_VALUE, Long.MIN_VALUE);
     }
 
     private static Stream<byte[]> provideByteArrays() {
@@ -47,13 +125,6 @@ public class PersistenceLayerUnitTest {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("provideLongList")
-    void convertFromLongList(List<Long> ll) {
-        byte[] bb = AddressConversion.longList2bytes(ll);
-        assertThat(AddressConversion.bytes2longList(bb)).isEqualTo(ll);
-    }
-
     private static Stream<List<Long>> provideLongList() {
         return Stream.of(
                 List.of(1L, 2L, 3L, 4L, 5L),
@@ -61,13 +132,6 @@ public class PersistenceLayerUnitTest {
                 List.of(0L, 5L),
                 List.of(Long.MAX_VALUE, 1000L, 2L)
         );
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideByteList")
-    void convertFromByteList(byte[] bb) {
-        List<Long> ll = AddressConversion.bytes2longList(bb);
-        assertThat(AddressConversion.longList2bytes(ll)).isEqualTo(bb);
     }
 
     private static Stream<byte[]> provideByteList() {

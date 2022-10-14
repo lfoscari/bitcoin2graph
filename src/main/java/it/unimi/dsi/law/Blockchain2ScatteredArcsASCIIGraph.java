@@ -52,10 +52,10 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final NetworkParameters np;
         private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
 
-        private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance();
+        private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
-        // private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
-        private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
+        private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
+        // private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
         private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
@@ -98,16 +98,16 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             return outputs;
         }
 
-        private void populateMappings(Transaction transaction, List<Long> receivers) {
+        private void populateMappings(Transaction transaction, List<Long> receivers) throws RocksDBException {
             for (TransactionInput ti : transaction.getInputs()) {
                 TransactionOutPoint top = ti.getOutpoint();
 
-                incompleteMappings.putAll(top, receivers);
+                incompleteMappings.put(top, receivers);
                 topMapping.put(top.getHash(), top);
             }
         }
 
-        private void completeMappings(Transaction transaction, List<Long> senders) {
+        private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
             Sha256Hash txId = transaction.getTxId();
 
             if (!topMapping.containsKey(txId))
@@ -145,7 +145,11 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                         continue;
 
                     List<Long> outputs = outputAddressesToLongs(transaction);
-                    completeMappings(transaction, outputs);
+                    try {
+                        completeMappings(transaction, outputs);
+                    } catch (RocksDBException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
 
