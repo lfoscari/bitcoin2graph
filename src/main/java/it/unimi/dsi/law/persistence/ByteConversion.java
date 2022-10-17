@@ -1,32 +1,36 @@
 package it.unimi.dsi.law.persistence;
 
-import java.nio.ByteBuffer;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class ByteConversion {
     public static byte[] long2bytes(long l) {
-        return ByteBuffer.allocate(8).putLong(l).array();
+        return Longs.toByteArray(l);
     }
 
     public static byte[] int2bytes(int n) {
-        return ByteBuffer.allocate(4).putInt(n).array();
+        return Ints.toByteArray(n);
     }
 
-    public static byte[] trim(byte[] bb) {
-        int z = 0;
-        while(z < 8 && bb[z++] == 0);
-        return Arrays.copyOfRange(bb, z - 1, 8);
+    public static int bytes2int(byte[] bb) {
+        if (bb.length > 4)
+            throw new ArithmeticException("byte array too big to be an integer");
+
+        bb = Bytes.ensureCapacity(bb, 4, 0);
+        return Ints.fromBytes(bb[0], bb[1], bb[2], bb[3]);
     }
 
     public static long bytes2long(byte[] bb) {
-        long n = 0L;
-        for (byte b : bb) {
-            n <<= 8;
-            n |= (b & 0xff);
-        }
-        return n;
+        if (bb.length > 8)
+            throw new ArithmeticException("byte array too big to be a long");
+
+        bb = Bytes.ensureCapacity(bb, 8, 0);
+        return Longs.fromBytes(bb[0], bb[1], bb[2], bb[3], bb[4], bb[5], bb[6], bb[7]);
     }
 
     public static byte[] longList2bytes(List<Long> ll) {
@@ -50,14 +54,5 @@ public class ByteConversion {
         }
 
         return l;
-    }
-
-    public static byte[] concat(byte[] aa, byte[] bb) {
-        byte[] result = new byte[aa.length + bb.length];
-
-        System.arraycopy(aa, 0, result, 0, aa.length);
-        System.arraycopy(bb, 0, result, aa.length, bb.length);
-
-        return result;
     }
 }

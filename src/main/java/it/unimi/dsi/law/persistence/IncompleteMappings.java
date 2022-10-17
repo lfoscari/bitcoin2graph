@@ -1,5 +1,6 @@
 package it.unimi.dsi.law.persistence;
 
+import com.google.common.primitives.Bytes;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
@@ -21,7 +22,7 @@ public class IncompleteMappings {
         List<Long> ll = addresses.stream().map(a -> a != null ? a : -1L).collect(Collectors.toList());
 
         byte[] key = ByteConversion.int2bytes(top.hashCode());
-        byte[] value = ByteConversion.concat(ByteConversion.longList2bytes(ll), ByteConversion.longList2bytes(get(top)));
+        byte[] value = Bytes.concat(ByteConversion.longList2bytes(ll), ByteConversion.longList2bytes(get(top)));
 
         db.put(column, key, value);
     }
