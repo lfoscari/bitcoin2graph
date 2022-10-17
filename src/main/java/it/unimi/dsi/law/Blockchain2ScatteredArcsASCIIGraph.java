@@ -59,8 +59,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
         private final TransactionOutpointFilter topFilter = persistenceLayer.getTransactionOutpointFilter();
 
-        // private final MultiValuedMap<TransactionOutPoint, Long> incompleteMappings = new HashSetValuedHashMap<>();
-        // private final MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
+        private final Long COINBASE_ADDRESS = 0L;
 
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
             this.np = np;
@@ -72,11 +71,13 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     continue;
 
                 for (Transaction transaction : block.getTransactions()) {
-                    if (transaction.isCoinBase())
-                        continue;
-
                     List<Long> outputs = outputAddressesToLongs(transaction);
-                    populateMappings(transaction, outputs);
+
+                    if (transaction.isCoinBase()) {
+                        addCoinbaseArcs(outputs);
+                    } else {
+                        populateMappings(transaction, outputs);
+                    }
                 }
             }
 
@@ -92,7 +93,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     Long receiverLong = addressConversion.mapAddress(receiver);
                     outputs.add(receiverLong);
                 } catch (ScriptException e) {
-                    outputs.add(-1L); // Don't mess up the indexing
+                    outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
                     System.out.println(e.getMessage() + " at " + t.getTxId());
                 } catch (RocksDBException e) {
                     throw new RuntimeException(e);
@@ -108,6 +109,12 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
                 incompleteMappings.put(top, receivers);
                 topFilter.put(top.getHash(), top);
+            }
+        }
+
+        private void addCoinbaseArcs(List<Long> receivers) {
+            for (Long receiver : receivers) {
+                transactionArcs.add(new long[] {COINBASE_ADDRESS, receiver});
             }
         }
 

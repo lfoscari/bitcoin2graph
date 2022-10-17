@@ -9,7 +9,7 @@ public class AddressConversion {
     private final RocksDB db;
     private final ColumnFamilyHandle column;
 
-    public long count = 0;
+    public long count = 1;
 
     public AddressConversion(RocksDB db, ColumnFamilyHandle column) {
         this.db = db;
