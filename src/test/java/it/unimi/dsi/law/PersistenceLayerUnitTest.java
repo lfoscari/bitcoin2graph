@@ -1,8 +1,6 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.law.persistence.AddressConversion;
-import it.unimi.dsi.law.persistence.IncompleteMappings;
-import it.unimi.dsi.law.persistence.PersistenceLayer;
+import it.unimi.dsi.law.persistence.*;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -21,15 +19,11 @@ import org.rocksdb.*;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.extractProperty;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,8 +34,10 @@ public class PersistenceLayerUnitTest {
     static PersistenceLayer pl;
     static IncompleteMappings im;
     static AddressConversion ac;
+    static TransactionOutpointFilter tof;
 
     static RocksDB db;
+    static List<ColumnFamilyHandle> columns;
 
     @BeforeAll
     static void setup() throws RocksDBException, NoSuchFieldException, IllegalAccessException, IOException {
@@ -56,34 +52,50 @@ public class PersistenceLayerUnitTest {
 
         im = pl.getIncompleteMappings();
         ac = pl.getAddressConversion();
+        tof = pl.getTransactionOutpointFilter();
+
+        columns = List.of(
+            (ColumnFamilyHandle) extract(ac, "column"),
+            (ColumnFamilyHandle) extract(im, "column"),
+            (ColumnFamilyHandle) extract(tof, "column")
+        );
     }
 
     @ParameterizedTest
     @MethodSource("provideLongs")
     void convertFromLong(long l) {
-        byte[] bb = AddressConversion.long2bytes(l);
-        assertThat(AddressConversion.bytes2long(bb)).isEqualTo(l);
+        byte[] bb = ByteConversion.long2bytes(l);
+        assertThat(ByteConversion.bytes2long(bb)).isEqualTo(l);
     }
 
     @ParameterizedTest
     @MethodSource("provideByteArrays")
     void convertFromBytes(byte[] bb) {
-        long l = AddressConversion.bytes2long(bb);
-        assertThat(AddressConversion.trim(AddressConversion.long2bytes(l))).containsExactly(bb);
+        long l = ByteConversion.bytes2long(bb);
+        assertThat(ByteConversion.trim(ByteConversion.long2bytes(l))).containsExactly(bb);
     }
 
     @ParameterizedTest
     @MethodSource("provideLongList")
     void convertFromLongList(List<Long> ll) {
-        byte[] bb = AddressConversion.longList2bytes(ll);
-        assertThat(AddressConversion.bytes2longList(bb)).isEqualTo(ll);
+        byte[] bb = ByteConversion.longList2bytes(ll);
+        assertThat(ByteConversion.bytes2longList(bb)).isEqualTo(ll);
     }
 
     @ParameterizedTest
     @MethodSource("provideByteList")
     void convertFromByteList(byte[] bb) {
-        List<Long> ll = AddressConversion.bytes2longList(bb);
-        assertThat(AddressConversion.longList2bytes(ll)).isEqualTo(bb);
+        List<Long> ll = ByteConversion.bytes2longList(bb);
+        assertThat(ByteConversion.longList2bytes(ll)).isEqualTo(bb);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideByteArrays")
+    void concatenationByteArray(byte[] bb) {
+        byte[] bba = Arrays.copyOfRange(bb, 0, bb.length / 2);
+        byte[] bbb = Arrays.copyOfRange(bb, bb.length / 2, bb.length);
+
+        assertThat(ByteConversion.concat(bba, bbb)).isEqualTo(bb);
     }
 
     @ParameterizedTest
@@ -104,7 +116,7 @@ public class PersistenceLayerUnitTest {
         im.put(top_a, ll1);
         im.put(top_a, ll2);
 
-        assertThat(im.get(top_a)).containsExactly(ll.toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactlyInAnyOrder(ll.toArray(new Long[0]));
     }
 
     @ParameterizedTest
@@ -120,16 +132,21 @@ public class PersistenceLayerUnitTest {
         assertThat(im.get(top_a)).containsExactly(ll.toArray(new Long[0]));
     }
 
-    @Test
-    void consistencyAddressConversion() throws RocksDBException {
-        when(addr_a.getHash()).thenReturn(intToHash(35).getBytes());
-        when(addr_b.getHash()).thenReturn(intToHash(42).getBytes());
+    @ParameterizedTest
+    @MethodSource("provideIntList")
+    void consistencyAddressConversion(List<Integer> ii) throws RocksDBException {
+        // Ci sono problemi a ripulire il DB!
 
-        long ai = ac.mapAddress(addr_a);
-        long bi = ac.mapAddress(addr_b);
+        Set<Long> ids = new HashSet<>();
+        for (int i : ii) {
+            when(addr_a.getHash()).thenReturn(intToHash(i).getBytes());
+            // System.out.println(i + " -> " + intToHash(i) + " -> " + Arrays.toString(intToHash(i).getBytes()));
+            ids.add(ac.mapAddress(addr_a));
+        }
 
-        assertThat(ac).extracting("count").isEqualTo(2L);
-        assertThat(ai).isNotEqualTo(bi);
+        assertThat(ac).extracting("count")
+                .isEqualTo((long) ids.size())
+                .isEqualTo(ii.stream().distinct().count());
     }
 
     @Test
@@ -218,26 +235,12 @@ public class PersistenceLayerUnitTest {
     }
 
     @AfterEach
-    void cleanup() throws NoSuchFieldException, IllegalAccessException, RocksDBException {
-        Field fc = IncompleteMappings.class.getDeclaredField("column");
-        fc.setAccessible(true);
-        ColumnFamilyHandle column = (ColumnFamilyHandle) fc.get(im);
+    void cleanup() throws RocksDBException {
+        for (ColumnFamilyHandle column : columns)
+            for(RocksIterator it = db.newIterator(column); it.isValid(); it.next())
+                db.delete(column, it.key());
 
-        db.delete(column, intToHash(35).getBytes());
-        db.delete(column, intToHash(42).getBytes());
-        db.delete(column, intToHash(65).getBytes());
-
-        fc = AddressConversion.class.getDeclaredField("column");
-        fc.setAccessible(true);
-        column = (ColumnFamilyHandle) fc.get(ac);
-
-        db.delete(column, intToHash(35).getBytes());
-        db.delete(column, intToHash(42).getBytes());
-        db.delete(column, intToHash(65).getBytes());
-
-        fc = AddressConversion.class.getDeclaredField("count");
-        fc.setAccessible(true);
-        fc.set(ac, 0L);
+        ac.count = 0;
     }
 
     @AfterAll
@@ -251,6 +254,17 @@ public class PersistenceLayerUnitTest {
 
     private static Stream<Long> provideLongs() {
         return Stream.of(4L, 5L, 6L, 7L, 1L, 0L, -4L, -100L, Long.MAX_VALUE, Long.MIN_VALUE);
+    }
+
+    private static Stream<List<Integer>> provideIntList() {
+        return Stream.of(
+                List.of(1, 2, -3, 4, 5),
+                List.of(),
+                List.of(10),
+                List.of(0, -5, 4, Integer.MIN_VALUE),
+                List.of(Integer.MAX_VALUE, 1000, 2),
+                List.of(1, -4, 3, 4, 4)
+        );
     }
 
     private static Stream<byte[]> provideByteArrays() {
@@ -282,12 +296,18 @@ public class PersistenceLayerUnitTest {
 
     private static Stream<byte[]> provideByteList() {
         return Stream.of(
-                AddressConversion.longList2bytes(List.of()),
-                AddressConversion.longList2bytes(List.of(1L, 2L, 3L, 4L, 5L, 3L, 4L, 5L)),
-                AddressConversion.longList2bytes(List.of(0L, -5L, 0L, -5L, 0L, -5L, 0L, -5L)),
-                AddressConversion.longList2bytes(List.of(-1000L, -1L, -1000L, -1L, -1000L, -1L, -1000L, -1L)),
-                AddressConversion.longList2bytes(List.of(Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE,
+                ByteConversion.longList2bytes(List.of()),
+                ByteConversion.longList2bytes(List.of(1L, 2L, 3L, 4L, 5L, 3L, 4L, 5L)),
+                ByteConversion.longList2bytes(List.of(0L, -5L, 0L, -5L, 0L, -5L, 0L, -5L)),
+                ByteConversion.longList2bytes(List.of(-1000L, -1L, -1000L, -1L, -1000L, -1L, -1000L, -1L)),
+                ByteConversion.longList2bytes(List.of(Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE,
                         Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE))
         );
+    }
+
+    private static Object extract(Object src, String fld) throws NoSuchFieldException, IllegalAccessException {
+        Field f = src.getClass().getDeclaredField(fld);
+        f.setAccessible(true);
+        return f.get(src);
     }
 }
