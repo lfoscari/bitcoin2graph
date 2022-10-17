@@ -19,10 +19,8 @@ public class IncompleteMappings {
     }
 
     public void put(TransactionOutPoint top, List<Long> addresses) throws RocksDBException {
-        List<Long> ll = addresses.stream().map(a -> a != null ? a : -1L).collect(Collectors.toList());
-
         byte[] key = ByteConversion.int2bytes(top.hashCode());
-        byte[] value = Bytes.concat(ByteConversion.longList2bytes(ll), ByteConversion.longList2bytes(get(top)));
+        byte[] value = Bytes.concat(ByteConversion.longList2bytes(addresses), ByteConversion.longList2bytes(get(top)));
 
         db.put(column, key, value);
     }
@@ -33,7 +31,6 @@ public class IncompleteMappings {
 
         if (value == null) return List.of();
 
-        List<Long> ll = ByteConversion.bytes2longList(value);
-        return ll.stream().map(a -> a == -1L ? null : a).collect(Collectors.toList());
+        return ByteConversion.bytes2longList(value);
     }
 }

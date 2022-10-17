@@ -26,11 +26,15 @@ public class TransactionOutpointFilter {
         this.column = column;
     }
 
-    public void put(Sha256Hash hash, TransactionOutPoint top) throws RocksDBException, IOException {
+    public void put(Sha256Hash hash, TransactionOutPoint top) throws RocksDBException {
         byte[] key = hash.getBytes();
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        top.bitcoinSerialize(bos);
+        try {
+            top.bitcoinSerialize(bos);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         byte[] value = bos.toByteArray();
 
         if (db.get(column, key) != null)
@@ -42,6 +46,8 @@ public class TransactionOutpointFilter {
     public List<TransactionOutPoint> get(Sha256Hash hash) throws RocksDBException {
         byte[] key = hash.getBytes();
         byte[] value = db.get(column, key);
+
+        if (value == null) return List.of();
 
         return deserialize(value);
     }
