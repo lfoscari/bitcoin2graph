@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
@@ -29,7 +28,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class PersistenceLayerUnitTest {
     @Mock TransactionOutPoint top_a, top_b, top_c;
-    @Mock Address addr_a, addr_b, addr_c;
+    @Mock Address addr;
 
     static PersistenceLayer pl;
     static IncompleteMappings im;
@@ -108,40 +107,33 @@ public class PersistenceLayerUnitTest {
     @ParameterizedTest
     @MethodSource("provideLongList")
     void multiplePutIncompleteMapping(List<Long> ll) throws RocksDBException {
-        assertThat(im.get(top_a)).isNullOrEmpty();
-
         List<Long> ll1 = ll.subList(0, ll.size() / 2);
         List<Long> ll2 = ll.subList(ll.size() / 2, ll.size());
 
         im.put(top_a, ll1);
         im.put(top_a, ll2);
 
-        assertThat(im.get(top_a)).containsExactlyInAnyOrder(ll.toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactlyInAnyOrder(ll.toArray(Long[]::new));
     }
 
     @ParameterizedTest
     @MethodSource("provideLongList")
     void multipleEmptyPutIncompleteMapping(List<Long> ll) throws RocksDBException {
-        assertThat(im.get(top_a)).isNullOrEmpty();
-
         im.put(top_a, ll);
         im.put(top_a, List.of());
         im.put(top_a, List.of());
         im.put(top_a, List.of());
 
-        assertThat(im.get(top_a)).containsExactly(ll.toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactly(ll.toArray(Long[]::new));
     }
 
     @ParameterizedTest
     @MethodSource("provideIntList")
     void consistencyAddressConversion(List<Integer> ii) throws RocksDBException {
-        // Ci sono problemi a ripulire il DB!
-
         Set<Long> ids = new HashSet<>();
         for (int i : ii) {
-            when(addr_a.getHash()).thenReturn(intToHash(i).getBytes());
-            // System.out.println(i + " -> " + intToHash(i) + " -> " + Arrays.toString(intToHash(i).getBytes()));
-            ids.add(ac.mapAddress(addr_a));
+            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
+            ids.add(ac.mapAddress(addr));
         }
 
         assertThat(ac).extracting("count")
@@ -149,20 +141,22 @@ public class PersistenceLayerUnitTest {
                 .isEqualTo(ii.stream().distinct().count());
     }
 
-    @Test
-    void consistencySingleAddressConversion() throws RocksDBException {
-        when(addr_a.getHash()).thenReturn(intToHash(35).getBytes());
+    @ParameterizedTest
+    @MethodSource("provideIntList")
+    void consistencySingleAddressConversion(List<Integer> ii) throws RocksDBException {
+        Set<Long> firstMapping = new HashSet<>();
+        for (int i : ii) {
+            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
+            firstMapping.add(ac.mapAddress(addr));
+        }
 
-        long ai = ac.mapAddress(addr_a);
-        assertThat(ai).isEqualTo(ac.mapAddress(addr_a));
-    }
+        Set<Long> recallMapping = new HashSet<>();
+        for (int i : ii) {
+            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
+            recallMapping.add(ac.mapAddress(addr));
+        }
 
-    @Test
-    void multipleAddressConversion() throws RocksDBException {
-        when(addr_a.getHash()).thenReturn(intToHash(35).getBytes());
-
-        long ai = ac.mapAddress(addr_a);
-        assertThat(ai).isEqualTo(0L);
+        assertThat(firstMapping).containsExactly(recallMapping.toArray(Long[]::new));
     }
 
     @ParameterizedTest
@@ -177,9 +171,9 @@ public class PersistenceLayerUnitTest {
         im.put(top_b, ll);
         im.put(top_c, ll);
 
-        assertThat(im.get(top_a)).containsExactly(ll.toArray(new Long[0]));
-        assertThat(im.get(top_b)).containsExactly(ll.toArray(new Long[0]));
-        assertThat(im.get(top_c)).containsExactly(ll.toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactly(ll.toArray(Long[]::new));
+        assertThat(im.get(top_b)).containsExactly(ll.toArray(Long[]::new));
+        assertThat(im.get(top_c)).containsExactly(ll.toArray(Long[]::new));
     }
 
     @ParameterizedTest
@@ -198,7 +192,7 @@ public class PersistenceLayerUnitTest {
         lll.addAll(ll);
         lll.addAll(ll);
 
-        assertThat(im.get(top_a)).containsExactly(lll.toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactly(lll.toArray(Long[]::new));
     }
 
     @ParameterizedTest
@@ -215,12 +209,9 @@ public class PersistenceLayerUnitTest {
         im.put(top_b, l2);
         im.put(top_c, l3);
 
-        System.out.println(im.get(top_a));
-        System.out.println(mvm.get(top_a));
-
-        assertThat(im.get(top_a)).containsExactlyInAnyOrder(mvm.get(top_a).toArray(new Long[0]));
-        assertThat(im.get(top_b)).containsExactlyInAnyOrder(mvm.get(top_b).toArray(new Long[0]));
-        assertThat(im.get(top_c)).containsExactlyInAnyOrder(mvm.get(top_c).toArray(new Long[0]));
+        assertThat(im.get(top_a)).containsExactlyInAnyOrder(mvm.get(top_a).toArray(Long[]::new));
+        assertThat(im.get(top_b)).containsExactlyInAnyOrder(mvm.get(top_b).toArray(Long[]::new));
+        assertThat(im.get(top_c)).containsExactlyInAnyOrder(mvm.get(top_c).toArray(Long[]::new));
     }
 
     @ParameterizedTest
@@ -236,9 +227,15 @@ public class PersistenceLayerUnitTest {
 
     @AfterEach
     void cleanup() throws RocksDBException {
-        for (ColumnFamilyHandle column : columns)
-            for(RocksIterator it = db.newIterator(column); it.isValid(); it.next())
+        for (ColumnFamilyHandle column : columns) {
+            RocksIterator it = db.newIterator(column);
+            it.seekToFirst();
+
+            while (it.isValid()) {
                 db.delete(column, it.key());
+                it.next();
+            }
+        }
 
         ac.count = 0;
     }
