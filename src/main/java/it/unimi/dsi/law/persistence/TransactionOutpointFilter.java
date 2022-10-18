@@ -48,19 +48,17 @@ public class TransactionOutpointFilter {
 
     public List<TransactionOutPoint> deserialize(byte[] bb) {
         List<TransactionOutPoint> results = new ArrayList<>();
-        for (int i = 0; i < bb.length; i += 36) {
-            byte[] s = Arrays.copyOfRange(bb, i, i + 36);
-            results.add(deserializeOne(s));
-        }
+        for (int i = 0; i < bb.length; i += 36)
+            results.add(deserializeOne(bb, i, i + 36));
         return results;
     }
 
-    public TransactionOutPoint deserializeOne(byte[] bb) {
+    public TransactionOutPoint deserializeOne(byte[] bb, int from, int to) {
         NetworkParameters np = new MainNetParams();
 
         // 32 byte (hash) | 4 byte (index)
-        Sha256Hash hash = Sha256Hash.wrapReversed(Arrays.copyOf(bb, 32));
-        int index = ByteConversion.bytes2int(Arrays.reverse(Arrays.copyOfRange(bb, 32, bb.length)));
+        Sha256Hash hash = Sha256Hash.wrapReversed(Arrays.copyOfRange(bb, from, from + 32));
+        int index = ByteConversion.bytes2int(Arrays.reverse(Arrays.copyOfRange(bb, from + 32, to)));
 
         return new TransactionOutPoint(np, index, hash);
     }

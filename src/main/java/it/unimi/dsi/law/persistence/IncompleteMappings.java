@@ -20,7 +20,11 @@ public class IncompleteMappings {
 
     public void put(TransactionOutPoint top, List<Long> addresses) throws RocksDBException {
         byte[] key = ByteConversion.int2bytes(top.hashCode());
-        byte[] value = Bytes.concat(ByteConversion.longList2bytes(addresses), ByteConversion.longList2bytes(get(top)));
+        byte[] value = ByteConversion.longList2bytes(addresses);
+
+        byte[] old = db.get(column, key);
+        if (old != null)
+            value = Bytes.concat(value, old);
 
         db.put(column, key, value);
     }
@@ -29,7 +33,8 @@ public class IncompleteMappings {
         byte[] key = ByteConversion.int2bytes(top.hashCode());
         byte[] value = db.get(column, key);
 
-        if (value == null) return List.of();
+        if (value == null)
+            return List.of();
 
         return ByteConversion.bytes2longList(value);
     }

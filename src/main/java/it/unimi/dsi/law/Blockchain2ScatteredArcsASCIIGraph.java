@@ -39,7 +39,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, 10, TimeUnit.SECONDS, "blocks");
 
-        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile, progress);
+        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources, progress);
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
 
@@ -70,7 +70,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private final Long COINBASE_ADDRESS = 0L;
 
-        public CustomBlockchainIterator(String blockfilePath, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
+        public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
             this.progress = progress;
 
@@ -79,11 +79,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
             progress.start("First pass to populate mappings");
 
-            List<File> blockchainFiles = List.of(new File(blockfilePath));
-            // File blockchainDirectory = new File(...);
-
-            BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainFiles);
-            // BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
+            File blockchainDirectory = new File(blockfilesDirectory);
+            BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
 
             for (Block block : bflTemp) {
                 progress.update();
@@ -105,7 +102,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             progress.stop("Done populating the mappings of " + progress.count + " total blocks in " + progress.millis() / 1000  + " seconds");
             progress.start("Second pass to complete the mappings");
 
-            this.bfl = new BlockFileLoader(np, blockchainFiles);
+            this.bfl = new BlockFileLoader(np, blockchainDirectory);
         }
 
         List<Long> outputAddressesToLongs(Transaction t) {
