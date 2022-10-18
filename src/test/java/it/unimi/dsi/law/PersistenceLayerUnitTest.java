@@ -3,10 +3,8 @@ package it.unimi.dsi.law;
 import com.google.common.primitives.Bytes;
 import it.unimi.dsi.law.persistence.*;
 import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.keyvalue.DefaultMapEntry;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.assertj.core.data.MapEntry;
 import org.assertj.core.util.Files;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
@@ -22,10 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.rocksdb.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
@@ -34,7 +30,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class PersistenceLayerUnitTest {
     @Mock TransactionOutPoint top_a, top_b, top_c;
-    @Mock Sha256Hash sha_a, sha_b, sha_c;
     @Mock Address addr;
 
     static PersistenceLayer pl;
@@ -46,7 +41,7 @@ public class PersistenceLayerUnitTest {
     static List<ColumnFamilyHandle> columns;
 
     @BeforeAll
-    static void setup() throws RocksDBException, NoSuchFieldException, IllegalAccessException, IOException {
+    static void setup() throws RocksDBException, NoSuchFieldException, IllegalAccessException {
         File temp = Files.newTemporaryFolder();
         temp.deleteOnExit();
 
@@ -230,7 +225,7 @@ public class PersistenceLayerUnitTest {
 
     @ParameterizedTest
     @MethodSource("provideInts")
-    void transactionOutpointFilter(Integer n) throws RocksDBException, IOException {
+    void transactionOutpointFilter(Integer n) throws RocksDBException {
         if (n <= 0) n = 1 - n;
 
         Sha256Hash key = intToHash(n);
@@ -261,7 +256,7 @@ public class PersistenceLayerUnitTest {
 
     @ParameterizedTest
     @MethodSource("provideIntList")
-    void multiValuedMapTransactionOutpointFilterComparison(List<Integer> ln) throws RocksDBException, IOException {
+    void multiValuedMapTransactionOutpointFilterComparison(List<Integer> ln) throws RocksDBException {
         MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
 
         for (int i = 0; i < ln.size(); i++) {

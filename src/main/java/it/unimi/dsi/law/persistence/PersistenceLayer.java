@@ -1,10 +1,5 @@
 package it.unimi.dsi.law.persistence;
 
-import org.apache.commons.math3.ml.neuralnet.Network;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.params.MainNetParams;
 import org.rocksdb.*;
 
 import java.io.Closeable;
@@ -72,17 +67,10 @@ public class PersistenceLayer implements Closeable {
     public void close() {
         for (final ColumnFamilyHandle columnFamilyHandle : columnFamilyHandleList)
             columnFamilyHandle.close();
+        columnFamilyHandleList.forEach(ColumnFamilyHandle::close);
 
         options.close();
         db.close();
         columnOptions.close();
     }
-
-    /* public static void main(String[] args) throws RocksDBException {
-        PersistenceLayer pl = PersistenceLayer.getInstance();
-        IncompleteMappings im = pl.getIncompleteMappings();
-
-        im.put("ciao", List.of(1L, 2L, 3L));
-        System.out.println(im.get("ciao"));
-    } */
 }

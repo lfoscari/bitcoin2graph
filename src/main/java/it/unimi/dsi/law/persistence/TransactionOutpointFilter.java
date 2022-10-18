@@ -1,10 +1,8 @@
 package it.unimi.dsi.law.persistence;
 
 import com.google.common.primitives.Bytes;
-import org.apache.commons.lang3.SerializationUtils;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.params.MainNetParams;
 import org.bouncycastle.util.Arrays;
@@ -12,11 +10,8 @@ import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
-import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class TransactionOutpointFilter {
     private final RocksDB db;
@@ -29,14 +24,7 @@ public class TransactionOutpointFilter {
 
     public void put(Sha256Hash hash, TransactionOutPoint top) throws RocksDBException {
         byte[] key = hash.getBytes();
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try {
-            top.bitcoinSerialize(bos);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        byte[] value = bos.toByteArray();
+        byte[] value = top.bitcoinSerialize();
 
         if (db.get(column, key) != null)
              value = Bytes.concat(value, db.get(column, key));
@@ -48,7 +36,8 @@ public class TransactionOutpointFilter {
         byte[] key = hash.getBytes();
         byte[] value = db.get(column, key);
 
-        if (value == null) return List.of();
+        if (value == null)
+            return List.of();
 
         return deserialize(value);
     }

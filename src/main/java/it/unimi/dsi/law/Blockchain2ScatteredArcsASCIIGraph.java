@@ -4,55 +4,59 @@ import it.unimi.dsi.law.persistence.AddressConversion;
 import it.unimi.dsi.law.persistence.IncompleteMappings;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
+import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
-import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
-import org.bitcoinj.utils.BriefLogFormatter;
 import org.rocksdb.RocksDBException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     public final NetworkParameters np;
     public final String blockfilePath;
+    private final ProgressLogger progress;
 
-    public Blockchain2ScatteredArcsASCIIGraph(String blockfilePath) {
+    public Blockchain2ScatteredArcsASCIIGraph(String blockfilePath, ProgressLogger progress) {
         this.blockfilePath = blockfilePath;
         this.np = new MainNetParams();
+        this.progress = progress;
 
-        BriefLogFormatter.init();
         new Context(this.np);
     }
 
     public static void main(String[] args) throws IOException {
-        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile);
-        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 1000, null, null);
-        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+        Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
+        ProgressLogger progress = new ProgressLogger(logger, 10, TimeUnit.SECONDS, "blocks");
+
+        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile, progress);
+        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
+        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
         System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
     }
 
     @Override
     public Iterator<long[]> iterator() {
         try {
-            return new CustomBlockchainIterator<long[]>(blockfilePath, np);
+            return new CustomBlockchainIterator<long[]>(blockfilePath, np, progress);
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
     }
 
     private static class CustomBlockchainIterator<T> implements Iterator<long[]> {
-        private final BlockFileLoader bfl;
         private final NetworkParameters np;
+        private final ProgressLogger progress;
+
+        private final BlockFileLoader bfl;
         private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
 
         private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
@@ -62,17 +66,24 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private final Long COINBASE_ADDRESS = 0L;
 
-        public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
+        public CustomBlockchainIterator(String blockfilePath, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
+            this.progress = progress;
+
+            progress.displayFreeMemory = true;
+            progress.displayLocalSpeed = true;
+
+            progress.start("First pass to populate mappings");
 
             List<File> blockchainFiles = List.of(new File(blockfilePath));
             // File blockchainDirectory = new File(...);
 
-            // First pass to populate mappings
             BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainFiles);
             // BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
 
             for (Block block : bflTemp) {
+                progress.update();
+
                 if (!block.hasTransactions())
                     continue;
 
@@ -87,6 +98,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 }
             }
 
+            progress.stop("Done populating the mappings of " + progress.count + " total blocks in " + progress.millis() / 1000  + " seconds");
+            progress.start("Second pass to complete the mappings");
+
             this.bfl = new BlockFileLoader(np, blockchainFiles);
         }
 
@@ -100,7 +114,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     outputs.add(receiverLong);
                 } catch (ScriptException e) {
                     outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
-                    System.out.println(e.getMessage() + " at " + t.getTxId());
+                    // System.out.println(e.getMessage() + " at " + t.getTxId());
                 } catch (RocksDBException e) {
                     throw new RuntimeException(e);
                 }
@@ -147,6 +161,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         @Override
         public boolean hasNext() {
             while (bfl.hasNext()) {
+                progress.update();
+
                 if (!transactionArcs.isEmpty())
                     return true;
 
@@ -167,6 +183,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     }
                 }
             }
+
+            progress.stop("Done completing the mappings in " + progress.millis() / 1000  + " seconds");
+            progress.done();
 
             persistenceLayer.close();
             return false;
