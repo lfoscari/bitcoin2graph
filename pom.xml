@@ -16,19 +16,6 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
-
-                    <compilerArgs>
-                        <arg>-server</arg>
-                        <arg>-Xss256K</arg>
-                        <arg>-Xms100G</arg>
-                        <arg>-XX:PretenureSizeThreshold=512M</arg>
-                        <arg>-XX:MaxNewSize=4G</arg>
-                        <arg>-XX:+UseConcMarkSweepGC</arg>
-                        <arg>-XX:CMSInitiatingOccupancyFraction=99</arg>
-                        <arg>-XX:+UseCMSInitiatingOccupancyOnly</arg>
-                        <arg>-verbose:gc</arg>
-                        <arg>-Xloggc:gc.log</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>
