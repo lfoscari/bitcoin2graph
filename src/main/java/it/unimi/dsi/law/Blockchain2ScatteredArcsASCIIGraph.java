@@ -34,16 +34,17 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     }
 
     public static void main(String[] args) throws IOException {
+        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
+
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, 10, TimeUnit.SECONDS, "blocks");
 
         Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile, progress);
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
-
-        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
-
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
-        System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+
+        progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
+        progress.done();
     }
 
     @Override
@@ -188,7 +189,6 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             }
 
             progress.stop("Done completing the mappings in " + progress.millis() / 1000  + " seconds");
-            progress.done();
 
             persistenceLayer.close();
             return false;
