@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes;
 import org.apache.commons.lang3.SerializationUtils;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.params.MainNetParams;
 import org.bouncycastle.util.Arrays;
@@ -50,6 +51,10 @@ public class TransactionOutpointFilter {
         if (value == null) return List.of();
 
         return deserialize(value);
+    }
+
+    public boolean containsKeys(Sha256Hash hash) throws RocksDBException {
+        return db.get(column, hash.getBytes()) != null;
     }
 
     public List<TransactionOutPoint> deserialize(byte[] bb) {

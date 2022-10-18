@@ -229,17 +229,6 @@ public class PersistenceLayerUnitTest {
     }
 
     @ParameterizedTest
-    @MethodSource("provideLongList")
-    void distinctLongList(List<Long> ll) throws RocksDBException {
-        List<Long> ll_mut = new ArrayList<>(ll);
-        ll_mut.add(null);
-
-        im.put(top_a, ll_mut);
-        assertThat(im.get(top_a).stream().filter(Objects::nonNull).distinct().toArray())
-                .containsExactlyInAnyOrder(ll_mut.stream().filter(Objects::nonNull).distinct().toArray());
-    }
-
-    @ParameterizedTest
     @MethodSource("provideInts")
     void transactionOutpointFilter(Integer n) throws RocksDBException, IOException {
         if (n <= 0) n = 1 - n;
@@ -254,9 +243,8 @@ public class PersistenceLayerUnitTest {
 
     @ParameterizedTest
     @MethodSource("provideInts")
-    void multipleTransactionOutpointFilter(Integer n) throws RocksDBException, IOException {
-        if (n <= 0) n = 1 - n;
-        if (n > 100 || n < -100) n = 50;
+    void multipleTransactionOutpointFilter(Integer n) throws RocksDBException {
+        if (n <= 0 || n > 100) n = 1 - (n % 100);
 
         Sha256Hash key = intToHash(n);
         NetworkParameters np = new MainNetParams();

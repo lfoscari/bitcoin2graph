@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     public final NetworkParameters np;
@@ -64,8 +65,13 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         public CustomBlockchainIterator(String blockfilePath, NetworkParameters np) throws RocksDBException {
             this.np = np;
 
+            List<File> blockchainFiles = List.of(new File(blockfilePath));
+            // File blockchainDirectory = new File(...);
+
             // First pass to populate mappings
-            BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(new File(blockfilePath)));
+            BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainFiles);
+            // BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
+
             for (Block block : bflTemp) {
                 if (!block.hasTransactions())
                     continue;
@@ -81,7 +87,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 }
             }
 
-            this.bfl = new BlockFileLoader(np, List.of(new File(blockfilePath)));
+            this.bfl = new BlockFileLoader(np, blockchainFiles);
         }
 
         List<Long> outputAddressesToLongs(Transaction t) {
@@ -113,30 +119,28 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         private void addCoinbaseArcs(List<Long> receivers) {
-            for (Long receiver : receivers) {
+            for (Long receiver : receivers)
                 transactionArcs.add(new long[] {COINBASE_ADDRESS, receiver});
-            }
         }
 
         private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
             Sha256Hash txId = transaction.getTxId();
 
-            if (topFilter.get(txId).isEmpty())
+            if (!topFilter.containsKeys(txId))
                 return;
 
             for (TransactionOutPoint top : topFilter.get(txId)) {
                 int index = (int) top.getIndex();
-                List<Long> dedupReceivers = incompleteMappings.get(top)
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .sorted(Long::compare)
-                        .distinct() // the HashSetValuedHashMap ensures this
-                        .collect(Collectors.toList());
+                Long sender = senders.get(index);
 
-                for (Long receiver : dedupReceivers) {
-                    Long sender = senders.get(index);
-                    transactionArcs.add(new long[]{sender, receiver});
-                }
+                incompleteMappings
+                    .get(top)
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .unordered()
+                    .distinct() // multigraph -> graph
+                    .map(receiver -> new long[]{sender, receiver})
+                    .forEach(transactionArcs::add);
             }
         }
 
