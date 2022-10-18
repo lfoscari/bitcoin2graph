@@ -39,6 +39,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources + Parameters.blockfile, progress);
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
+
+        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
+
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
         System.out.println("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
     }
