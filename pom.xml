@@ -29,6 +29,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <exec.mainClass>it.unimi.dsi.law.Blockchain2ScatteredArcsASCIIGraph</exec.mainClass>
+        <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
     </properties>
 
     <dependencies>
