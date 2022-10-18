@@ -7,11 +7,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-// TODO: implement strong persistence in case of crash, check out column families.
-// https://github.com/facebook/rocksdb/wiki/RocksJava-Basics
-// https://github.com/facebook/rocksdb/wiki/Tuning-RocksDB-from-Java
-
 public class PersistenceLayer implements Closeable {
+    final long WRITE_BUFFER_SIZE  = 2L << 40; // 274 GB
+    final long MAX_TOTAL_WAL_SIZE = 2L << 50; // 281 475 GB
+
     private static PersistenceLayer pl = null;
 
     private final ColumnFamilyOptions columnOptions;
@@ -26,7 +25,8 @@ public class PersistenceLayer implements Closeable {
     private PersistenceLayer(String location) throws RocksDBException {
         RocksDB.loadLibrary();
 
-        columnOptions = new ColumnFamilyOptions().optimizeUniversalStyleCompaction();
+        columnOptions = new ColumnFamilyOptions()
+                .optimizeUniversalStyleCompaction();
 
         final List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
                 new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions),
@@ -37,7 +37,12 @@ public class PersistenceLayer implements Closeable {
 
         columnFamilyHandleList = new ArrayList<>();
 
-        options = new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true);
+        options = new DBOptions()
+                .setCreateIfMissing(true)
+                .setCreateMissingColumnFamilies(true)
+                .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
+                .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE);
+
         db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
 
         ac = new AddressConversion(db, columnFamilyHandleList.get(1));
