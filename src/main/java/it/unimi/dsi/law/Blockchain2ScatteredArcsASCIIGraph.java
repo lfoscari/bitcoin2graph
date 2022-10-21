@@ -1,5 +1,7 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongLongImmutablePair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import it.unimi.dsi.law.persistence.AddressConversion;
@@ -36,8 +38,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     }
 
     public static void main(String[] args) throws IOException {
-        if (!(new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir())
-            throw new RuntimeException("Couldn't create the directory in " + Parameters.resources);
+        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, 10, TimeUnit.SECONDS, "blocks");
@@ -108,7 +109,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         List<Long> outputAddressesToLongs(Transaction t) {
-            List<Long> outputs = new ArrayList<>();
+            LongList outputs = new LongArrayList();
 
             for (TransactionOutput to : t.getOutputs()) {
                 try {
