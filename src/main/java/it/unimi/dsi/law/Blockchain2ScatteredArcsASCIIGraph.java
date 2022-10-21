@@ -82,16 +82,10 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             this.np = np;
             this.progress = progress;
 
-            FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().endsWith(".dat");
-            File[] blockFiles = (new File(blockfilesDirectory)).listFiles(blockFileFilter);
-
-            if (blockFiles == null)
-                throw new RuntimeException("No blocks found in " + blockfilesDirectory + "!");
-
             progress.start("First pass to populate mappings");
 
             File blockchainDirectory = new File(blockfilesDirectory);
-            BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(blockFiles));
+            BlockFileLoader bflTemp = new BlockFileLoader(np, getBlockfiles(blockfilesDirectory));
 
             for (Block block : bflTemp) {
                 progress.update();
@@ -114,6 +108,18 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             progress.start("Second pass to complete the mappings");
 
             this.bfl = new BlockFileLoader(np, blockchainDirectory);
+        }
+
+        List<File> getBlockfiles(String directory) {
+            FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().endsWith(".dat");
+            File[] blockFiles = (new File(directory)).listFiles(blockFileFilter);
+
+            if (blockFiles == null)
+                throw new RuntimeException("No blocks found in " + directory + "!");
+
+            System.out.println(blockFiles.length  + " total block files");
+
+            return List.of(blockFiles);
         }
 
         List<Long> outputAddressesToLongs(Transaction t) {
