@@ -77,7 +77,6 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final TransactionOutpointFilter topFilter = persistenceLayer.getTransactionOutpointFilter();
 
         private final long COINBASE_ADDRESS = 0L;
-
         public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
             this.progress = progress;
@@ -129,9 +128,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 try {
                     Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
                     outputs.add(addressConversion.mapAddress(receiver));
-                } catch (ScriptException e) {
+                } catch (RuntimeException e) {
                     outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
-                    // System.out.println(e.getMessage() + " at " + t.getTxId());
+                    System.out.println(e.getMessage() + " at " + t.getTxId());
                 } catch (RocksDBException e) {
                     throw new RuntimeException(e);
                 }
