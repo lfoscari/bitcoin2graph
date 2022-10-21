@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -81,10 +82,16 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             this.np = np;
             this.progress = progress;
 
+            FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().endsWith(".dat");
+            File[] blockFiles = (new File(blockfilesDirectory)).listFiles(blockFileFilter);
+
+            if (blockFiles == null)
+                throw new RuntimeException("No blocks found in " + blockfilesDirectory + "!");
+
             progress.start("First pass to populate mappings");
 
             File blockchainDirectory = new File(blockfilesDirectory);
-            BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
+            BlockFileLoader bflTemp = new BlockFileLoader(np, List.of(blockFiles));
 
             for (Block block : bflTemp) {
                 progress.update();
