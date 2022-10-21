@@ -111,7 +111,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         List<File> getBlockfiles(String directory) {
-            FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().endsWith(".dat");
+            FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().startsWith("blk");
             File[] blockFiles = (new File(directory)).listFiles(blockFileFilter);
 
             if (blockFiles == null)
