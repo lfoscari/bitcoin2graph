@@ -130,7 +130,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     outputs.add(addressConversion.mapAddress(receiver));
                 } catch (RuntimeException e) {
                     outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
-                    System.out.println(e.getMessage() + " at " + t.getTxId());
+                    // System.out.println(e.getMessage() + " at " + t.getTxId());
                 } catch (RocksDBException e) {
                     throw new RuntimeException(e);
                 }
