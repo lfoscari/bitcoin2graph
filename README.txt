@@ -18,7 +18,7 @@ In case the association TransactionOutLog - Address uses too much space,
 consider using an implementation of RocksDB or LevelDB.
 
 TODO:
-- Use rocksdb to store incomplete mappings and top mappings
 - Figure out how to add information to arcs and nodes
 - Avoid scanning two times the blocks for performance [likely impossible]
 - Remove graphviz exporter
+- Use https://fastutil.di.unimi.it for the queue
