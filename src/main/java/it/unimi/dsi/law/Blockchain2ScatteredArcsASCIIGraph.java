@@ -1,5 +1,7 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.longs.LongLongImmutablePair;
+import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import it.unimi.dsi.law.persistence.AddressConversion;
 import it.unimi.dsi.law.persistence.IncompleteMappings;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
@@ -34,10 +36,13 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     }
 
     public static void main(String[] args) throws IOException {
-        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
+        if (!(new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir())
+            throw new RuntimeException("Couldn't create the directory in " + Parameters.resources);
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, 10, TimeUnit.SECONDS, "blocks");
+        progress.displayFreeMemory = true;
+        progress.displayLocalSpeed = true;
 
         Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Parameters.resources, progress);
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
@@ -61,7 +66,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final ProgressLogger progress;
 
         private final BlockFileLoader bfl;
-        private final ArrayDeque<long[]> transactionArcs = new ArrayDeque<>();
+        private final ObjectArrayFIFOQueue<LongLongImmutablePair> transactionArcs = new ObjectArrayFIFOQueue<>();
 
         private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
@@ -73,9 +78,6 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
             this.progress = progress;
-
-            progress.displayFreeMemory = true;
-            progress.displayLocalSpeed = true;
 
             progress.start("First pass to populate mappings");
 
@@ -135,7 +137,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private void addCoinbaseArcs(List<Long> receivers) {
             for (Long receiver : receivers)
-                transactionArcs.add(new long[] {COINBASE_ADDRESS, receiver});
+                transactionArcs.enqueue(new LongLongImmutablePair(COINBASE_ADDRESS, receiver));
         }
 
         private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
@@ -154,8 +156,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     .filter(Objects::nonNull)
                     .unordered()
                     .distinct() // multigraph -> graph
-                    .map(receiver -> new long[]{sender, receiver})
-                    .forEach(transactionArcs::add);
+                    .map(receiver -> new LongLongImmutablePair(sender, receiver))
+                    .forEach(transactionArcs::enqueue);
             }
         }
 
@@ -193,7 +195,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         @Override
         public long[] next() {
-            return transactionArcs.pop();
+            LongLongImmutablePair arcs = transactionArcs.dequeue();
+            return new long[] {arcs.leftLong(), arcs.rightLong()};
         }
     }
 }
