@@ -20,9 +20,11 @@ import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
@@ -76,6 +78,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final TransactionOutpointFilter topFilter = persistenceLayer.getTransactionOutpointFilter();
 
         private final long COINBASE_ADDRESS = 0L;
+        private long skipped = 0;
 
         public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
@@ -86,7 +89,18 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             File blockchainDirectory = new File(blockfilesDirectory);
             BlockFileLoader bflTemp = new BlockFileLoader(np, blockchainDirectory);
 
-            for (Block block : bflTemp) {
+            Iterator<Block> blockIt = bflTemp.iterator();
+
+            while (blockIt.hasNext()) {
+                Block block;
+                try {
+                    block = blockIt.next();
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Skipping block");
+                    skipped++;
+                    continue;
+                }
+
                 progress.update();
 
                 if (!block.hasTransactions())
@@ -104,6 +118,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             }
 
             progress.stop("Done populating the mappings of " + progress.count + " total blocks in " + progress.millis() / 1000  + " seconds");
+            System.out.println("Total skipped: " + skipped);
+
             progress.start("Second pass to complete the mappings");
 
             this.bfl = new BlockFileLoader(np, blockchainDirectory);
@@ -115,8 +131,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             for (TransactionOutput to : t.getOutputs()) {
                 try {
                     Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
-                    Long receiverLong = addressConversion.mapAddress(receiver);
-                    outputs.add(receiverLong);
+                    outputs.add(addressConversion.mapAddress(receiver));
                 } catch (ScriptException e) {
                     outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
                     // System.out.println(e.getMessage() + " at " + t.getTxId());
@@ -175,7 +190,12 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 if (!transactionArcs.isEmpty())
                     return true;
 
-                Block block = bfl.next();
+                Block block;
+                try {
+                    block = bfl.next();
+                } catch (IllegalArgumentException e) {
+                    continue;
+                }
 
                 if (!block.hasTransactions())
                     continue;
