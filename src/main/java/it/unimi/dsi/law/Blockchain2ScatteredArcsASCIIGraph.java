@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongLongImmutablePair;
@@ -67,14 +68,14 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final ProgressLogger progress;
 
         private final BlockFileLoader bfl;
-        private final ObjectArrayFIFOQueue<LongLongImmutablePair> transactionArcs = new ObjectArrayFIFOQueue<>();
+        private final LongArrayFIFOQueue transactionArcs = new LongArrayFIFOQueue();
 
         private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
         private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
         private final TransactionOutpointFilter topFilter = persistenceLayer.getTransactionOutpointFilter();
 
-        private final Long COINBASE_ADDRESS = 0L;
+        private final long COINBASE_ADDRESS = 0L;
 
         public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
@@ -137,8 +138,10 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         private void addCoinbaseArcs(List<Long> receivers) {
-            for (Long receiver : receivers)
-                transactionArcs.enqueue(new LongLongImmutablePair(COINBASE_ADDRESS, receiver));
+            for (long receiver : receivers) {
+                transactionArcs.enqueue(COINBASE_ADDRESS);
+                transactionArcs.enqueue(receiver);
+            }
         }
 
         private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
@@ -149,7 +152,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
             for (TransactionOutPoint top : topFilter.get(txId)) {
                 int index = (int) top.getIndex();
-                Long sender = senders.get(index);
+                long sender = senders.get(index);
 
                 incompleteMappings
                     .get(top)
@@ -157,8 +160,10 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     .filter(Objects::nonNull)
                     .unordered()
                     .distinct() // multigraph -> graph
-                    .map(receiver -> new LongLongImmutablePair(sender, receiver))
-                    .forEach(transactionArcs::enqueue);
+                    .forEach(receiver -> {
+                        transactionArcs.enqueue(sender);
+                        transactionArcs.enqueue((long) receiver);
+                    });
             }
         }
 
@@ -196,8 +201,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         @Override
         public long[] next() {
-            LongLongImmutablePair arcs = transactionArcs.dequeue();
-            return new long[] {arcs.leftLong(), arcs.rightLong()};
+            long sender = transactionArcs.dequeueLong();
+            long receiver = transactionArcs.dequeueLong();
+            return new long[] {sender, receiver};
         }
     }
 }
