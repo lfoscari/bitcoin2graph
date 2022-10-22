@@ -1,6 +1,3 @@
-The best solution would be to implement an extension of ImmutableGraph, the
-skeleton is in BlockchainGraph.
-
 ScatteredArcsASCIIGraph on the other hand simply needs a list of arcs, to make
 it lazy I implemented it with a custom iterator over the blockchain.
 
