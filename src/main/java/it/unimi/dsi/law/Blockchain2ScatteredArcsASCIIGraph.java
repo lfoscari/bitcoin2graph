@@ -124,32 +124,31 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             LongList outputs = new LongArrayList();
 
             for (TransactionOutput to : t.getOutputs()) {
-                Script script = to.getScriptPubKey();
-
-                // If getToAddress fails I know that the script is not
-                // P2PKH, P2SH, P2PK, P2WH or P2TR, therefore is P2WPKH.
-                // We could handle this case with the catch, but it is
-                // significantly slower.
-                if (script.getScriptType() == null || script.getScriptType().equals(P2WPKH)) {
-                    // If the address is malformed in some way try identifying
-                    // the receiver via the script, which contains the address
-                    // and therefore cannot address someone else, but might not
-                    // be unique to the public key.
-                    // This cannot introduce wrong arcs, but in the worst case
-                    // we get more junk in the database and miss some arcs.
-                    byte[] key = script.getProgram();
-                    outputs.add(addressConversion.map(key));
-                    continue;
-                }
-
+                Script script = null;
                 byte[] key;
 
                 try {
-                    Address receiver = script.getToAddress(this.np, true);
-                    key = receiver.getHash();
+                    script = to.getScriptPubKey();
+
+                    // If getToAddress fails I know that the script is not
+                    // P2PKH, P2SH, P2PK, P2WH or P2TR, therefore is P2WPKH.
+                    // We could handle this case with the catch, but it is
+                    // significantly slower.
+                    if (script.getScriptType() == null || script.getScriptType().equals(P2WPKH)) {
+                        // If the address is malformed in some way try identifying
+                        // the receiver via the script, which contains the address
+                        // and therefore cannot address someone else, but might not
+                        // be unique to the public key.
+                        // This cannot introduce wrong arcs, but in the worst case
+                        // we get more junk in the database and miss some arcs.
+                        key = script.getProgram();
+                    } else {
+                        Address receiver = script.getToAddress(this.np, true);
+                        key = receiver.getHash();
+                    }
                 } catch (RuntimeException e) {
                     // System.err.println(e.getClass().getCanonicalName() + ": " + e.getMessage());
-                    key = script.getProgram();
+                    key = script != null ? script.getProgram() : ByteConversion.long2bytes(-1);
                 }
 
                 outputs.add(addressConversion.map(key));
