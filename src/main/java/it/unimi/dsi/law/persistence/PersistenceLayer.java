@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class PersistenceLayer implements Closeable {
-    final long WRITE_BUFFER_SIZE  = 2L << 40; // 274 GB
-    final long MAX_TOTAL_WAL_SIZE = 2L << 50; // 281 475 GB
+    final long WRITE_BUFFER_SIZE  = 2L << 5; // 32 GB
+    final long MAX_TOTAL_WAL_SIZE = 2L << 10; // 1024 GB
 
     private static PersistenceLayer pl = null;
 
@@ -70,8 +70,6 @@ public class PersistenceLayer implements Closeable {
     }
 
     public void close() {
-        for (final ColumnFamilyHandle columnFamilyHandle : columnFamilyHandleList)
-            columnFamilyHandle.close();
         columnFamilyHandleList.forEach(ColumnFamilyHandle::close);
 
         options.close();

@@ -3,8 +3,6 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
-import it.unimi.dsi.fastutil.longs.LongLongImmutablePair;
-import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import it.unimi.dsi.law.persistence.AddressConversion;
 import it.unimi.dsi.law.persistence.IncompleteMappings;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
@@ -14,7 +12,6 @@ import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
@@ -28,11 +25,11 @@ import java.util.concurrent.TimeUnit;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     public final NetworkParameters np;
-    public final String blockfilePath;
+    public final String blocksDirectory;
     private final ProgressLogger progress;
 
-    public Blockchain2ScatteredArcsASCIIGraph(String blockfilePath, ProgressLogger progress) {
-        this.blockfilePath = blockfilePath;
+    public Blockchain2ScatteredArcsASCIIGraph(String blocksDirectory, ProgressLogger progress) {
+        this.blocksDirectory = blocksDirectory;
         this.np = new MainNetParams();
         this.progress = progress;
 
@@ -58,7 +55,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     @Override
     public Iterator<long[]> iterator() {
         try {
-            return new CustomBlockchainIterator<long[]>(blockfilePath, np, progress);
+            return new CustomBlockchainIterator<long[]>(blocksDirectory, np, progress);
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
@@ -71,20 +68,21 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         private final BlockFileLoader bfl;
         private final LongArrayFIFOQueue transactionArcs = new LongArrayFIFOQueue();
 
-        private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance("/tmp/bitcoin");
+        private final PersistenceLayer persistenceLayer = PersistenceLayer.getInstance(Parameters.resources + "bitcoin-parser-db");
         private final AddressConversion addressConversion = persistenceLayer.getAddressConversion();
         private final IncompleteMappings incompleteMappings = persistenceLayer.getIncompleteMappings();
         private final TransactionOutpointFilter topFilter = persistenceLayer.getTransactionOutpointFilter();
 
         private final long COINBASE_ADDRESS = 0L;
-        public CustomBlockchainIterator(String blockfilesDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
+
+        public CustomBlockchainIterator(String blocksDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
             this.progress = progress;
 
             progress.start("First pass to populate mappings");
 
-            File blockchainDirectory = new File(blockfilesDirectory);
-            BlockFileLoader bflTemp = new BlockFileLoader(np, getBlockfiles(blockfilesDirectory));
+            File blockchainDirectory = new File(blocksDirectory);
+            BlockFileLoader bflTemp = new BlockFileLoader(np, getBlockfiles(blocksDirectory));
 
             for (Block block : bflTemp) {
                 progress.update();
