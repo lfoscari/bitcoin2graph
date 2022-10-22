@@ -3,15 +3,14 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
-import it.unimi.dsi.law.persistence.AddressConversion;
-import it.unimi.dsi.law.persistence.IncompleteMappings;
-import it.unimi.dsi.law.persistence.PersistenceLayer;
-import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
+import it.unimi.dsi.law.persistence.*;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
@@ -22,6 +21,9 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import static org.bitcoinj.script.Script.ScriptType.P2PK;
+import static org.bitcoinj.script.Script.ScriptType.P2WPKH;
 
 public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     public final NetworkParameters np;
@@ -79,10 +81,10 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             this.np = np;
             this.progress = progress;
 
-            progress.start("First pass to populate mappings");
+            List<File> blockFiles = getBlockFiles(blocksDirectory);
 
-            File blockchainDirectory = new File(blocksDirectory);
-            BlockFileLoader bflTemp = new BlockFileLoader(np, getBlockfiles(blocksDirectory));
+            progress.start("First pass to populate mappings");
+            BlockFileLoader bflTemp = new BlockFileLoader(np, blockFiles);
 
             for (Block block : bflTemp) {
                 progress.update();
@@ -104,17 +106,15 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             progress.stop("Done populating the mappings of " + progress.count + " total blocks in " + progress.millis() / 1000  + " seconds");
             progress.start("Second pass to complete the mappings");
 
-            this.bfl = new BlockFileLoader(np, blockchainDirectory);
+            this.bfl = new BlockFileLoader(np, blockFiles);
         }
 
-        List<File> getBlockfiles(String directory) {
+        List<File> getBlockFiles(String directory) {
             FilenameFilter blockFileFilter = (d, s) -> s.toLowerCase().startsWith("blk");
             File[] blockFiles = (new File(directory)).listFiles(blockFileFilter);
 
             if (blockFiles == null)
                 throw new RuntimeException("No blocks found in " + directory + "!");
-
-            System.out.println(blockFiles.length  + " total block files");
 
             return List.of(blockFiles);
         }
@@ -124,11 +124,21 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
             for (TransactionOutput to : t.getOutputs()) {
                 try {
-                    Address receiver = to.getScriptPubKey().getToAddress(this.np, true);
+                    Script script = to.getScriptPubKey();
+
+                    // If getToAddress fails I know that the script is not
+                    // P2PKH, P2SH, P2PK, P2WH or P2TR, therefore is P2WPKH.
+                    if (script.getScriptType() == null || script.getScriptType().equals(P2WPKH)) {
+                        outputs.add(-1);
+                        continue;
+                    }
+
+                    Address receiver = script.getToAddress(this.np, true);
                     outputs.add(addressConversion.mapAddress(receiver));
+
                 } catch (RuntimeException e) {
-                    outputs.add(-1L); // Don't mess up the indexing, note that this adds the node -1
-                    // System.out.println(e.getMessage() + " at " + t.getTxId());
+                    System.err.println(e.getClass() + ": " + e.getMessage());
+                    outputs.add(-1);
                 } catch (RocksDBException e) {
                     throw new RuntimeException(e);
                 }

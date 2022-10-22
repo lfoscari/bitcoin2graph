@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import com.google.common.primitives.Bytes;
 import it.unimi.dsi.law.persistence.*;
+import it.unimi.dsi.law.utils.ByteConversion;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;

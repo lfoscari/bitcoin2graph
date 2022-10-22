@@ -1,4 +1,4 @@
-package it.unimi.dsi.law.persistence;
+package it.unimi.dsi.law.utils;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;

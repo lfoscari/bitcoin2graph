@@ -1,6 +1,7 @@
 package it.unimi.dsi.law.persistence;
 
 import com.google.common.primitives.Bytes;
+import it.unimi.dsi.law.utils.ByteConversion;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.TransactionOutPoint;

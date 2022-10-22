@@ -39,9 +39,9 @@ public class PersistenceLayer implements Closeable {
 
         options = new DBOptions()
                 .setCreateIfMissing(true)
-                .setCreateMissingColumnFamilies(true)
-                .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
-                .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE);
+                .setCreateMissingColumnFamilies(true);
+                // .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
+                // .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE);
 
         db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
 

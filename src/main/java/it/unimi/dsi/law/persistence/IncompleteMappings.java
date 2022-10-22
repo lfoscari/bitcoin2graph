@@ -1,13 +1,13 @@
 package it.unimi.dsi.law.persistence;
 
 import com.google.common.primitives.Bytes;
+import it.unimi.dsi.law.utils.ByteConversion;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class IncompleteMappings {
     private final RocksDB db;
