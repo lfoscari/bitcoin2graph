@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.*;
+import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
@@ -119,29 +120,39 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             return List.of(blockFiles);
         }
 
-        List<Long> outputAddressesToLongs(Transaction t) {
+        List<Long> outputAddressesToLongs(Transaction t) throws RocksDBException {
             LongList outputs = new LongArrayList();
 
             for (TransactionOutput to : t.getOutputs()) {
-                try {
-                    Script script = to.getScriptPubKey();
+                Script script = to.getScriptPubKey();
 
-                    // If getToAddress fails I know that the script is not
-                    // P2PKH, P2SH, P2PK, P2WH or P2TR, therefore is P2WPKH.
-                    if (script.getScriptType() == null || script.getScriptType().equals(P2WPKH)) {
-                        outputs.add(-1);
-                        continue;
-                    }
-
-                    Address receiver = script.getToAddress(this.np, true);
-                    outputs.add(addressConversion.mapAddress(receiver));
-
-                } catch (RuntimeException e) {
-                    System.err.println(e.getClass() + ": " + e.getMessage());
-                    outputs.add(-1);
-                } catch (RocksDBException e) {
-                    throw new RuntimeException(e);
+                // If getToAddress fails I know that the script is not
+                // P2PKH, P2SH, P2PK, P2WH or P2TR, therefore is P2WPKH.
+                // We could handle this case with the catch, but it is
+                // significantly slower.
+                if (script.getScriptType() == null || script.getScriptType().equals(P2WPKH)) {
+                    // If the address is malformed in some way try identifying
+                    // the receiver via the script, which contains the address
+                    // and therefore cannot address someone else, but might not
+                    // be unique to the public key.
+                    // This cannot introduce wrong arcs, but in the worst case
+                    // we get more junk in the database and miss some arcs.
+                    byte[] key = script.getProgram();
+                    outputs.add(addressConversion.map(key));
+                    continue;
                 }
+
+                byte[] key;
+
+                try {
+                    Address receiver = script.getToAddress(this.np, true);
+                    key = receiver.getHash();
+                } catch (RuntimeException e) {
+                    // System.err.println(e.getClass().getCanonicalName() + ": " + e.getMessage());
+                    key = script.getProgram();
+                }
+
+                outputs.add(addressConversion.map(key));
             }
 
             return outputs;
@@ -203,8 +214,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                     if (transaction.isCoinBase())
                         continue;
 
-                    List<Long> outputs = outputAddressesToLongs(transaction);
                     try {
+                        List<Long> outputs = outputAddressesToLongs(transaction);
                         completeMappings(transaction, outputs);
                     } catch (RocksDBException e) {
                         throw new RuntimeException(e);
