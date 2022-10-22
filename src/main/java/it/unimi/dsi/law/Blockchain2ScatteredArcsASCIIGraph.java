@@ -41,7 +41,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
-        ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, TimeUnit.MINUTES, "blocks");
+        ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
         progress.displayFreeMemory = true;
         progress.displayLocalSpeed = true;
 
