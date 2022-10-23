@@ -80,7 +80,9 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             this.np = np;
             this.progress = progress;
 
+            progress.start("Saving in parsed-blocks.txt the block to parse");
             savedParsedBlocksFilenames(blocksDirectory, "parsed-blocks.txt");
+            progress.stop();
 
             progress.start("First pass to populate mappings");
             BlockFileLoader bflTemp = new BlockFileLoader(np, new File(blocksDirectory));
