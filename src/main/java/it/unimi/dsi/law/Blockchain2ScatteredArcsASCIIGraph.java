@@ -1,5 +1,8 @@
 package it.unimi.dsi.law;
 
+// import it.unimi.dsi.law.reimplemented.BlockFileLoader;
+import org.bitcoinj.utils.BlockFileLoader;
+
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -11,14 +14,13 @@ import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.utils.BlockFileLoader;
+import org.rocksdb.Holder;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.bitcoinj.script.Script.ScriptType.P2WPKH;
@@ -56,7 +58,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     @Override
     public Iterator<long[]> iterator() {
         try {
-            return new CustomBlockchainIterator<long[]>(blocksDirectory, np, progress);
+            return new CustomBlockchainIterator<long[]>(new File(blocksDirectory), np, progress);
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
@@ -76,7 +78,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         private final long COINBASE_ADDRESS = 0L;
 
-        public CustomBlockchainIterator(String blocksDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
+        public CustomBlockchainIterator(File blocksDirectory, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
             this.np = np;
             this.progress = progress;
 
@@ -85,7 +87,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             progress.stop();
 
             progress.start("First pass to populate mappings");
-            BlockFileLoader bflTemp = new BlockFileLoader(np, new File(blocksDirectory));
+            BlockFileLoader bflTemp = new BlockFileLoader(np, blocksDirectory);
 
             for (Block block : bflTemp) {
                 progress.update();
@@ -107,12 +109,12 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
             progress.stop("Done populating the mappings of " + progress.count + " total blocks in " + progress.millis() / 1000  + " seconds");
             progress.start("Second pass to complete the mappings");
 
-            this.bfl = new BlockFileLoader(np, new File(blocksDirectory));
+            this.bfl = new BlockFileLoader(np, blocksDirectory);
         }
 
-        void savedParsedBlocksFilenames(String blocksDirectory, String filename) {
+        void savedParsedBlocksFilenames(File blocksDirectory, String filename) {
             try {
-                List<File> fileToParse = getReferenceClientBlockFileList(new File(blocksDirectory));
+                List<File> fileToParse = getReferenceClientBlockFileList(blocksDirectory);
                 File out = new File(Parameters.resources + filename);
 
                 try (OutputStream os = new FileOutputStream(out)) {
@@ -149,12 +151,12 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                         Address receiver = script.getToAddress(this.np, true);
                         key = receiver.getHash();
                     }
+
+                    outputs.add(addressConversion.map(key));
                 } catch (RuntimeException e) {
                     // System.err.println(e.getClass().getCanonicalName() + ": " + e.getMessage());
-                    key = ByteConversion.long2bytes(-1);
+                    outputs.add(-1);
                 }
-
-                outputs.add(addressConversion.map(key));
             }
 
             return outputs;
@@ -177,12 +179,21 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
+            List<TransactionOutPoint> tops;
             Sha256Hash txId = transaction.getTxId();
+            Holder<byte[]> exists = topFilter.keyMayExist(txId);
 
-            if (!topFilter.containsKeys(txId))
+            if (exists == null)
                 return;
 
-            for (TransactionOutPoint top : topFilter.get(txId)) {
+            tops = exists.getValue() != null ?
+                    TransactionOutpointFilter.deserialize(exists.getValue())
+                    : topFilter.get(txId);
+
+            if (tops == null)
+                return;
+
+            for (TransactionOutPoint top : tops) {
                 int index = (int) top.getIndex();
                 long sender = senders.get(index);
 
@@ -202,7 +213,6 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         @Override
         public boolean hasNext() {
             while (bfl.hasNext()) {
-                progress.update();
 
                 if (!transactionArcs.isEmpty())
                     return true;
@@ -233,6 +243,8 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
 
         @Override
         public long[] next() {
+            progress.update();
+
             long sender = transactionArcs.dequeueLong();
             long receiver = transactionArcs.dequeueLong();
             return new long[] {sender, receiver};

@@ -1,7 +1,6 @@
 package it.unimi.dsi.law.persistence;
 
 import it.unimi.dsi.law.utils.ByteConversion;
-import org.bitcoinj.core.Address;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;

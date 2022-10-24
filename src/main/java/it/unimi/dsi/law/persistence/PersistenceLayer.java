@@ -1,5 +1,6 @@
 package it.unimi.dsi.law.persistence;
 
+import it.unimi.dsi.law.Parameters;
 import org.rocksdb.*;
 
 import java.io.Closeable;
@@ -8,8 +9,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public class PersistenceLayer implements Closeable {
-    final long WRITE_BUFFER_SIZE  = 2L << 5; // 32 GB
-    final long MAX_TOTAL_WAL_SIZE = 2L << 10; // 1024 GB
 
     private static PersistenceLayer pl = null;
 
@@ -26,7 +25,8 @@ public class PersistenceLayer implements Closeable {
         RocksDB.loadLibrary();
 
         columnOptions = new ColumnFamilyOptions()
-                .optimizeUniversalStyleCompaction();
+                .optimizeUniversalStyleCompaction()
+                .setMergeOperator(new StringAppendOperator(""));
 
         final List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
                 new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions),
@@ -39,9 +39,10 @@ public class PersistenceLayer implements Closeable {
 
         options = new DBOptions()
                 .setCreateIfMissing(true)
-                .setCreateMissingColumnFamilies(true);
-                // .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
-                // .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE);
+                .setCreateMissingColumnFamilies(true)
+                .setDbWriteBufferSize(Parameters.WRITE_BUFFER_SIZE)
+                .setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
+                .setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
         db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
 

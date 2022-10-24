@@ -5,7 +5,6 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class ByteConversion {
@@ -54,5 +53,14 @@ public class ByteConversion {
         }
 
         return l;
+    }
+
+    public static byte[] concat(byte[] aa, byte[] bb) {
+        byte[] result = new byte[aa.length + bb.length];
+
+        System.arraycopy(aa, 0, result, 0, aa.length);
+        System.arraycopy(bb, 0, result, aa.length, bb.length);
+
+        return result;
     }
 }

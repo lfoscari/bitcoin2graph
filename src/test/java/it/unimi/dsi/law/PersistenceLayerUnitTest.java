@@ -7,7 +7,6 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.assertj.core.util.Files;
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -26,12 +25,10 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class PersistenceLayerUnitTest {
     @Mock TransactionOutPoint top_a, top_b, top_c;
-    @Mock Address addr;
 
     static PersistenceLayer pl;
     static IncompleteMappings im;
@@ -57,9 +54,9 @@ public class PersistenceLayerUnitTest {
         tof = pl.getTransactionOutpointFilter();
 
         columns = List.of(
-            (ColumnFamilyHandle) extract(ac, "column"),
-            (ColumnFamilyHandle) extract(im, "column"),
-            (ColumnFamilyHandle) extract(tof, "column")
+            (ColumnFamilyHandle) extractColumn(ac),
+            (ColumnFamilyHandle) extractColumn(im),
+            (ColumnFamilyHandle) extractColumn(tof)
         );
     }
 
@@ -104,7 +101,7 @@ public class PersistenceLayerUnitTest {
         byte[] bba = Arrays.copyOfRange(bb, 0, bb.length / 2);
         byte[] bbb = Arrays.copyOfRange(bb, bb.length / 2, bb.length);
 
-        assertThat(Bytes.concat(bba, bbb)).isEqualTo(bb);
+        assertThat(ByteConversion.concat(bba, bbb)).isEqualTo(bb);
     }
 
     @ParameterizedTest
@@ -142,8 +139,7 @@ public class PersistenceLayerUnitTest {
     void consistencyAddressConversion(List<Integer> ii) throws RocksDBException {
         Set<Long> ids = new HashSet<>();
         for (int i : ii) {
-            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
-            ids.add(ac.mapAddress(addr));
+            ids.add(ac.map(intToHash(i).getBytes()));
         }
 
         assertThat(ac).extracting("count")
@@ -156,14 +152,12 @@ public class PersistenceLayerUnitTest {
     void consistencySingleAddressConversion(List<Integer> ii) throws RocksDBException {
         Set<Long> firstMapping = new HashSet<>();
         for (int i : ii) {
-            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
-            firstMapping.add(ac.mapAddress(addr));
+            firstMapping.add(ac.map(intToHash(i).getBytes()));
         }
 
         Set<Long> recallMapping = new HashSet<>();
         for (int i : ii) {
-            when(addr.getHash()).thenReturn(intToHash(i).getBytes());
-            recallMapping.add(ac.mapAddress(addr));
+            recallMapping.add(ac.map(intToHash(i).getBytes()));
         }
 
         assertThat(firstMapping).containsExactly(recallMapping.toArray(Long[]::new));
@@ -358,8 +352,8 @@ public class PersistenceLayerUnitTest {
         );
     }
 
-    private static Object extract(Object src, String fld) throws NoSuchFieldException, IllegalAccessException {
-        Field f = src.getClass().getDeclaredField(fld);
+    private static Object extractColumn(Object src) throws NoSuchFieldException, IllegalAccessException {
+        Field f = src.getClass().getDeclaredField("column");
         f.setAccessible(true);
         return f.get(src);
     }
