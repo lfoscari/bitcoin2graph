@@ -1,13 +1,12 @@
 package it.unimi.dsi.law;
 
-// import it.unimi.dsi.law.reimplemented.BlockFileLoader;
+import it.unimi.dsi.law.utils.ByteConversion;
 import org.bitcoinj.utils.BlockFileLoader;
 
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.*;
-import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
@@ -58,7 +57,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     @Override
     public Iterator<long[]> iterator() {
         try {
-            return new CustomBlockchainIterator<long[]>(new File(blocksDirectory), np, progress);
+            return new CustomBlockchainIterator<long[]>(new File(blocksDirectory + "tmp"), np, progress);
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
@@ -167,7 +166,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 TransactionOutPoint top = ti.getOutpoint();
 
                 incompleteMappings.put(top, receivers);
-                topFilter.put(top.getHash(), top);
+                topFilter.put(top.getHash(), top.getIndex());
             }
         }
 
@@ -179,7 +178,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
         }
 
         private void completeMappings(Transaction transaction, List<Long> senders) throws RocksDBException {
-            List<TransactionOutPoint> tops;
+            List<Long> tops;
             Sha256Hash txId = transaction.getTxId();
             Holder<byte[]> exists = topFilter.keyMayExist(txId);
 
@@ -187,15 +186,15 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
                 return;
 
             tops = exists.getValue() != null ?
-                    TransactionOutpointFilter.deserialize(exists.getValue())
+                    ByteConversion.bytes2longList(exists.getValue())
                     : topFilter.get(txId);
 
             if (tops == null)
                 return;
 
-            for (TransactionOutPoint top : tops) {
-                int index = (int) top.getIndex();
-                long sender = senders.get(index);
+            for (long index : tops) {
+                TransactionOutPoint top = new TransactionOutPoint(np, index, txId);
+                long sender = senders.get((int) index);
 
                 incompleteMappings
                     .get(top)

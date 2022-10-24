@@ -5,7 +5,6 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.TransactionDB;
 
 import java.util.List;
 

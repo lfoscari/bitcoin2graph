@@ -17,3 +17,4 @@ consider using an implementation of RocksDB or LevelDB.
 TODO:
 - Figure out how to add information to arcs and nodes
 - Avoid scanning two times the blocks for performance [likely impossible]
+- MULTITHREAD FIRST PASS

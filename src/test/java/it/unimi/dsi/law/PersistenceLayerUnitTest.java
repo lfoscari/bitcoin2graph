@@ -224,48 +224,42 @@ public class PersistenceLayerUnitTest {
         if (n <= 0) n = 1 - n;
 
         Sha256Hash key = intToHash(n);
-        NetworkParameters np = new MainNetParams();
-        TransactionOutPoint top = new TransactionOutPoint(np, n, key);
 
-        tof.put(key, top);
-        assertThat(tof.get(key)).isEqualTo(List.of(top));
+        tof.put(key, (long) n);
+        assertThat(tof.get(key)).isEqualTo(List.of((long) n));
     }
 
     @ParameterizedTest
     @MethodSource("provideInts")
     void multipleTransactionOutpointFilter(Integer n) throws RocksDBException {
         if (n <= 0 || n > 100) n = 1 - (n % 100);
-
         Sha256Hash key = intToHash(n);
-        NetworkParameters np = new MainNetParams();
 
-        List<TransactionOutPoint> tops = new ArrayList<>();
+        List<Long> tops = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            TransactionOutPoint top = new TransactionOutPoint(np, n, key);
-            tof.put(key, top);
-            tops.add(top);
+            tof.put(key, (long) n);
+            tops.add((long) n);
         }
 
         assertThat(tof.get(key)).isEqualTo(tops);
     }
 
     @ParameterizedTest
-    @MethodSource("provideIntList")
-    void multiValuedMapTransactionOutpointFilterComparison(List<Integer> ln) throws RocksDBException {
-        MultiValuedMap<Sha256Hash, TransactionOutPoint> topMapping = new HashSetValuedHashMap<>();
+    @MethodSource("provideLongList")
+    void multiValuedMapTransactionOutpointFilterComparison(List<Long> ln) throws RocksDBException {
+        MultiValuedMap<Sha256Hash, Long> topMapping = new HashSetValuedHashMap<>();
 
         for (int i = 0; i < ln.size(); i++) {
-            int n = ln.get(i);
-            Sha256Hash key = intToHash(n);
+            long n = ln.get(i);
+            Sha256Hash key = intToHash((int) n);
             NetworkParameters np = new MainNetParams();
-            TransactionOutPoint top = new TransactionOutPoint(np, n + i, key);
 
-            tof.put(key, top);
-            topMapping.put(key, top);
+            tof.put(key, n + i);
+            topMapping.put(key, n + i);
         }
 
-        for (Integer n : ln) {
-            Sha256Hash key = intToHash(n);
+        for (long n : ln) {
+            Sha256Hash key = intToHash((int) n);
             assertThat(tof.get(key)).containsExactlyInAnyOrderElementsOf(topMapping.get(key));
         }
 
