@@ -57,7 +57,7 @@ public class Blockchain2ScatteredArcsASCIIGraph implements Iterable<long[]> {
     @Override
     public Iterator<long[]> iterator() {
         try {
-            return new CustomBlockchainIterator<long[]>(new File(blocksDirectory + "tmp"), np, progress);
+            return new CustomBlockchainIterator<long[]>(new File(blocksDirectory), np, progress);
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
