@@ -43,7 +43,7 @@ public class PersistenceLayerUnitTest {
         File temp = Files.newTemporaryFolder();
         temp.deleteOnExit();
 
-        pl = PersistenceLayer.getInstance(temp.getAbsolutePath());
+        pl = new PersistenceLayer(temp.getAbsolutePath());
 
         Field fdb = PersistenceLayer.class.getDeclaredField("db");
         fdb.setAccessible(true);

@@ -9,19 +9,17 @@ import java.util.Arrays;
 import java.util.List;
 
 public class PersistenceLayer implements Closeable {
-
-    private static PersistenceLayer pl = null;
-
     private final ColumnFamilyOptions columnOptions;
-    private final List<ColumnFamilyHandle> columnFamilyHandleList;
     private final DBOptions options;
-    private final RocksDB db;
+
+    public final List<ColumnFamilyHandle> columnFamilyHandleList;
+    public final RocksDB db;
 
     private final AddressConversion ac;
     private final IncompleteMappings im;
     private final TransactionOutpointFilter tof;
 
-    private PersistenceLayer(String location) throws RocksDBException {
+    public PersistenceLayer(String location) throws RocksDBException {
         RocksDB.loadLibrary();
 
         columnOptions = new ColumnFamilyOptions()
@@ -51,13 +49,6 @@ public class PersistenceLayer implements Closeable {
         tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(3));
     }
 
-    public static PersistenceLayer getInstance(String location) throws RocksDBException {
-        if (pl == null)
-            pl = new PersistenceLayer(location);
-
-        return pl;
-    }
-
     public AddressConversion getAddressConversion() {
         return ac;
     }
@@ -68,6 +59,47 @@ public class PersistenceLayer implements Closeable {
 
     public TransactionOutpointFilter getTransactionOutpointFilter() {
         return tof;
+    }
+
+    public void mergeWith(PersistenceLayer other) throws RocksDBException {
+        try (WriteBatch wb = new WriteBatch()) {
+
+            for (ColumnFamilyHandle column : other.columnFamilyHandleList) {
+                RocksIterator rit = other.db.newIterator(column);
+                rit.seekToFirst();
+
+                while (rit.isValid()) {
+                    wb.merge(column, rit.key(), rit.value());
+                    rit.next();
+                }
+            }
+
+            this.db.write(new WriteOptions(), wb);
+        }
+    }
+
+    public List<byte[]> keys() {
+        List<byte[]> keys = new ArrayList<>();
+
+        for (ColumnFamilyHandle column : columnFamilyHandleList) {
+            RocksIterator rit = this.db.newIterator(column);
+            rit.seekToFirst();
+
+            while (rit.isValid()) {
+                keys.add(rit.key());
+                rit.next();
+            }
+        }
+
+        return keys;
+    }
+
+    public boolean containsAnywhere(byte[] key) throws RocksDBException {
+        for (ColumnFamilyHandle column : columnFamilyHandleList) {
+            if (this.db.get(column, key) != null)
+                return true;
+        }
+        return false;
     }
 
     public void close() {
