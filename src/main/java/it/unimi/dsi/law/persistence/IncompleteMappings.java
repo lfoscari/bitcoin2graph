@@ -5,6 +5,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteBatch;
 
 import java.util.List;
 
@@ -15,6 +16,7 @@ public class IncompleteMappings {
     public IncompleteMappings(RocksDB db, ColumnFamilyHandle column) {
         this.db = db;
         this.column = column;
+
     }
 
     public void put(TransactionOutPoint top, List<Long> addresses) throws RocksDBException {

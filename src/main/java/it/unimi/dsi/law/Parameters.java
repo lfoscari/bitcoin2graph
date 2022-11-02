@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 public class Parameters {
     public final static String resources = "src/main/resources/";
     public final static String basename = "bitcoin";
+    public static final long COINBASE_ADDRESS = 0L;
     public final static long logInterval = 10;
     public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
 

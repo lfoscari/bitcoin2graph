@@ -4,23 +4,29 @@ import it.unimi.dsi.law.Parameters;
 import org.rocksdb.*;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class PersistenceLayer implements Closeable {
+    private final String location;
     private final ColumnFamilyOptions columnOptions;
     private final DBOptions options;
 
     public final List<ColumnFamilyHandle> columnFamilyHandleList;
     public final RocksDB db;
 
-    private final AddressConversion ac;
     private final IncompleteMappings im;
     private final TransactionOutpointFilter tof;
 
     public PersistenceLayer(String location) throws RocksDBException {
         RocksDB.loadLibrary();
+
+        this.location = location;
 
         columnOptions = new ColumnFamilyOptions()
                 .optimizeUniversalStyleCompaction()
@@ -28,7 +34,6 @@ public class PersistenceLayer implements Closeable {
 
         final List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
                 new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions),
-                new ColumnFamilyDescriptor("address-conversion".getBytes(), columnOptions),
                 new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), columnOptions),
                 new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), columnOptions)
         );
@@ -44,13 +49,8 @@ public class PersistenceLayer implements Closeable {
 
         db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
 
-        ac = new AddressConversion(db, columnFamilyHandleList.get(1));
-        im = new IncompleteMappings(db, columnFamilyHandleList.get(2));
-        tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(3));
-    }
-
-    public AddressConversion getAddressConversion() {
-        return ac;
+        im = new IncompleteMappings(db, columnFamilyHandleList.get(1));
+        tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(2));
     }
 
     public IncompleteMappings getIncompleteMappings() {
@@ -63,7 +63,6 @@ public class PersistenceLayer implements Closeable {
 
     public void mergeWith(PersistenceLayer other) throws RocksDBException {
         try (WriteBatch wb = new WriteBatch()) {
-
             for (ColumnFamilyHandle column : other.columnFamilyHandleList) {
                 RocksIterator rit = other.db.newIterator(column);
                 rit.seekToFirst();
@@ -78,28 +77,9 @@ public class PersistenceLayer implements Closeable {
         }
     }
 
-    public List<byte[]> keys() {
-        List<byte[]> keys = new ArrayList<>();
-
-        for (ColumnFamilyHandle column : columnFamilyHandleList) {
-            RocksIterator rit = this.db.newIterator(column);
-            rit.seekToFirst();
-
-            while (rit.isValid()) {
-                keys.add(rit.key());
-                rit.next();
-            }
-        }
-
-        return keys;
-    }
-
-    public boolean containsAnywhere(byte[] key) throws RocksDBException {
-        for (ColumnFamilyHandle column : columnFamilyHandleList) {
-            if (this.db.get(column, key) != null)
-                return true;
-        }
-        return false;
+    public void delete() {
+        this.close();
+        deleteDirectory(new File(this.location));
     }
 
     public void close() {
@@ -108,5 +88,13 @@ public class PersistenceLayer implements Closeable {
         options.close();
         db.close();
         columnOptions.close();
+    }
+
+    private boolean deleteDirectory(File directoryToBeDeleted) {
+        File[] allContents = directoryToBeDeleted.listFiles();
+        if (allContents != null)
+            for (File file : allContents)
+                deleteDirectory(file);
+        return directoryToBeDeleted.delete();
     }
 }

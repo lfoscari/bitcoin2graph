@@ -20,23 +20,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static org.bitcoinj.script.Script.ScriptType.P2WPKH;
 import static org.bitcoinj.utils.BlockFileLoader.getReferenceClientBlockFileList;
 
 public class Blockchain2ScatteredArcsASCIIGraph { // implements Iterable<long[]> {
-    public final NetworkParameters np;
-    public final List<File> blockFiles;
-    private final ProgressLogger progress;
+    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException {
+        NetworkParameters np = new MainNetParams();
 
-    public Blockchain2ScatteredArcsASCIIGraph(List<File> blockFiles, ProgressLogger progress) {
-        this.blockFiles = blockFiles;
-        this.np = new MainNetParams();
-        this.progress = progress;
-    }
-
-    public static void main(String[] args) {
         (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
@@ -45,13 +38,19 @@ public class Blockchain2ScatteredArcsASCIIGraph { // implements Iterable<long[]>
         progress.displayLocalSpeed = true;
 
         File blocksDirectory = new File(Parameters.resources);
-        File[] blockFiles = blocksDirectory.listFiles((f, p) -> p.startsWith("blk"));
+        File[] blockFilesArray = blocksDirectory.listFiles((f, p) -> p.startsWith("blk"));
 
-        if (blockFiles == null)
+        if (blockFilesArray == null)
             throw new RuntimeException("No block files found!");
 
-        Blockchain2ScatteredArcsASCIIGraph bt = new Blockchain2ScatteredArcsASCIIGraph(Arrays.asList(blockFiles), progress);
-        bt.go();
+        List<File> blockFiles = List.of(blockFilesArray);
+
+        AddressConversion addressConversion = new AddressConversion(progress);
+        addressConversion.addAddresses(blockFiles);
+        addressConversion.freeze();
+
+        CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, addressConversion, np, progress);
+        it.populateMappings();
 
         /* ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bt.iterator(), false, false, 10000, null, progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress); */
@@ -59,21 +58,4 @@ public class Blockchain2ScatteredArcsASCIIGraph { // implements Iterable<long[]>
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
         progress.done();
     }
-
-    public void go() {
-        try {
-            new CustomBlockchainIterator(blockFiles, np, progress);
-        } catch (RocksDBException | IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /* @Override
-    public Iterator<long[]> iterator() {
-        try {
-            return new CustomBlockchainIterator<long[]>(blockFiles, np, progress);
-        } catch (RocksDBException | IOException e) {
-            throw new RuntimeException(e);
-        }
-    } */
 }
