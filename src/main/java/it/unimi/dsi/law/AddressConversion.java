@@ -41,10 +41,18 @@ public class AddressConversion {
     private RocksDB db;
 
     public AddressConversion() throws RocksDBException, IOException {
-        this(null);
+        this(null, false);
+    }
+
+    public AddressConversion(boolean readonly) throws RocksDBException, IOException {
+        this(null, readonly);
     }
 
     public AddressConversion(ProgressLogger progress) throws RocksDBException, IOException {
+        this(progress, false);
+    }
+
+    public AddressConversion(ProgressLogger progress, boolean readonly) throws RocksDBException, IOException {
         if (progress == null) {
             Logger l = LoggerFactory.getLogger(getClass());
             progress = new ProgressLogger(l, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
@@ -52,20 +60,16 @@ public class AddressConversion {
 
         this.progress = progress;
         this.np = new MainNetParams();
-        this.db = startDatabase();
+        this.db = startDatabase(readonly);
 
         new Context(np);
     }
 
-    private RocksDB startDatabase() throws RocksDBException, IOException {
+    private RocksDB startDatabase(boolean readonly) throws RocksDBException, IOException {
         RocksDB.loadLibrary();
 
         this.location = Path.of(Parameters.resources + "addressconversion");
-        boolean created = this.location.toFile().mkdir();
-
-        if (!created) {
-            throw new RuntimeException("Address conversion database already present!");
-        }
+        this.location.toFile().mkdir();
 
         options = new Options()
                 .setCreateIfMissing(true)
@@ -74,7 +78,12 @@ public class AddressConversion {
                 .setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
                 .setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
+        if (readonly) {
+            return RocksDB.openReadOnly(options, location.toString());
+        }
+
         return RocksDB.open(options, location.toString());
+
     }
 
     public void addAddresses(File tsv) throws IOException, RocksDBException {
@@ -148,13 +157,13 @@ public class AddressConversion {
         progress.done();
     }
 
-    /**
-     * Opens the address conversion database as readonly, to improve multithread
-     * performance
-     */
-    public void freeze() throws RocksDBException {
+    public boolean exists() {
+        return this.location.toFile().exists();
+    }
+
+    public void close() {
+        this.options.close();
         this.db.close();
-        this.db = RocksDB.openReadOnly(this.options, this.location.toString());
     }
 
     public long map(Address address) throws RocksDBException {

@@ -18,12 +18,16 @@ public class PersistenceLayer implements Closeable {
     private final DBOptions options;
 
     public final List<ColumnFamilyHandle> columnFamilyHandleList;
-    public final RocksDB db;
+    public final List<ColumnFamilyDescriptor> columnFamilyDescriptors;
+    public RocksDB db;
 
     private final IncompleteMappings im;
     private final TransactionOutpointFilter tof;
 
     public PersistenceLayer(String location) throws RocksDBException {
+        this(location, false);
+    }
+    public PersistenceLayer(String location, boolean readonly) throws RocksDBException {
         RocksDB.loadLibrary();
 
         this.location = location;
@@ -32,7 +36,7 @@ public class PersistenceLayer implements Closeable {
                 .optimizeUniversalStyleCompaction()
                 .setMergeOperator(new StringAppendOperator(""));
 
-        final List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
+        columnFamilyDescriptors = Arrays.asList(
                 new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions),
                 new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), columnOptions),
                 new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), columnOptions)
@@ -47,7 +51,11 @@ public class PersistenceLayer implements Closeable {
                 .setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
                 .setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
-        db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
+        if (readonly) {
+            db = RocksDB.openReadOnly(options, location, columnFamilyDescriptors, columnFamilyHandleList);
+        } else {
+            db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
+        }
 
         im = new IncompleteMappings(db, columnFamilyHandleList.get(1));
         tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(2));

@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.*;
 import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
@@ -27,16 +29,17 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
     private final AddressConversion addressConversion;
 
     public final Path tempDirectory;
-    public final LongArrayFIFOQueue transactionArcs = new LongArrayFIFOQueue();
+    public final LinkedBlockingQueue<Long> transactionArcs;
 
     private final PersistenceLayer persistenceLayer;
     private final IncompleteMappings incompleteMappings;
     private final TransactionOutpointFilter topFilter;
 
-    public PopulateMappings(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws IOException, RocksDBException {
+    public PopulateMappings(List<File> blockFiles, LinkedBlockingQueue<Long> transactionArcs, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws IOException, RocksDBException {
         this.np = np;
         this.progress = progress;
         this.blockFiles = blockFiles;
+        this.transactionArcs = transactionArcs;
         this.addressConversion = addressConversion;
 
         tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "partialchain-");
@@ -47,9 +50,9 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
     }
 
     void populateMappings() throws RocksDBException {
-        BlockFileLoader bflTemp = new BlockFileLoader(np, blockFiles);
+        BlockFileLoader bfl = new BlockFileLoader(np, blockFiles);
 
-        for (Block block : bflTemp) {
+        for (Block block : bfl) {
             progress.update();
 
             if (!block.hasTransactions())
@@ -59,15 +62,15 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
                 List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
 
                 if (transaction.isCoinBase()) {
-                    addCoinbaseArcs(outputs, transactionArcs);
+                    addCoinbaseArcs(outputs);
                 } else {
-                    mapTransactionOutputs(transaction, outputs, this.incompleteMappings, this.topFilter);
+                    mapTransactionOutputs(transaction, outputs);
                 }
             }
         }
     }
 
-    public static void mapTransactionOutputs(Transaction transaction, List<Long> receivers, IncompleteMappings incompleteMappings, TransactionOutpointFilter topFilter) throws RocksDBException {
+    public void mapTransactionOutputs(Transaction transaction, List<Long> receivers) throws RocksDBException {
         for (TransactionInput ti : transaction.getInputs()) {
             TransactionOutPoint top = ti.getOutpoint();
 
@@ -76,10 +79,10 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
         }
     }
 
-    public static void addCoinbaseArcs(List<Long> receivers, LongArrayFIFOQueue transactionArcs) {
+    public void addCoinbaseArcs(List<Long> receivers) {
         for (long receiver : receivers) {
-            transactionArcs.enqueue(COINBASE_ADDRESS);
-            transactionArcs.enqueue(receiver);
+            transactionArcs.add(COINBASE_ADDRESS);
+            transactionArcs.add(receiver);
         }
     }
 
