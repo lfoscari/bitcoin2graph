@@ -14,12 +14,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
-public class Blockchain2ScatteredArcsASCIIGraph { // implements Iterable<long[]> {
-    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException {
+public class Blockchain2ScatteredArcsASCIIGraph {
+    public static void main(String[] args) throws RocksDBException, IOException {
         NetworkParameters np = new MainNetParams();
-
         (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);

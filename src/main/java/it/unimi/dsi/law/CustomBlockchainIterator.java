@@ -39,7 +39,6 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
         numberOfThreads = Math.min(this.blockFiles.size(), Runtime.getRuntime().availableProcessors());
         executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
-
     }
 
     public void populateMappings() throws RocksDBException, IOException, ExecutionException, InterruptedException {

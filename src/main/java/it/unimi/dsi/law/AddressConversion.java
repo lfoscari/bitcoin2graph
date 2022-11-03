@@ -118,9 +118,6 @@ public class AddressConversion {
             }
         }
 
-        // Save current count
-        this.db.put("count".getBytes(), ByteConversion.long2bytes(count));
-
         progress.stop();
     }
 
@@ -151,9 +148,6 @@ public class AddressConversion {
             }
         }
 
-        // Save current count
-        this.db.put("count".getBytes(), ByteConversion.long2bytes(count));
-
         progress.done();
     }
 
@@ -167,6 +161,13 @@ public class AddressConversion {
     }
 
     public long map(Address address) throws RocksDBException {
-        return ByteConversion.bytes2long(this.db.get(address.toString().getBytes()));
+        byte[] id = this.db.get(address.toString().getBytes());
+
+        if (id == null) {
+            this.db.put(address.toString().getBytes(), ByteConversion.long2bytes(count));
+            return count++;
+        }
+
+        return ByteConversion.bytes2long(id);
     }
 }
