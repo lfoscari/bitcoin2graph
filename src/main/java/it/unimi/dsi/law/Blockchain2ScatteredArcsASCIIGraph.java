@@ -30,7 +30,7 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         progress.displayFreeMemory = true;
         progress.displayLocalSpeed = true;
 
-        File blocksDirectory = new File(Parameters.resources);
+        File blocksDirectory = new File(Parameters.resources + "blocks");
         File[] blockFilesArray = blocksDirectory.listFiles((f, p) -> p.startsWith("blk"));
 
         if (blockFilesArray == null)
