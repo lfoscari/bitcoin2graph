@@ -102,7 +102,8 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
             return null;
         } catch (ScriptException e) {
             // Address malformed
-            System.out.println(to.getParentTransaction().getTxId() + "\n" + script.getScriptType() + "\n" + script);
+
+            System.out.println(to.getParentTransaction().getTxId());
             throw e;
         }
     }
