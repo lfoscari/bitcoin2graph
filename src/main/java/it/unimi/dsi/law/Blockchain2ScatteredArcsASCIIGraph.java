@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.rocksdb.RocksDBException;
@@ -14,10 +15,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class Blockchain2ScatteredArcsASCIIGraph {
-    public static void main(String[] args) throws RocksDBException, IOException {
+    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException {
         NetworkParameters np = new MainNetParams();
+        Context c = new Context(np);
+        Context.propagate(c);
+
         (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
@@ -33,14 +38,13 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
         List<File> blockFiles = List.of(blockFilesArray);
 
-        AddressConversion addressConversion = new AddressConversion(progress);
-        if (!addressConversion.exists())
-            addressConversion.addAddresses(blockFiles);
+        AddressConversion addressConversion = new AddressConversion(np, progress);
+        addressConversion.addAddresses(blockFiles);
         addressConversion.close();
 
-        addressConversion = new AddressConversion(progress, true);
+        addressConversion = new AddressConversion(np, progress, true);
         CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, addressConversion, np, progress);
-        // it.populateMappings();
+        it.populateMappings();
         it.completeMappings();
 
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");

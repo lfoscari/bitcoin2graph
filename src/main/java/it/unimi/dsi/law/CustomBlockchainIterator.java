@@ -28,11 +28,8 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
     private final LinkedBlockingQueue<Long> transactionArcs = new LinkedBlockingQueue<>();
 
-    public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
+    public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) {
         this.np = np;
-        Context c = new Context(this.np);
-        Context.propagate(c);
-
         this.progress = progress;
         this.blockFiles = blockFiles;
         this.addressConversion = addressConversion;
@@ -105,11 +102,16 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         }
     }
 
+    public void close() {
+        addressConversion.close();
+        mappings.close();
+    }
+
     @Override
     public boolean hasNext() {
         while (transactionArcs.size() < 2) {
             if (executorService.isTerminated()) {
-                mappings.close();
+                this.close();
                 return false;
             }
         }

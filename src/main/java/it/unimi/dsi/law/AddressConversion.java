@@ -3,27 +3,21 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.apache.commons.math3.analysis.function.Add;
-import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptException;
+import org.bitcoinj.core.*;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.transactionOutputToAddress;
-import static org.bitcoinj.script.Script.ScriptType.P2WPKH;
 
 /**
  * Build an address conversion map from either a tsv file
@@ -40,32 +34,30 @@ public class AddressConversion {
     private Options options;
     private RocksDB db;
 
-    public AddressConversion() throws RocksDBException, IOException {
-        this(null, false);
+    public AddressConversion(NetworkParameters np) throws RocksDBException, IOException {
+        this(np, null, false);
     }
 
-    public AddressConversion(boolean readonly) throws RocksDBException, IOException {
-        this(null, readonly);
+    public AddressConversion(NetworkParameters np, boolean readonly) throws RocksDBException, IOException {
+        this(np, null, readonly);
     }
 
-    public AddressConversion(ProgressLogger progress) throws RocksDBException, IOException {
-        this(progress, false);
+    public AddressConversion(NetworkParameters np, ProgressLogger progress) throws RocksDBException, IOException {
+        this(np, progress, false);
     }
 
-    public AddressConversion(ProgressLogger progress, boolean readonly) throws RocksDBException, IOException {
+    public AddressConversion(NetworkParameters np, ProgressLogger progress, boolean readonly) throws RocksDBException, IOException {
         if (progress == null) {
             Logger l = LoggerFactory.getLogger(getClass());
             progress = new ProgressLogger(l, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
         }
 
         this.progress = progress;
-        this.np = new MainNetParams();
+        this.np = np;
         this.db = startDatabase(readonly);
-
-        new Context(np);
     }
 
-    private RocksDB startDatabase(boolean readonly) throws RocksDBException, IOException {
+    private RocksDB startDatabase(boolean readonly) throws RocksDBException {
         RocksDB.loadLibrary();
 
         this.location = Path.of(Parameters.resources + "addressconversion");
@@ -103,7 +95,7 @@ public class AddressConversion {
                 read--;
 
             if (read == 0)
-                throw new RuntimeException("Malformed tsv");
+                throw new RuntimeException("Malformed tsv! The right format is [address]<tab>...<newline>");
 
             progress.update();
 

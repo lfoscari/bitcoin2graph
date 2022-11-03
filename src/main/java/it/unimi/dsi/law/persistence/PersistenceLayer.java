@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static it.unimi.dsi.law.Parameters.MAX_BYTES_FOR_LEVEL_BASE;
+
 public class PersistenceLayer implements Closeable {
     private final String location;
     private final ColumnFamilyOptions columnOptions;
@@ -34,6 +36,7 @@ public class PersistenceLayer implements Closeable {
 
         columnOptions = new ColumnFamilyOptions()
                 .optimizeUniversalStyleCompaction()
+                .setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE)
                 .setMergeOperator(new StringAppendOperator(""));
 
         columnFamilyDescriptors = Arrays.asList(
