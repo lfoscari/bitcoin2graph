@@ -10,7 +10,6 @@ import org.rocksdb.RocksDBException;
 
 import java.io.File;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;

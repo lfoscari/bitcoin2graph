@@ -1,20 +1,22 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
-import org.rocksdb.*;
+import org.rocksdb.RocksDBException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.*;
 
 public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long[]> {
@@ -24,7 +26,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     private final AddressConversion addressConversion;
     private PersistenceLayer mappings;
 
-    private ExecutorService executorService;
+    private final ExecutorService executorService;
     private final int numberOfThreads;
 
     private final LinkedBlockingQueue<Long> transactionArcs = new LinkedBlockingQueue<>();
@@ -124,7 +126,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     public long[] next() {
         long sender = transactionArcs.poll();
         long receiver = transactionArcs.poll();
-        return new long[] {sender, receiver};
+        return new long[]{sender, receiver};
     }
 
     @Override

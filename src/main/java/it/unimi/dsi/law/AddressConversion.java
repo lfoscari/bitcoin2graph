@@ -51,9 +51,9 @@ public class AddressConversion {
             Logger l = LoggerFactory.getLogger(getClass());
             progress = new ProgressLogger(l, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
         }
-
-        this.progress = progress;
+        
         this.np = np;
+        this.progress = progress;
         this.db = startDatabase(readonly);
     }
 
@@ -131,7 +131,7 @@ public class AddressConversion {
                         if (receiver == null)
                             continue;
 
-                        // I'm using receiver.getHash() because it would lose information
+                        // I'm not using receiver.getHash() because it would lose information
                         wb.put(receiver.toString().getBytes(), ByteConversion.long2bytes(count++));
                     }
                 }

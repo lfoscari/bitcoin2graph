@@ -5,9 +5,6 @@ import org.rocksdb.*;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +26,7 @@ public class PersistenceLayer implements Closeable {
     public PersistenceLayer(String location) throws RocksDBException {
         this(location, false);
     }
+
     public PersistenceLayer(String location, boolean readonly) throws RocksDBException {
         RocksDB.loadLibrary();
 

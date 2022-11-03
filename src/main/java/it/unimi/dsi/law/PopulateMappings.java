@@ -1,11 +1,9 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.law.persistence.IncompleteMappings;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.apache.commons.math3.analysis.function.Add;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.RocksDBException;
@@ -16,10 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static it.unimi.dsi.law.CustomBlockchainIterator.*;
+import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
 import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
 
 public class PopulateMappings implements Callable<PersistenceLayer> {
