@@ -8,6 +8,7 @@ import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.rocksdb.*;
 
@@ -97,8 +98,12 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         try {
             return script.getToAddress(np, true);
         } catch (IllegalArgumentException e) {
-            // Non standard address
+            // Non-standard address
             return null;
+        } catch (ScriptException e) {
+            // Address malformed
+            System.out.println(to.getParentTransaction().getTxId() + "\n" + script.getScriptType() + "\n" + script);
+            throw e;
         }
     }
 
