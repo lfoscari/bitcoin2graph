@@ -88,14 +88,14 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     }
 
     public static Address transactionOutputToAddress(TransactionOutput to, NetworkParameters np) {
-        Script script = to.getScriptPubKey();
-
-        if (script.getScriptType() == null) {
-            // No public keys are contained in this script.
-            return null;
-        }
-
         try {
+            Script script = to.getScriptPubKey();
+
+            if (script.getScriptType() == null) {
+                // No public keys are contained in this script.
+                return null;
+            }
+
             return script.getToAddress(np, true);
         } catch (IllegalArgumentException e) {
             // Non-standard address
