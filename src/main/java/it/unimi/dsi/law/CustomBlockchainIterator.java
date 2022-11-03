@@ -97,14 +97,9 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
             }
 
             return script.getToAddress(np, true);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | ScriptException e) {
             // Non-standard address
             return null;
-        } catch (ScriptException e) {
-            // Address malformed
-
-            System.out.println(to.getParentTransaction().getTxId());
-            throw e;
         }
     }
 
