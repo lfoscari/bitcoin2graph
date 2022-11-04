@@ -47,7 +47,7 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
     }
 
     void populateMappings() throws RocksDBException {
-        BlockFileLoader bfl = new BlockFileLoader(np, blockFiles);
+        FastBlockFileLoader bfl = new FastBlockFileLoader(np, blockFiles);
 
         for (Block block : bfl) {
             progress.update();

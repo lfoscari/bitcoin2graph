@@ -47,7 +47,7 @@ public class CompleteMappings implements Runnable {
     }
 
     public void completeMappings() throws RocksDBException {
-        BlockFileLoader bfl = new BlockFileLoader(np, this.blockFiles);
+        FastBlockFileLoader bfl = new FastBlockFileLoader(np, this.blockFiles);
 
         for (Block block : bfl) {
             progress.update();
