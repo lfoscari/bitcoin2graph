@@ -26,13 +26,13 @@ import static it.unimi.dsi.law.CustomBlockchainIterator.transactionOutputToAddre
  */
 public class AddressConversion {
     private final NetworkParameters np;
-    private ProgressLogger progress;
+    private final ProgressLogger progress;
 
     private long count = 0;
     private Path location;
 
     private Options options;
-    private RocksDB db;
+    private final RocksDB db;
 
     public AddressConversion(NetworkParameters np) throws RocksDBException, IOException {
         this(np, null, false);
@@ -75,7 +75,6 @@ public class AddressConversion {
         }
 
         return RocksDB.open(options, location.toString());
-
     }
 
     public void addAddresses(File tsv) throws IOException, RocksDBException {
@@ -132,7 +131,8 @@ public class AddressConversion {
                             continue;
 
                         // I'm not using receiver.getHash() because it would lose information
-                        wb.put(receiver.toString().getBytes(), ByteConversion.long2bytes(count++));
+                        byte[] key = receiver.toString().getBytes();
+                        wb.put(key, ByteConversion.long2bytes(count++));
                     }
                 }
 
@@ -153,13 +153,14 @@ public class AddressConversion {
     }
 
     public long map(Address address) throws RocksDBException {
-        byte[] id = this.db.get(address.toString().getBytes());
+        byte[] key = address.toString().getBytes();
+        byte[] value = this.db.get(key);
 
-        if (id == null) {
-            this.db.put(address.toString().getBytes(), ByteConversion.long2bytes(count));
+        if (value == null) {
+            this.db.put(key, ByteConversion.long2bytes(count));
             return count++;
         }
 
-        return ByteConversion.bytes2long(id);
+        return ByteConversion.bytes2long(value);
     }
 }
