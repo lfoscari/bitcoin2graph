@@ -47,13 +47,13 @@ public class CompleteMappings implements Runnable {
     }
 
     public void completeMappings() throws RocksDBException {
-        FastBlockFileLoader bfl = new FastBlockFileLoader(np, this.blockFiles);
+        BlockFileLoader bfl = new BlockFileLoader(np, this.blockFiles);
 
         for (Block block : bfl) {
-            progress.update();
-
             if (!block.hasTransactions())
                 continue;
+
+            progress.update();
 
             for (Transaction transaction : block.getTransactions()) {
                 List<Long> senders = outputAddressesToLongs(transaction, addressConversion, np);

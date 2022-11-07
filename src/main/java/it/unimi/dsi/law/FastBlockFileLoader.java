@@ -2,12 +2,14 @@ package it.unimi.dsi.law;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import it.unimi.dsi.fastutil.Size64;
 import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.AppDataDirectory;
+import org.rocksdb.util.SizeUnit;
 
 import java.io.*;
 import java.util.Iterator;
@@ -48,6 +50,8 @@ public class FastBlockFileLoader implements Iterable<Block>, Iterator<Block> {
     private FastBufferedInputStream currentFileStream = null;
     private Block nextBlock = null;
     private NetworkParameters params;
+
+    private final int BUFFER_SIZE = 64 * (int) SizeUnit.MB;
 
     public FastBlockFileLoader(NetworkParameters params, List<File> files) {
         fileIt = files.iterator();
@@ -94,7 +98,7 @@ public class FastBlockFileLoader implements Iterable<Block>, Iterator<Block> {
                 }
                 file = fileIt.next();
                 try {
-                    currentFileStream = new FastBufferedInputStream(new FileInputStream(file));
+                    currentFileStream = new FastBufferedInputStream(new FileInputStream(file), BUFFER_SIZE);
                 } catch (FileNotFoundException e) {
                     currentFileStream = null;
                 }

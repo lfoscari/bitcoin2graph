@@ -47,13 +47,13 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
     }
 
     void populateMappings() throws RocksDBException {
-        FastBlockFileLoader bfl = new FastBlockFileLoader(np, blockFiles);
+        BlockFileLoader bfl = new BlockFileLoader(np, blockFiles);
 
         for (Block block : bfl) {
-            progress.update();
-
             if (!block.hasTransactions())
                 continue;
+
+            progress.update();
 
             for (Transaction transaction : block.getTransactions()) {
                 List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);

@@ -38,9 +38,11 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
         List<File> blockFiles = List.of(blockFilesArray);
 
-        AddressConversion addressConversion = new AddressConversion(np, progress);
+        AddressConversion addressConversion;
+
+        /* addressConversion = new AddressConversion(np, progress);
         addressConversion.addAddresses(blockFiles);
-        addressConversion.close();
+        addressConversion.close(); */
 
         addressConversion = new AddressConversion(np, progress, true);
         CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, addressConversion, np, progress);
