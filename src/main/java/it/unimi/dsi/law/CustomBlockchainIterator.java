@@ -4,14 +4,13 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.*;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteBatch;
+import org.rocksdb.WriteOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,60 +21,102 @@ import java.util.concurrent.*;
 public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long[]> {
     private final NetworkParameters np;
     private final ProgressLogger progress;
-    private final List<File> blockFiles;
     private final AddressConversion addressConversion;
     private PersistenceLayer mappings;
 
-    private final ExecutorService executorService;
-    private final int numberOfThreads;
+    private final LinkedBlockingQueue<Long> transactionArcs;
+    private final LinkedBlockingQueue<List<byte[]>> blockQueue;
+    private final LinkedBlockingQueue<WriteBatch> dbUpdates;
 
-    private final LinkedBlockingQueue<Long> transactionArcs = new LinkedBlockingQueue<>();
+    private final int numberOfThreads;
+    private final List<File> blockFiles;
+    private ExecutorService executorService;
 
     public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) {
         this.np = np;
         this.progress = progress;
-        this.blockFiles = blockFiles;
         this.addressConversion = addressConversion;
 
-        numberOfThreads = Math.min(this.blockFiles.size(), Runtime.getRuntime().availableProcessors());
-        executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
+        this.transactionArcs = new LinkedBlockingQueue<>();
+        this.blockQueue = new LinkedBlockingQueue<>();
+        this.dbUpdates = new LinkedBlockingQueue<>();
+
+        this.numberOfThreads = Runtime.getRuntime().availableProcessors() - 1;
+        this.blockFiles = blockFiles;
     }
 
-    public void populateMappings() throws RocksDBException, IOException, ExecutionException, InterruptedException {
-        mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db");
-        progress.start("Populating mappings on block files with " + numberOfThreads + " threads");
+    public void populateMappings() throws RocksDBException, ExecutionException, InterruptedException {
+        progress.start("Populating mappings");
 
-        ExecutorCompletionService<PersistenceLayer> executorCompletionService = new ExecutorCompletionService<>(executorService);
-        int factor = this.blockFiles.size() / numberOfThreads;
-        for (int i = 0; i < numberOfThreads; i++) {
-            List<File> assignedBlockFiles = blockFiles.subList(i * factor, (i + 1) * factor);
-            PopulateMappings pm = new PopulateMappings(assignedBlockFiles, transactionArcs, addressConversion, np, progress);
+        this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
+
+        this.executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
+        ExecutorCompletionService<WriteBatch> executorCompletionService = new ExecutorCompletionService<>(executorService);
+
+        Future<?> loaderStatus = this.executorService.submit(new BlockLoader(this.blockFiles, blockQueue, np));
+        // Future<?> writerStatus = this.executorService.submit(new DBWriter(this.mappings, wbQueue, np));
+
+        while (!loaderStatus.isDone()) {
+            List<byte[]> blocksBytes = blockQueue.take();
+            PopulateMappings pm = new PopulateMappings(blocksBytes, addressConversion, transactionArcs, mappings.getColumnFamilyHandleList(), np, progress);
             executorCompletionService.submit(pm);
         }
 
-        for (int i = 0; i < numberOfThreads; i++) {
-            PersistenceLayer partialChain = executorCompletionService.take().get();
-            mappings.mergeWith(partialChain);
-            partialChain.delete();
+        executorService.shutdown();
+
+        while (!executorService.isTerminated()) {
+            WriteBatch wb = executorCompletionService.take().get();
+            this.mappings.db.write(new WriteOptions(), wb);
         }
 
         progress.stop();
-        mappings.close();
     }
 
-    public void completeMappings() throws RocksDBException {
-        mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
-        progress.start("Completing mappings with " + numberOfThreads + " threads");
+    public void completeMappings() throws RocksDBException, IOException, ExecutionException, InterruptedException {
+        progress.start("Completing mappings");
 
-        int factor = this.blockFiles.size() / numberOfThreads;
-        for (int i = 0; i < numberOfThreads; i++) {
-            List<File> assignedBlockFiles = blockFiles.subList(i * factor, (i + 1) * factor);
-            CompleteMappings cm = new CompleteMappings(assignedBlockFiles, transactionArcs, mappings, addressConversion, np, progress);
+        this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
+
+        this.executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
+        Future<?> loaderStatus = this.executorService.submit(new BlockLoader(this.blockFiles, blockQueue, np));
+
+        while (!loaderStatus.isDone()) {
+            List<byte[]> block = blockQueue.take();
+            CompleteMappings cm = new CompleteMappings(block, addressConversion, transactionArcs, mappings, np, progress);
             executorService.execute(cm);
         }
 
-        progress.stop();
         executorService.shutdown();
+    }
+
+    @Override
+    public boolean hasNext() {
+        while (transactionArcs.size() < 2) {
+            if (executorService.isTerminated()) {
+                this.close();
+                progress.done();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public long[] next() {
+        long sender = transactionArcs.poll();
+        long receiver = transactionArcs.poll();
+        return new long[]{sender, receiver};
+    }
+
+    @Override
+    public Iterator<long[]> iterator() {
+        return this;
+    }
+
+    public void close() {
+        this.addressConversion.close();
+        this.mappings.close();
     }
 
     public static List<Long> outputAddressesToLongs(Transaction t, AddressConversion ac, NetworkParameters np) throws RocksDBException {
@@ -103,34 +144,5 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
             // Non-standard address
             return null;
         }
-    }
-
-    public void close() {
-        addressConversion.close();
-        mappings.close();
-    }
-
-    @Override
-    public boolean hasNext() {
-        while (transactionArcs.size() < 2) {
-            if (executorService.isTerminated()) {
-                this.close();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    @Override
-    public long[] next() {
-        long sender = transactionArcs.poll();
-        long receiver = transactionArcs.poll();
-        return new long[]{sender, receiver};
-    }
-
-    @Override
-    public Iterator<long[]> iterator() {
-        return this;
     }
 }

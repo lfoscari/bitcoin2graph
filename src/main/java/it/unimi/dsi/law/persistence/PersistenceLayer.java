@@ -1,6 +1,7 @@
 package it.unimi.dsi.law.persistence;
 
 import it.unimi.dsi.law.Parameters;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.*;
 
 import java.io.Closeable;
@@ -19,9 +20,6 @@ public class PersistenceLayer implements Closeable {
     public final List<ColumnFamilyHandle> columnFamilyHandleList;
     public final List<ColumnFamilyDescriptor> columnFamilyDescriptors;
     public RocksDB db;
-
-    private final IncompleteMappings im;
-    private final TransactionOutpointFilter tof;
 
     public PersistenceLayer(String location) throws RocksDBException {
         this(location, false);
@@ -57,17 +55,10 @@ public class PersistenceLayer implements Closeable {
         } else {
             db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
         }
-
-        im = new IncompleteMappings(db, columnFamilyHandleList.get(1));
-        tof = new TransactionOutpointFilter(db, columnFamilyHandleList.get(2));
     }
 
-    public IncompleteMappings getIncompleteMappings() {
-        return im;
-    }
-
-    public TransactionOutpointFilter getTransactionOutpointFilter() {
-        return tof;
+    public List<ColumnFamilyHandle> getColumnFamilyHandleList() {
+        return columnFamilyHandleList;
     }
 
     public void mergeWith(PersistenceLayer other) throws RocksDBException {

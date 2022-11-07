@@ -1,59 +1,57 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.law.persistence.IncompleteMappings;
-import it.unimi.dsi.law.persistence.PersistenceLayer;
 import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.BlockFileLoader;
+import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteBatch;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
 import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
 
-public class PopulateMappings implements Callable<PersistenceLayer> {
-    private final NetworkParameters np;
-    private final ProgressLogger progress;
-    private final List<File> blockFiles;
+public class PopulateMappings implements Callable<WriteBatch> {
+    private final List<byte[]> blocksBytes;
+    public final LinkedBlockingQueue<Long> transactionArcs;
     private final AddressConversion addressConversion;
 
-    public final Path tempDirectory;
-    public final LinkedBlockingQueue<Long> transactionArcs;
+    private final ColumnFamilyHandle incompleteMappings;
+    private final ColumnFamilyHandle topFilter;
 
-    private final PersistenceLayer persistenceLayer;
-    private final IncompleteMappings incompleteMappings;
-    private final TransactionOutpointFilter topFilter;
+    private final NetworkParameters np;
+    private final ProgressLogger progress;
 
-    public PopulateMappings(List<File> blockFiles, LinkedBlockingQueue<Long> transactionArcs, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws IOException, RocksDBException {
-        this.np = np;
-        this.progress = progress;
-        this.blockFiles = blockFiles;
+    private final WriteBatch wb;
+
+    public PopulateMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long> transactionArcs, List<ColumnFamilyHandle> columnFamilyHandleList, NetworkParameters np, ProgressLogger progress) {
+        this.blocksBytes = blocksBytes;
         this.transactionArcs = transactionArcs;
         this.addressConversion = addressConversion;
 
-        tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "partialchain-");
+        this.incompleteMappings = columnFamilyHandleList.get(1);
+        this.topFilter = columnFamilyHandleList.get(2);
 
-        this.persistenceLayer = new PersistenceLayer(tempDirectory.toString());
-        this.incompleteMappings = persistenceLayer.getIncompleteMappings();
-        this.topFilter = persistenceLayer.getTransactionOutpointFilter();
+        this.np = np;
+        this.progress = progress;
+
+        this.wb = new WriteBatch();
     }
 
-    void populateMappings() throws RocksDBException {
-        BlockFileLoader bfl = new BlockFileLoader(np, blockFiles);
+    private void populateMappings() throws RocksDBException {
+        for (byte[] blockBytes : blocksBytes) {
+            Block block = np.getDefaultSerializer().makeBlock(blockBytes);
 
-        for (Block block : bfl) {
             if (!block.hasTransactions())
-                continue;
-
-            progress.update();
+                return;
 
             for (Transaction transaction : block.getTransactions()) {
                 List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
@@ -64,6 +62,8 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
                     mapTransactionOutputs(transaction, outputs);
                 }
             }
+
+            this.progress.update();
         }
     }
 
@@ -71,8 +71,8 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
         for (TransactionInput ti : transaction.getInputs()) {
             TransactionOutPoint top = ti.getOutpoint();
 
-            incompleteMappings.put(top, receivers);
-            topFilter.put(top.getHash(), top.getIndex());
+            IncompleteMappings.put(wb, incompleteMappings, top, receivers, transaction.getUpdateTime());
+            TransactionOutpointFilter.put(wb, topFilter, top.getHash(), top.getIndex(), transaction.getUpdateTime());
         }
     }
 
@@ -84,10 +84,10 @@ public class PopulateMappings implements Callable<PersistenceLayer> {
     }
 
     @Override
-    public PersistenceLayer call() {
+    public WriteBatch call() {
         try {
-            populateMappings();
-            return persistenceLayer;
+            this.populateMappings();
+            return wb;
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }
