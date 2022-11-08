@@ -70,6 +70,9 @@ public class BlockLoader implements Runnable {
     @Override
     public void run() {
         while (true) {
+            while (blockQueue.size() > 1)
+                Thread.yield();
+
             try {
                 List<byte[]> blocks = loadNextBlocks();
 

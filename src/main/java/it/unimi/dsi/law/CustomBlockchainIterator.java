@@ -48,7 +48,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     }
 
     public void populateMappings() throws RocksDBException, InterruptedException {
-        progress.start("Populating mappings");
+        progress.start("Populating mappings with " + numberOfThreads + " threads");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
 
@@ -73,7 +73,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     }
 
     public void completeMappings() throws RocksDBException, InterruptedException {
-        progress.start("Completing mappings");
+        progress.start("Completing mappings with " + numberOfThreads + " threads");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
 
