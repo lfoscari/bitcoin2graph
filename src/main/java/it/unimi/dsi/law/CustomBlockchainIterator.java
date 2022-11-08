@@ -97,7 +97,6 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         while (transactionArcs.size() < 2) {
             if (blockchainParsers.isTerminated()) {
                 this.close();
-                progress.done();
                 return false;
             }
         }
@@ -120,6 +119,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
     public void close() {
         this.addressConversion.close();
         this.mappings.close();
+        this.progress.done();
     }
 
     public static List<Long> outputAddressesToLongs(Transaction t, AddressConversion ac, NetworkParameters np) throws RocksDBException {

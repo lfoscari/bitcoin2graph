@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class Blockchain2ScatteredArcsASCIIGraph {
-    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException, TimeoutException {
+    public static void main(String[] args) throws RocksDBException, IOException, InterruptedException {
         NetworkParameters np = new MainNetParams();
         Context c = new Context(np);
         Context.propagate(c);
@@ -52,6 +52,7 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 10000, tempDirectory.toFile(), progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
+        Files.delete(tempDirectory.toAbsolutePath());
 
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
         progress.done();
