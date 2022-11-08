@@ -16,9 +16,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 public class Blockchain2ScatteredArcsASCIIGraph {
-    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws RocksDBException, IOException, ExecutionException, InterruptedException, TimeoutException {
         NetworkParameters np = new MainNetParams();
         Context c = new Context(np);
         Context.propagate(c);

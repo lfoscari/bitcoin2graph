@@ -26,11 +26,12 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
     private final LinkedBlockingQueue<Long> transactionArcs;
     private final LinkedBlockingQueue<List<byte[]>> blockQueue;
-    private final LinkedBlockingQueue<WriteBatch> dbUpdates;
+    private final LinkedBlockingQueue<WriteBatch> wbQueue;
 
     private final int numberOfThreads;
     private final List<File> blockFiles;
-    private ExecutorService executorService;
+    private ExecutorService blockchainParsers;
+    private ExecutorService diskHandlers;
 
     public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) {
         this.np = np;
@@ -39,60 +40,61 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
         this.transactionArcs = new LinkedBlockingQueue<>();
         this.blockQueue = new LinkedBlockingQueue<>();
-        this.dbUpdates = new LinkedBlockingQueue<>();
+        this.wbQueue = new LinkedBlockingQueue<>();
 
         this.numberOfThreads = Runtime.getRuntime().availableProcessors() - 1;
         this.blockFiles = blockFiles;
     }
 
-    public void populateMappings() throws RocksDBException, ExecutionException, InterruptedException {
+    public void populateMappings() throws RocksDBException, InterruptedException {
         progress.start("Populating mappings");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
 
-        this.executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
-        ExecutorCompletionService<WriteBatch> executorCompletionService = new ExecutorCompletionService<>(executorService);
+        this.blockchainParsers = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
 
-        Future<?> loaderStatus = this.executorService.submit(new BlockLoader(this.blockFiles, blockQueue, np));
-        // Future<?> writerStatus = this.executorService.submit(new DBWriter(this.mappings, wbQueue, np));
+        this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
+        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, np));
+        Future<?> writerStatus = this.diskHandlers.submit(new DBWriter(this.mappings, wbQueue));
+        diskHandlers.shutdown();
 
         while (!loaderStatus.isDone()) {
             List<byte[]> blocksBytes = blockQueue.take();
-            PopulateMappings pm = new PopulateMappings(blocksBytes, addressConversion, transactionArcs, mappings.getColumnFamilyHandleList(), np, progress);
-            executorCompletionService.submit(pm);
+            PopulateMappings pm = new PopulateMappings(blocksBytes, addressConversion, transactionArcs, mappings.getColumnFamilyHandleList(), wbQueue, np, progress);
+            blockchainParsers.execute(pm);
         }
+        blockchainParsers.shutdown();
+        blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
-        executorService.shutdown();
-
-        while (!executorService.isTerminated()) {
-            WriteBatch wb = executorCompletionService.take().get();
-            this.mappings.db.write(new WriteOptions(), wb);
-        }
+        // How to gracefully stop the DBWriter?
 
         progress.stop();
     }
 
-    public void completeMappings() throws RocksDBException, IOException, ExecutionException, InterruptedException {
+    public void completeMappings() throws RocksDBException, InterruptedException {
         progress.start("Completing mappings");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
 
-        this.executorService = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
-        Future<?> loaderStatus = this.executorService.submit(new BlockLoader(this.blockFiles, blockQueue, np));
+        this.blockchainParsers = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
+
+        this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
+        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, np));
+        diskHandlers.shutdown();
 
         while (!loaderStatus.isDone()) {
             List<byte[]> block = blockQueue.take();
             CompleteMappings cm = new CompleteMappings(block, addressConversion, transactionArcs, mappings, np, progress);
-            executorService.execute(cm);
+            blockchainParsers.execute(cm);
         }
 
-        executorService.shutdown();
+        blockchainParsers.shutdown();
     }
 
     @Override
     public boolean hasNext() {
         while (transactionArcs.size() < 2) {
-            if (executorService.isTerminated()) {
+            if (blockchainParsers.isTerminated()) {
                 this.close();
                 progress.done();
                 return false;
