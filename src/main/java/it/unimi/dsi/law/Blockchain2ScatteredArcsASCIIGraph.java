@@ -7,6 +7,7 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.util.SizeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +29,6 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
-        progress.displayFreeMemory = true;
-        progress.displayLocalSpeed = true;
 
         File blocksDirectory = new File(Parameters.resources + "blocks");
         File[] blockFilesArray = blocksDirectory.listFiles((f, p) -> p.startsWith("blk"));
