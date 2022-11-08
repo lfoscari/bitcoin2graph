@@ -11,6 +11,7 @@ import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
+import org.rocksdb.util.SizeUnit;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
 
-        this.blockchainParsers = Executors.newFixedThreadPool(numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
+        this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("blockchain-parser"));
 
         this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
         Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, np));
