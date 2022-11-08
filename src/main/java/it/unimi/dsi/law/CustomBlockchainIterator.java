@@ -67,7 +67,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         blockchainParsers.shutdown();
         blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
-        // How to gracefully stop the DBWriter?
+        // How to gracefully stop the DBWriter? Simply don't...
 
         progress.stop();
     }

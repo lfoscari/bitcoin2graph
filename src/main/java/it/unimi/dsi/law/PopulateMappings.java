@@ -90,6 +90,7 @@ public class PopulateMappings implements Runnable {
         try {
             this.populateMappings();
             wbQueue.add(wb);
+            System.gc();
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }

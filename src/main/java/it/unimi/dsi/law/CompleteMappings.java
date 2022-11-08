@@ -70,6 +70,7 @@ public class CompleteMappings implements Runnable {
     public void run () {
         try {
             this.completeMappings();
+            System.gc();
         } catch (RocksDBException e) {
             throw new RuntimeException(e);
         }

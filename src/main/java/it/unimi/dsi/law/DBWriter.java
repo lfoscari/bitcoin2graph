@@ -19,11 +19,17 @@ public class DBWriter implements Runnable {
 
     @Override
     public void run() {
-        while (!wbQueue.isEmpty()) {
+        while (true) {
+            WriteBatch wb = wbQueue.poll();
+
+            if (wb == null)
+                Thread.yield();
+
             try {
-                WriteBatch wb = wbQueue.poll();
                 this.mappings.db.write(new WriteOptions(), wb);
             } catch (RocksDBException ignored) {}
+
+            System.gc();
         }
     }
 }
