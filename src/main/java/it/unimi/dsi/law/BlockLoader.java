@@ -1,8 +1,7 @@
 package it.unimi.dsi.law;
 
-import org.bitcoinj.core.Block;
+import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Utils;
 
 import java.io.ByteArrayInputStream;
@@ -12,16 +11,19 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class BlockLoader implements Runnable {
     private final Iterator<File> blockFiles;
     private final LinkedBlockingQueue<List<byte[]>> blockQueue;
+    private final ProgressLogger progress;
     private final NetworkParameters np;
 
-    public BlockLoader(List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, NetworkParameters np) {
+    public BlockLoader(List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, ProgressLogger progress, NetworkParameters np) {
         this.blockFiles = blockFiles.iterator();
         this.blockQueue = blockQueue;
+        this.progress = progress;
         this.np = np;
     }
 
@@ -29,7 +31,8 @@ public class BlockLoader implements Runnable {
         if (!blockFiles.hasNext())
             return null;
 
-        byte[] blocks = Files.readAllBytes(blockFiles.next().toPath());
+        File blockFile = blockFiles.next();
+        byte[] blocks = Files.readAllBytes(blockFile.toPath());
         ByteArrayInputStream bis = new ByteArrayInputStream(blocks);
         List<byte[]> blockList = new ArrayList<>();
 
@@ -64,6 +67,8 @@ public class BlockLoader implements Runnable {
             blockList.add(bytes);
         }
 
+        this.progress.logger.info("New block file loaded " + blockFile);
+
         return blockList;
     }
 
@@ -79,7 +84,8 @@ public class BlockLoader implements Runnable {
                 if (blocks == null)
                     break;
 
-                blockQueue.add(blocks);
+                if (blocks.size() > 0)
+                    blockQueue.add(blocks);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

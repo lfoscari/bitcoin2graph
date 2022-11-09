@@ -52,7 +52,8 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 10000, tempDirectory.toFile(), progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
-        Files.delete(tempDirectory.toAbsolutePath());
+
+        addressConversion.close();
 
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
         progress.done();
