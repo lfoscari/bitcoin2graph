@@ -54,7 +54,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         WriteBatch stop = new WriteBatch();
 
         this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
-        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, progress, np));
+        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, wbQueue, progress, np));
         Future<?> writerStatus = this.diskHandlers.submit(new DBWriter(this.mappings, wbQueue, stop, progress));
         diskHandlers.shutdown();
 
@@ -82,7 +82,7 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
 
         this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
-        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, progress, np));
+        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, null, progress, np));
         diskHandlers.shutdown();
 
         this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("completing-mappings"));

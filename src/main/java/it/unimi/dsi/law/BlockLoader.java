@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
+import org.rocksdb.WriteBatch;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -17,12 +18,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class BlockLoader implements Runnable {
     private final Iterator<File> blockFiles;
     private final LinkedBlockingQueue<List<byte[]>> blockQueue;
+    private final LinkedBlockingQueue<WriteBatch> wbQueue;
     private final ProgressLogger progress;
     private final NetworkParameters np;
 
-    public BlockLoader(List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, ProgressLogger progress, NetworkParameters np) {
+    public BlockLoader(List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, LinkedBlockingQueue<WriteBatch> wbQueue, ProgressLogger progress, NetworkParameters np) {
         this.blockFiles = blockFiles.iterator();
         this.blockQueue = blockQueue;
+        this.wbQueue = wbQueue;
         this.progress = progress;
         this.np = np;
     }
@@ -75,7 +78,7 @@ public class BlockLoader implements Runnable {
     @Override
     public void run() {
         while (true) {
-            while (blockQueue.size() > 1)
+            while (this.blockQueue.size() > 1 || (this.wbQueue != null && this.wbQueue.size() > 1))
                 Thread.yield();
 
             try {
