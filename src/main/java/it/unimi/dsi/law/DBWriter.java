@@ -26,20 +26,21 @@ public class DBWriter implements Runnable {
     @Override
     public void run() {
         while (true) {
-            WriteBatch wb = wbQueue.poll();
-
-            if (wb == null)
-                Thread.yield();
-
-            if (stop.equals(wb))
-                return;
-
             try {
+                WriteBatch wb = wbQueue.take();
+
+                if (stop.hashCode() == wb.hashCode()) {
+                    this.progress.logger.info("No more writes to perform on the database");
+                    return;
+                }
+
                 this.mappings.db.write(new WriteOptions(), wb);
                 this.progress.logger.info("New write batch completed");
-            } catch (RocksDBException ignored) {}
 
-            System.gc();
+                System.gc();
+            } catch (RocksDBException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

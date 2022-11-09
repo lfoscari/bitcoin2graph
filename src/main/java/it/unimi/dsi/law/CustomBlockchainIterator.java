@@ -15,9 +15,11 @@ import org.rocksdb.util.SizeUnit;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long[]> {
     private final NetworkParameters np;
@@ -39,13 +41,13 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         this.addressConversion = addressConversion;
 
         this.transactionArcs = new LinkedBlockingQueue<>();
-        this.blockQueue = new LinkedBlockingQueue<>();
+        this.blockQueue = new LinkedBlockingQueue<>(Parameters.numberOfThreads);
         this.wbQueue = new LinkedBlockingQueue<>();
 
         this.blockFiles = blockFiles;
     }
 
-    public void populateMappings() throws RocksDBException, InterruptedException {
+    public void populateMappings() throws RocksDBException, InterruptedException, ExecutionException {
         this.progress.start("Populating mappings with " + Parameters.numberOfThreads + " threads");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
@@ -59,15 +61,27 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         diskHandlers.shutdown();
 
         this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("populating-mappings"));
+        List<Future<?>> pmTasks = new ArrayList<>();
+
         while (!loaderStatus.isDone()) {
+
+            // Manage the number of active PopulateMappings tasks to avoid thrashing
+            if (pmTasks.size() >= Parameters.numberOfThreads) {
+                // Remove done threads
+                pmTasks.removeIf(Future::isDone);
+                continue;
+            }
+
             List<byte[]> blocksBytes = blockQueue.take();
 
             this.progress.logger.info("New mapping task added");
             PopulateMappings pm = new PopulateMappings(blocksBytes, addressConversion, transactionArcs, mappings.getColumnFamilyHandleList(), wbQueue, np, progress);
-            this.blockchainParsers.execute(pm);
+            Future<?> pmFuture = this.blockchainParsers.submit(pm);
+            pmTasks.add(pmFuture);
         }
-        this.blockchainParsers.shutdown();
-        this.blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+
+        for (Future<?> pmFuture : pmTasks)
+            pmFuture.get();
 
         wbQueue.add(stop);
         this.diskHandlers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
@@ -86,12 +100,23 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         diskHandlers.shutdown();
 
         this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("completing-mappings"));
+        List<Future<?>> cmTasks = new ArrayList<>();
+
         while (!loaderStatus.isDone()) {
+
+            // Manage the number of active PopulateMappings tasks to avoid thrashing
+            if (cmTasks.size() >= Parameters.numberOfThreads) {
+                // Remove done threads
+                cmTasks.removeIf(Future::isDone);
+                continue;
+            }
+
             List<byte[]> block = blockQueue.take();
 
             this.progress.logger.info("New mapping task added");
             CompleteMappings cm = new CompleteMappings(block, addressConversion, transactionArcs, mappings, np, progress);
-            blockchainParsers.execute(cm);
+            Future<?> cmFuture = this.blockchainParsers.submit(cm);
+            cmTasks.add(cmFuture);
         }
 
         blockchainParsers.shutdown();

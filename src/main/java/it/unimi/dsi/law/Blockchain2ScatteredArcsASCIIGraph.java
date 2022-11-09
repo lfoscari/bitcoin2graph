@@ -6,6 +6,7 @@ import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.util.SizeUnit;
 import org.slf4j.Logger;
@@ -15,12 +16,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class Blockchain2ScatteredArcsASCIIGraph {
-    public static void main(String[] args) throws RocksDBException, IOException, InterruptedException {
+    public static void main(String[] args) throws RocksDBException, IOException, InterruptedException, ExecutionException {
         NetworkParameters np = new MainNetParams();
         Context c = new Context(np);
         Context.propagate(c);
@@ -30,13 +36,7 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
         ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
 
-        File blocksDirectory = new File(Parameters.resources + "blocks");
-        File[] blockFilesArray = blocksDirectory.listFiles((f, p) -> p.startsWith("blk"));
-
-        if (blockFilesArray == null)
-            throw new RuntimeException("No block files found!");
-
-        List<File> blockFiles = List.of(blockFilesArray);
+        List<File> blockFiles = getBlockFiles(Parameters.resources + "blocks");
 
         AddressConversion addressConversion;
 
@@ -57,5 +57,16 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
         progress.done();
+    }
+
+    public static List<File> getBlockFiles(String blocksDirName) {
+        File blocksDir = new File(blocksDirName);
+        List<File> list = new ArrayList<>();
+        for (int i = 0; true; i++) {
+            File file = new File(blocksDir, String.format(Locale.US, "blk%05d.dat", i));
+            if (!file.exists()) break;
+            list.add(file);
+        }
+        return list;
     }
 }

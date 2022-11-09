@@ -78,9 +78,6 @@ public class BlockLoader implements Runnable {
     @Override
     public void run() {
         while (true) {
-            while (this.blockQueue.size() > 1 || (this.wbQueue != null && this.wbQueue.size() > 1))
-                Thread.yield();
-
             try {
                 List<byte[]> blocks = loadNextBlocks();
 
@@ -88,8 +85,8 @@ public class BlockLoader implements Runnable {
                     break;
 
                 if (blocks.size() > 0)
-                    blockQueue.add(blocks);
-            } catch (IOException e) {
+                    blockQueue.put(blocks);
+            } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
