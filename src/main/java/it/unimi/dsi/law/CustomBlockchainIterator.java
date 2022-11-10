@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
@@ -139,9 +140,16 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
     @Override
     public long[] next() {
-        long sender = transactionArcs.poll();
-        long receiver = transactionArcs.poll();
-        return new long[]{sender, receiver};
+        try {
+            if (transactionArcs.size() < 2)
+                throw new NoSuchElementException();
+
+            long sender = transactionArcs.take();
+            long receiver = transactionArcs.take();
+            return new long[]{sender, receiver};
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
