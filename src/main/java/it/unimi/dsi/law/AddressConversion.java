@@ -143,10 +143,6 @@ public class AddressConversion {
         progress.done();
     }
 
-    public boolean exists() {
-        return this.location.toFile().exists();
-    }
-
     public void close() {
         this.options.close();
         this.db.close();
@@ -156,11 +152,19 @@ public class AddressConversion {
         byte[] key = address.toString().getBytes();
         byte[] value = this.db.get(key);
 
-        if (value == null) {
-            this.db.put(key, ByteConversion.long2bytes(count));
-            return count++;
-        }
+        // NOT POSSIBLE IN READ-ONLY MODE
+        // if (value == null) {
+        //     this.db.put(key, ByteConversion.long2bytes(count));
+        //     return count++;
+        //  }
 
         return ByteConversion.bytes2long(value);
+    }
+
+    public RocksIterator iterator() {
+        RocksIterator rit = db.newIterator();
+        rit.seekToFirst();
+
+        return rit;
     }
 }

@@ -1,20 +1,22 @@
-ScatteredArcsASCIIGraph on the other hand simply needs a list of arcs, to make
-it lazy I implemented it with a custom iterator over the blockchain.
+Check out Parameters.java to customize the execution.
 
-Adding the arcs directly to an ArrayListMutableGraph appears to be a bad idea,
-because is very difficult to avoid adding duplicate arcs, and this slows down
-the program significantly.
+The parser works with three passes over all the blockchain blocks, each one does not need to be repeated once completed,
+unless the blockchain changes. The first pass builds an "address conversion" database to map addresses to longs, this
+is crucial because Webgraph accepts arcs in the form of longs (note: in the final graph the nodes won't be labeled
+exactly as this map suggests, because during construction new numbers are associated to the nodes to improve compression).
 
-In both cases the main drawback is that two passes are necessary over the whole
-blockchain, because the blocks are parsed from last to first, instead of from
-first to last, making it impossible to close the mappings, because a mapping
-references a previous transaction. As far as I know Bitcoinj does not allow
-reverse loading, but another solution might be found.
+The second pass populates the address mappings, because of how the Bitcoin blockchain is structured the transactions
+don't contain address-to-address associations but store as the sender a transaction id and an index, meaning that the
+sender is actually the i-th address in the given transaction.
 
-In case the association TransactionOutLog - Address uses too much space,
-consider using an implementation of RocksDB or LevelDB.
+The last pass completes the mappings by running once again over all the blocks at completing the association between
+addresses and exposes an iterator, which is given to the ScatteredArcsASCIIGraph constructor.
 
-TODO:
-- Figure out how to add information to arcs and nodes
-- Avoid scanning two times the blocks for performance [likely impossible]
-- MULTITHREAD FIRST PASS
+The main issue encountered with the last to passes was to execute them concurrently, but reading the block files one at
+a time (the code was to be run on an HDD machine) and avoid filling up too much memory, automatically resorting to swap
+space, even if the latter challenge is yet to be conquered, the execution is quite fast and easily tunable.
+
+Because of how the block loader works it keeps in memory at most two times the number of threads in block files, each
+sized at roughly 128MB, keep that in mind when sizing the number of threads.
+
+As a database we opted for RocksDB, due to its graceful degradation features.

@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
+import org.apache.commons.math3.analysis.function.Add;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
@@ -52,9 +53,9 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 10000, tempDirectory.toFile(), progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
+        Address2Node.saveAddress2Node(graph.ids, addressConversion);
 
         addressConversion.close();
-
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
         progress.done();
     }
