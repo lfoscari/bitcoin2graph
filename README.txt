@@ -20,3 +20,5 @@ Because of how the block loader works it keeps in memory at most two times the n
 sized at roughly 128MB, keep that in mind when sizing the number of threads.
 
 As a database we opted for RocksDB, due to its graceful degradation features.
+
+TODO: Improve memory management
