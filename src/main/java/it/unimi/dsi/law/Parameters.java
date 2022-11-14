@@ -11,8 +11,7 @@ public class Parameters {
     public final static long logInterval = 10;
     public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
 
-    // Each block file is roughly 128MB and each thread works on a single block file
-    public final static int numberOfThreads = 6; // Math.max(1, (int) (Runtime.getRuntime().maxMemory() / (128 * SizeUnit.MB)) - 1);
+    public final static int numberOfThreads = 6;
 
     /* ROCKSDB */
     public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;

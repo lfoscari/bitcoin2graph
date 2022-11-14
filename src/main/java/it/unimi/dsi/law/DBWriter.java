@@ -31,12 +31,13 @@ public class DBWriter implements Runnable {
 
                 if (stop.hashCode() == wb.hashCode()) {
                     this.progress.logger.info("No more writes to perform on the database");
-                    return;
+                    break;
                 }
 
                 this.mappings.db.write(new WriteOptions(), wb);
-                this.progress.logger.info("New write batch completed");
+                this.progress.logger.info("New write batch completed " + wb.hashCode());
 
+                wb = null;
                 System.gc();
             } catch (RocksDBException | InterruptedException e) {
                 throw new RuntimeException(e);

@@ -79,13 +79,16 @@ public class BlockLoader implements Runnable {
     public void run() {
         while (true) {
             try {
+                if (this.blockQueue.remainingCapacity() == 0)
+                    continue;
+
                 List<byte[]> blocks = loadNextBlocks();
 
                 if (blocks == null)
                     break;
 
                 if (blocks.size() > 0)
-                    blockQueue.put(blocks);
+                    this.blockQueue.put(blocks);
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }

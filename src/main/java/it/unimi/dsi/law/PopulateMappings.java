@@ -22,7 +22,7 @@ import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
 
 public class PopulateMappings implements Runnable {
     private final List<byte[]> blocksBytes;
-    public final LinkedBlockingQueue<Long> transactionArcs;
+    public final LinkedBlockingQueue<Long[]> transactionArcs;
     private final LinkedBlockingQueue<WriteBatch> wbQueue;
     private final AddressConversion addressConversion;
 
@@ -34,7 +34,7 @@ public class PopulateMappings implements Runnable {
 
     private final WriteBatch wb;
 
-    public PopulateMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long> transactionArcs, List<ColumnFamilyHandle> columnFamilyHandleList, LinkedBlockingQueue<WriteBatch> wbQueue, NetworkParameters np, ProgressLogger progress) {
+    public PopulateMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, List<ColumnFamilyHandle> columnFamilyHandleList, LinkedBlockingQueue<WriteBatch> wbQueue, NetworkParameters np, ProgressLogger progress) {
         this.blocksBytes = blocksBytes;
         this.transactionArcs = transactionArcs;
         this.wbQueue = wbQueue;
@@ -80,19 +80,18 @@ public class PopulateMappings implements Runnable {
     }
 
     public void addCoinbaseArcs(List<Long> receivers) {
-        for (long receiver : receivers) {
-            transactionArcs.add(COINBASE_ADDRESS);
-            transactionArcs.add(receiver);
-        }
+        for (long receiver : receivers)
+            transactionArcs.add(new Long[] {COINBASE_ADDRESS, receiver});
     }
 
     @Override
     public void run() {
         try {
             this.populateMappings();
-            wbQueue.add(wb);
+            this.progress.logger.info("Adding write batch " + wb.hashCode());
+            this.wbQueue.put(wb);
             System.gc();
-        } catch (RocksDBException e) {
+        } catch (RocksDBException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

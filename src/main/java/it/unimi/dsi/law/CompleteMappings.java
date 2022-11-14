@@ -16,14 +16,14 @@ import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
 
 public class CompleteMappings implements Runnable {
     private final List<byte[]> blocksBytes;
-    public final LinkedBlockingQueue<Long> transactionArcs;
+    public final LinkedBlockingQueue<Long[]> transactionArcs;
     private final PersistenceLayer mappings;
     private final AddressConversion addressConversion;
 
     private final NetworkParameters np;
     private final ProgressLogger progress;
 
-    public CompleteMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long> transactionArcs, PersistenceLayer mappings, NetworkParameters np, ProgressLogger progress) {
+    public CompleteMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, PersistenceLayer mappings, NetworkParameters np, ProgressLogger progress) {
         this.blocksBytes = blocksBytes;
         this.addressConversion = addressConversion;
         this.transactionArcs = transactionArcs;
@@ -57,8 +57,7 @@ public class CompleteMappings implements Runnable {
                         if (receiver == null)
                             continue;
 
-                        transactionArcs.add(sender);
-                        transactionArcs.add(receiver);
+                        transactionArcs.add(new Long[]{sender, receiver});
                     }
                 }
             }
