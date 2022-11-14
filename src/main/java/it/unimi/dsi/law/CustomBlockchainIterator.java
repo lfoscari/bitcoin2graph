@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.*;
 
-public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long[]> {
+public class CustomBlockchainIterator {
     private final NetworkParameters np;
     private final ProgressLogger progress;
     private final AddressConversion addressConversion;
@@ -30,18 +31,19 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
     private final List<File> blockFiles;
     private ExecutorService blockchainParsers;
-    private ExecutorService diskHandlers;
+    private final RocksArcs rocksArcs;
 
-    public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) {
+    public CustomBlockchainIterator(List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
         this.np = np;
         this.progress = progress;
         this.addressConversion = addressConversion;
 
         this.transactionArcs = new LinkedBlockingQueue<>();
         this.blockQueue = new LinkedBlockingQueue<>(Parameters.numberOfThreads / 2);
-        this.wbQueue = new LinkedBlockingQueue<>(Parameters.numberOfThreads / 2);
+        this.wbQueue = new LinkedBlockingQueue<>(Parameters.numberOfThreads);
 
         this.blockFiles = blockFiles;
+        this.rocksArcs = new RocksArcs(transactionArcs);
     }
 
     public void populateMappings() throws RocksDBException, InterruptedException, ExecutionException {
@@ -49,12 +51,11 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", false);
 
-        WriteBatch stopWb = new WriteBatch();
+        BlockLoader bl = new BlockLoader(this.blockFiles, blockQueue, progress, np);
+        Future<?> loaderStatus = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("block-loader")).submit(bl);
 
-        this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
-        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, wbQueue, progress, np));
-        Future<?> writerStatus = this.diskHandlers.submit(new DBWriter(this.mappings, wbQueue, stopWb, progress));
-        diskHandlers.shutdown();
+        DBWriter dbWriter = new DBWriter(this.mappings, wbQueue, progress);
+        Future<?> writerStatus = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("db-writer")).submit(dbWriter);
 
         this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("populating-mappings"));
         List<Future<?>> pmTasks = new ArrayList<>();
@@ -63,13 +64,14 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
 
             // Manage the number of active PopulateMappings tasks to avoid thrashing
             if (pmTasks.size() > Parameters.numberOfThreads) {
-                // Remove done threads
                 pmTasks.removeIf(Future::isDone);
-                System.gc();
                 continue;
             }
 
-            List<byte[]> blocksBytes = blockQueue.take();
+            List<byte[]> blocksBytes = blockQueue.poll();
+
+            if (blocksBytes == null)
+                continue;
 
             this.progress.logger.info("New mapping task added");
             PopulateMappings pm = new PopulateMappings(blocksBytes, addressConversion, transactionArcs, mappings.getColumnFamilyHandleList(), wbQueue, np, progress);
@@ -82,76 +84,63 @@ public class CustomBlockchainIterator implements Iterator<long[]>, Iterable<long
         for (Future<?> pmFuture : pmTasks)
             pmFuture.get();
 
-        wbQueue.put(stopWb);
-        this.diskHandlers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        dbWriter.stop = true;
+        writerStatus.get();
+        loaderStatus.get();
+
         this.blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
         this.mappings.close();
         this.progress.stop();
     }
 
-    public void completeMappings() throws RocksDBException, InterruptedException {
+    public void completeMappings() throws RocksDBException, InterruptedException, ExecutionException {
         this.progress.start("Completing mappings with " + Parameters.numberOfThreads + " threads");
 
         this.mappings = new PersistenceLayer(Parameters.resources + "bitcoin-db", true);
 
-        this.diskHandlers = Executors.newFixedThreadPool(2, new ContextPropagatingThreadFactory("disk-handler"));
-        Future<?> loaderStatus = this.diskHandlers.submit(new BlockLoader(this.blockFiles, blockQueue, null, progress, np));
-        diskHandlers.shutdown();
+        BlockLoader blockLoader = new BlockLoader(this.blockFiles, blockQueue, progress, np);
+        Future<?> loaderStatus = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("block-loader")).submit(blockLoader);
 
-        this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads, new ContextPropagatingThreadFactory("completing-mappings"));
+        DBWriter dbWriter = new DBWriter(this.mappings, wbQueue, progress);
+        Future<?> writerStatus = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("db-writer")).submit(dbWriter);
+
+        this.blockchainParsers = Executors.newFixedThreadPool(Parameters.numberOfThreads / 2, new ContextPropagatingThreadFactory("completing-mappings"));
         List<Future<?>> cmTasks = new ArrayList<>();
 
         while (!loaderStatus.isDone()) {
 
-            // Manage the number of active PopulateMappings tasks to avoid thrashing
-            if (cmTasks.size() > Parameters.numberOfThreads) {
-                // Remove done threads
+            // Manage the number of active CompleteMappings tasks to avoid thrashing
+            if (cmTasks.size() > Parameters.numberOfThreads / 2) {
                 cmTasks.removeIf(Future::isDone);
-                System.gc();
                 continue;
             }
 
-            List<byte[]> block = blockQueue.take();
+            List<byte[]> blocksBytes = blockQueue.poll();
+
+            if (blocksBytes == null)
+                continue;
 
             this.progress.logger.info("New mapping task added");
-            CompleteMappings cm = new CompleteMappings(block, addressConversion, transactionArcs, mappings, np, progress);
+            CompleteMappings cm = new CompleteMappings(blocksBytes, addressConversion, transactionArcs, mappings, np, progress);
             Future<?> cmFuture = this.blockchainParsers.submit(cm);
             cmTasks.add(cmFuture);
         }
 
         this.blockchainParsers.shutdown();
-    }
 
-    @Override
-    public boolean hasNext() {
-        while (transactionArcs.isEmpty()) {
-            if (blockchainParsers.isTerminated()) {
-                this.mappings.close();
-                this.progress.done();
-                return false;
-            }
-        }
+        for (Future<?> cmFuture : cmTasks)
+            cmFuture.get();
 
-        return true;
-    }
+        dbWriter.stop = true;
+        writerStatus.get();
+        loaderStatus.get();
 
-    @Override
-    public long[] next() {
-        try {
-            if (transactionArcs.isEmpty())
-                throw new NoSuchElementException();
+        this.blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
-            Long[] arcs = transactionArcs.take();
-            return new long[]{arcs[0], arcs[1]};
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public Iterator<long[]> iterator() {
-        return this;
+        this.mappings.close();
+        this.progress.stop();
+        this.rocksArcs.flush();
     }
 
     public static List<Long> outputAddressesToLongs(Transaction t, AddressConversion ac, NetworkParameters np) throws RocksDBException {

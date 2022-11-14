@@ -33,7 +33,7 @@ public class CompleteMappings implements Runnable {
         this.progress = progress;
     }
 
-    public void completeMappings() throws RocksDBException {
+    public void completeMappings() throws RocksDBException, InterruptedException {
         for (byte[] blockBytes : blocksBytes) {
             Block block = np.getDefaultSerializer().makeBlock(blockBytes);
 
@@ -57,7 +57,7 @@ public class CompleteMappings implements Runnable {
                         if (receiver == null)
                             continue;
 
-                        transactionArcs.add(new Long[]{sender, receiver});
+                        transactionArcs.put(new Long[]{sender, receiver});
                     }
                 }
             }
@@ -70,8 +70,7 @@ public class CompleteMappings implements Runnable {
     public void run () {
         try {
             this.completeMappings();
-            System.gc();
-        } catch (RocksDBException e) {
+        } catch (RocksDBException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

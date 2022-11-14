@@ -10,6 +10,7 @@ import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -24,7 +25,7 @@ import static it.unimi.dsi.law.CustomBlockchainIterator.transactionOutputToAddre
  * in the Blockchair format or by scanning the blockchain
  * files.
  */
-public class AddressConversion {
+public class AddressConversion implements Closeable {
     private final NetworkParameters np;
     private final ProgressLogger progress;
 

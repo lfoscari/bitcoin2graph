@@ -49,7 +49,7 @@ public class PopulateMappings implements Runnable {
         this.wb = new WriteBatch();
     }
 
-    private void populateMappings() throws RocksDBException {
+    private void populateMappings() throws RocksDBException, InterruptedException {
         for (byte[] blockBytes : blocksBytes) {
             Block block = np.getDefaultSerializer().makeBlock(blockBytes);
 
@@ -79,18 +79,16 @@ public class PopulateMappings implements Runnable {
         }
     }
 
-    public void addCoinbaseArcs(List<Long> receivers) {
+    public void addCoinbaseArcs(List<Long> receivers) throws InterruptedException {
         for (long receiver : receivers)
-            transactionArcs.add(new Long[] {COINBASE_ADDRESS, receiver});
+            transactionArcs.put(new Long[] {COINBASE_ADDRESS, receiver});
     }
 
     @Override
     public void run() {
         try {
             this.populateMappings();
-            this.progress.logger.info("Adding write batch " + wb.hashCode());
             this.wbQueue.put(wb);
-            System.gc();
         } catch (RocksDBException | InterruptedException e) {
             throw new RuntimeException(e);
         }

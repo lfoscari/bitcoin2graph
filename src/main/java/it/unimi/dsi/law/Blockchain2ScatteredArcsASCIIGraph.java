@@ -39,19 +39,19 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
         List<File> blockFiles = getBlockFiles(Parameters.resources + "blocks");
 
-        AddressConversion addressConversion;
+        /* try (AddressConversion ac = new AddressConversion(np, progress)) {
+            ac.addAddresses(blockFiles);
+        } */
 
-        /* addressConversion = new AddressConversion(np, progress);
-        addressConversion.addAddresses(blockFiles);
-        addressConversion.close(); */
+        try (AddressConversion ac = new AddressConversion(np, progress, true)) {
+            CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, ac, np, progress);
+            it.populateMappings();
+            it.completeMappings();
+        }
 
-        addressConversion = new AddressConversion(np, progress, true);
-        CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, addressConversion, np, progress);
-        it.populateMappings();
-        it.completeMappings();
-
+        /*
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");
-        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 100_000, tempDirectory.toFile(), progress);
+        ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 1000, tempDirectory.toFile(), progress);
         BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
 
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
@@ -59,8 +59,8 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         progress.start("Creating address-to-node map");
         Address2Node.saveAddress2Node(graph.ids, addressConversion);
         progress.stop();
+        */
 
-        addressConversion.close();
         progress.done();
     }
 

@@ -14,32 +14,31 @@ public class DBWriter implements Runnable {
     private final PersistenceLayer mappings;
     private final LinkedBlockingQueue<WriteBatch> wbQueue;
     private final ProgressLogger progress;
-    private final WriteBatch stop;
+    public volatile boolean stop = false;
 
-    public DBWriter(PersistenceLayer mappings, LinkedBlockingQueue<WriteBatch> wbQueue, WriteBatch stop, ProgressLogger progress) {
+    public DBWriter(PersistenceLayer mappings, LinkedBlockingQueue<WriteBatch> wbQueue, ProgressLogger progress) {
         this.mappings = mappings;
         this.wbQueue = wbQueue;
         this.progress = progress;
-        this.stop = stop;
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                WriteBatch wb = wbQueue.take();
+                WriteBatch wb = wbQueue.poll();
 
-                if (stop.hashCode() == wb.hashCode()) {
+                if (wb == null && stop) {
                     this.progress.logger.info("No more writes to perform on the database");
                     break;
                 }
 
-                this.mappings.db.write(new WriteOptions(), wb);
-                this.progress.logger.info("New write batch completed " + wb.hashCode());
+                if (wb == null)
+                    continue;
 
-                wb = null;
-                System.gc();
-            } catch (RocksDBException | InterruptedException e) {
+                this.mappings.db.write(new WriteOptions(), wb);
+                this.progress.logger.info("New write batch completed");
+            } catch (RocksDBException e) {
                 throw new RuntimeException(e);
             }
         }
