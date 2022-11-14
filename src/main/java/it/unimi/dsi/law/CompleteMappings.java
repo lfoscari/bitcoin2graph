@@ -10,6 +10,7 @@ import org.rocksdb.RocksDBException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
@@ -41,7 +42,9 @@ public class CompleteMappings implements Runnable {
                 return;
             }
 
-			for (Transaction transaction : block.getTransactions()) {
+			List<Transaction> transactions = (List<Transaction>) Blockchain2ScatteredArcsASCIIGraph.extract(block, "transactions");
+
+			for (Transaction transaction : transactions) {
 				List<Long> senders = outputAddressesToLongs(transaction, this.addressConversion, this.np);
 
 				Sha256Hash txId = transaction.getTxId();
@@ -52,10 +55,10 @@ public class CompleteMappings implements Runnable {
                 }
 
 				for (long index : indices) {
-					TransactionOutPoint top = new TransactionOutPoint(this.np, index, txId);
+					int topHashCode = Objects.hash(index, txId);
 					long sender = senders.get((int) index);
 
-					for (Long receiver : IncompleteMappings.get(this.mappings, top, transaction.getUpdateTime())) {
+					for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
                         if (receiver == null) {
                             continue;
                         }
@@ -63,6 +66,8 @@ public class CompleteMappings implements Runnable {
 						this.transactionArcs.add(new Long[] { sender, receiver });
 					}
 				}
+
+				System.gc();
 			}
 
 			this.progress.update();

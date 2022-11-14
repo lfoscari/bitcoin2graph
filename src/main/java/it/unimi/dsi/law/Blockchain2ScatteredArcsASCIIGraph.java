@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,5 +74,15 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 			list.add(file);
 		}
 		return list;
+	}
+
+	public static Object extract(Object o, String fieldName) {
+		try {
+			Field f = o.getClass().getDeclaredField(fieldName);
+			f.setAccessible(true);
+			return f.get(o);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

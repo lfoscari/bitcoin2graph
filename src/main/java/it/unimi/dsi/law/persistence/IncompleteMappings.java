@@ -9,11 +9,11 @@ import java.util.Date;
 import java.util.List;
 
 public class IncompleteMappings {
-	public static List<Long> get (PersistenceLayer mappings, TransactionOutPoint top, Date date) throws RocksDBException {
+	public static List<Long> get (PersistenceLayer mappings, int topHashCode, Date date) throws RocksDBException {
 		ColumnFamilyHandle column = mappings.getColumnFamilyHandleList().get(1);
 
 		byte[] dateBytes = Bytes.ensureCapacity(ByteConversion.long2bytes(date.getTime()), Long.BYTES, 0);
-		byte[] key = ByteConversion.concat(dateBytes, ByteConversion.int2bytes(top.hashCode()));
+		byte[] key = ByteConversion.concat(dateBytes, ByteConversion.int2bytes(topHashCode));
 
 		byte[] value = mappings.db.get(column, key);
 
@@ -24,9 +24,9 @@ public class IncompleteMappings {
 		return ByteConversion.bytes2longList(value);
 	}
 
-	public static void put (WriteBatch wb, ColumnFamilyHandle column, TransactionOutPoint top, List<Long> addresses, Date date) throws RocksDBException {
+	public static void put (WriteBatch wb, ColumnFamilyHandle column, int topHashCode, List<Long> addresses, Date date) throws RocksDBException {
 		byte[] dateBytes = Bytes.ensureCapacity(ByteConversion.long2bytes(date.getTime()), Long.BYTES, 0);
-		byte[] key = ByteConversion.concat(dateBytes, ByteConversion.int2bytes(top.hashCode()));
+		byte[] key = ByteConversion.concat(dateBytes, ByteConversion.int2bytes(topHashCode));
 
 		byte[] value = ByteConversion.longList2bytes(addresses);
 

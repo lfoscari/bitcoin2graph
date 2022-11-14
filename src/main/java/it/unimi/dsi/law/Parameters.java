@@ -13,7 +13,7 @@ public class Parameters {
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
 
-	public final static int numberOfThreads = 7;
+	public final static int numberOfThreads = 3;
 
 	/* ROCKSDB */
 	public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;

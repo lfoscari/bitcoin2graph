@@ -57,7 +57,9 @@ public class PopulateMappings implements Runnable {
                 return;
             }
 
-			for (Transaction transaction : block.getTransactions()) {
+			List<Transaction> transactions = (List<Transaction>) Blockchain2ScatteredArcsASCIIGraph.extract(block, "transactions");
+
+			for (Transaction transaction : transactions) {
 				List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
 
 				if (transaction.isCoinBase()) {
@@ -75,7 +77,7 @@ public class PopulateMappings implements Runnable {
 		for (TransactionInput ti : transaction.getInputs()) {
 			TransactionOutPoint top = ti.getOutpoint();
 
-			IncompleteMappings.put(this.wb, this.incompleteMappings, top, receivers, transaction.getUpdateTime());
+			IncompleteMappings.put(this.wb, this.incompleteMappings, top.hashCode(), receivers, transaction.getUpdateTime());
 			TransactionOutpointFilter.put(this.wb, this.topFilter, top.getHash(), top.getIndex(), transaction.getUpdateTime());
 		}
 	}
