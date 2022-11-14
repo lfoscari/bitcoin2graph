@@ -14,24 +14,25 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class BlockLoader implements Runnable {
-	private final Iterator<File> blockFiles;
+	public final List<File> blockFiles;
+	private Iterator<File> blockFilesIt;
 	private final LinkedBlockingQueue<List<byte[]>> blockQueue;
 	private final ProgressLogger progress;
 	private final NetworkParameters np;
+	public volatile boolean stop = false;
 
 	public BlockLoader (List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, ProgressLogger progress, NetworkParameters np) {
-		this.blockFiles = blockFiles.iterator();
+		this.blockFiles = blockFiles;
+		this.blockFilesIt = blockFiles.iterator();
+
 		this.blockQueue = blockQueue;
 		this.progress = progress;
 		this.np = np;
 	}
 
 	public List<byte[]> loadNextBlocks () throws IOException {
-        if (!this.blockFiles.hasNext()) {
-            return null;
-        }
+		File blockFile = this.blockFilesIt.next();
 
-		File blockFile = this.blockFiles.next();
 		byte[] blocks = Files.readAllBytes(blockFile.toPath());
 		ByteArrayInputStream bis = new ByteArrayInputStream(blocks);
 		List<byte[]> blockList = new ArrayList<>();
@@ -77,19 +78,23 @@ public class BlockLoader implements Runnable {
 		return blockList;
 	}
 
+	public boolean hasNext() {
+		return this.blockFilesIt.hasNext() || this.blockQueue.size() > 0;
+	}
+
+	public void reset () {
+		this.blockFilesIt = this.blockFiles.iterator();
+	}
+
 	@Override
 	public void run () {
-		while (true) {
+		while (!this.stop) {
 			try {
                 if (this.blockQueue.remainingCapacity() == 0) {
                     continue;
                 }
 
 				List<byte[]> blocks = this.loadNextBlocks();
-
-                if (blocks == null) {
-                    break;
-                }
 
                 if (blocks.size() > 0) {
                     this.blockQueue.put(blocks);

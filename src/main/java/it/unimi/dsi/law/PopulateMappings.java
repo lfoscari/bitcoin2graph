@@ -81,9 +81,8 @@ public class PopulateMappings implements Runnable {
 	}
 
 	public void addCoinbaseArcs (List<Long> receivers) throws InterruptedException {
-        for (long receiver : receivers) {
-			this.transactionArcs.put(new Long[] { COINBASE_ADDRESS, receiver });
-        }
+		List<Long[]> rr = receivers.stream().map(r -> new Long[] { COINBASE_ADDRESS, r }).toList();
+		this.transactionArcs.addAll(rr);
 	}
 
 	@Override

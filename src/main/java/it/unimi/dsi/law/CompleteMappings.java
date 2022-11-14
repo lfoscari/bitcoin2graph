@@ -7,9 +7,9 @@ import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
 import org.rocksdb.RocksDBException;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
@@ -60,7 +60,7 @@ public class CompleteMappings implements Runnable {
                             continue;
                         }
 
-						this.transactionArcs.put(new Long[] { sender, receiver });
+						this.transactionArcs.add(new Long[] { sender, receiver });
 					}
 				}
 			}

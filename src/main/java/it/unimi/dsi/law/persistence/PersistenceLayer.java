@@ -1,7 +1,6 @@
 package it.unimi.dsi.law.persistence;
 
 import it.unimi.dsi.law.Parameters;
-import org.bitcoinj.core.TransactionOutPoint;
 import org.rocksdb.*;
 
 import java.io.Closeable;
@@ -19,13 +18,9 @@ public class PersistenceLayer implements Closeable {
 
 	public final List<ColumnFamilyHandle> columnFamilyHandleList;
 	public final List<ColumnFamilyDescriptor> columnFamilyDescriptors;
-	public RocksDB db;
+	public final RocksDB db;
 
 	public PersistenceLayer (String location) throws RocksDBException {
-		this(location, false);
-	}
-
-	public PersistenceLayer (String location, boolean readonly) throws RocksDBException {
 		RocksDB.loadLibrary();
 
 		this.location = location;
@@ -50,36 +45,16 @@ public class PersistenceLayer implements Closeable {
 				.setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
 				.setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
-		if (readonly) {
-			this.db = RocksDB.openReadOnly(this.options, location, this.columnFamilyDescriptors, this.columnFamilyHandleList);
-		} else {
-			this.db = RocksDB.open(this.options, location, this.columnFamilyDescriptors, this.columnFamilyHandleList);
-		}
+		this.db = RocksDB.open(this.options, location, this.columnFamilyDescriptors, this.columnFamilyHandleList);
 	}
 
 	public List<ColumnFamilyHandle> getColumnFamilyHandleList () {
 		return this.columnFamilyHandleList;
 	}
 
-	public void mergeWith (PersistenceLayer other) throws RocksDBException {
-		try (WriteBatch wb = new WriteBatch()) {
-			for (ColumnFamilyHandle column : other.columnFamilyHandleList) {
-				RocksIterator rit = other.db.newIterator(column);
-				rit.seekToFirst();
-
-				while (rit.isValid()) {
-					wb.merge(column, rit.key(), rit.value());
-					rit.next();
-				}
-			}
-
-			this.db.write(new WriteOptions(), wb);
-		}
-	}
-
-	public void delete () {
+	public boolean delete () {
 		this.close();
-		this.deleteDirectory(new File(this.location));
+		return this.deleteDirectory(new File(this.location));
 	}
 
 	public void close () {

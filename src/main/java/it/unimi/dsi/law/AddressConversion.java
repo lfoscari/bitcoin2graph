@@ -102,8 +102,8 @@ public class AddressConversion implements Closeable {
             Address converted;
 
             try {
-                converted = LegacyAddress.fromString(np, new String(address));
-                this.db.put(converted.getHash(), ByteConversion.long2bytes(count++));
+                converted = LegacyAddress.fromString(this.np, new String(address));
+                this.db.put(converted.getHash(), ByteConversion.long2bytes(this.count++));
             } catch (AddressFormatException e) {
                 System.err.println("Cannot cast address " + e.getMessage());
             }
@@ -112,9 +112,9 @@ public class AddressConversion implements Closeable {
         this.progress.stop();
     }
 
-    public void addAddresses(List<File> blockfiles) throws RocksDBException {
-        this.progress.start("Adding addresses from " + blockfiles.size() + " blockfiles");
-        BlockFileLoader bfl = new BlockFileLoader(np, blockfiles);
+    public void addAddresses(List<File> blockFiles) throws RocksDBException {
+        this.progress.start("Adding addresses from " + blockFiles.size() + " blockfiles");
+        BlockFileLoader bfl = new BlockFileLoader(this.np, blockFiles);
 
         for (Block block : bfl) {
             if (!block.hasTransactions())

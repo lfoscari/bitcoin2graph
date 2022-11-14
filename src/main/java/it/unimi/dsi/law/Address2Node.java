@@ -11,9 +11,9 @@ public class Address2Node {
 		RocksDB db = startDatabase();
 
 		Long2IntOpenHashMap indices = new Long2IntOpenHashMap();
-        for (int i = 0; i < ids.length; i++) {
-            indices.put(ids[i], i);
-        }
+		for (int i = 0; i < ids.length; i++) {
+			indices.put(ids[i], i);
+		}
 
 		save(db, indices, addressConversion);
 		db.close();

@@ -3,7 +3,6 @@ package it.unimi.dsi.law.persistence;
 import com.google.common.primitives.Bytes;
 import it.unimi.dsi.law.utils.ByteConversion;
 import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
 import org.rocksdb.*;
 
 import java.util.Date;
@@ -18,9 +17,9 @@ public class IncompleteMappings {
 
 		byte[] value = mappings.db.get(column, key);
 
-        if (value == null) {
-            return List.of();
-        }
+		if (value == null) {
+			return List.of();
+		}
 
 		return ByteConversion.bytes2longList(value);
 	}

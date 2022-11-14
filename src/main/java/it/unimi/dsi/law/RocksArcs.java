@@ -22,10 +22,7 @@ public class RocksArcs implements Runnable {
 
 	public void flush () {
 		try (WriteBatch wb = new WriteBatch()) {
-			List<Long[]> arcsList = new ArrayList<>();
-            this.transactionArcs.drainTo(arcsList);
-
-			for (Long[] arcs : arcsList) {
+			for (Long[] arcs : this.transactionArcs) {
 				Long sender = arcs[0], receiver = arcs[1];
 				wb.merge(ByteConversion.long2bytes(sender), ByteConversion.long2bytes(receiver));
 			}
@@ -38,18 +35,15 @@ public class RocksArcs implements Runnable {
 
 	@Override
 	public void run () {
-		while (true) {
-			if (this.stop) {
-				this.close();
-				break;
-			}
-
+		while (!this.stop) {
             if (this.transactionArcs.size() < 1000) {
                 continue;
             }
 
             this.flush();
 		}
+
+		this.close();
 	}
 
 	private void close () {
