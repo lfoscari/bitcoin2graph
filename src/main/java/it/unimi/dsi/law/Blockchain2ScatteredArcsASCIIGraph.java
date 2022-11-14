@@ -27,32 +27,32 @@ import java.util.concurrent.TimeoutException;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class Blockchain2ScatteredArcsASCIIGraph {
-    public static void main(String[] args) throws RocksDBException, IOException, InterruptedException, ExecutionException {
-        NetworkParameters np = new MainNetParams();
-        Context c = new Context(np);
-        Context.propagate(c);
+	public static void main (String[] args) throws RocksDBException, IOException, InterruptedException, ExecutionException {
+		NetworkParameters np = new MainNetParams();
+		Context c = new Context(np);
+		Context.propagate(c);
 
-        (new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
+		(new File(Parameters.resources + "ScatteredArcsASCIIGraph/")).mkdir();
 
-        Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
-        ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
+		Logger logger = LoggerFactory.getLogger(Blockchain2ScatteredArcsASCIIGraph.class);
+		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
 
-        List<File> blockFiles = getBlockFiles(Parameters.resources + "blocks");
+		List<File> blockFiles = getBlockFiles(Parameters.resources + "blocks");
 
         /* try (AddressConversion ac = new AddressConversion(np, progress)) {
             ac.addAddresses(blockFiles);
         } */
 
-        try (AddressConversion ac = new AddressConversion(np, progress, true)) {
-            CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, ac, np, progress);
-            it.populateMappings();
-            it.completeMappings();
-        }
+		try (AddressConversion ac = new AddressConversion(np, progress, true)) {
+			CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, ac, np, progress);
+			it.populateMappings();
+			it.completeMappings();
+		}
 
         /*
         Path tempDirectory = Files.createTempDirectory(Path.of(Parameters.resources), "scatteredgraph-");
         ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(it.iterator(), false, false, 1000, tempDirectory.toFile(), progress);
-        BVGraph.store(graph, Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename, progress);
+        BVGraph.store(graph, Parameters.basename, progress);
 
         progress.stop("Results saved in " + Parameters.resources + "ScatteredArcsASCIIGraph/" + Parameters.basename);
 
@@ -61,17 +61,19 @@ public class Blockchain2ScatteredArcsASCIIGraph {
         progress.stop();
         */
 
-        progress.done();
-    }
+		progress.done();
+	}
 
-    public static List<File> getBlockFiles(String blocksDirName) {
-        File blocksDir = new File(blocksDirName);
-        List<File> list = new ArrayList<>();
-        for (int i = 0; true; i++) {
-            File file = new File(blocksDir, String.format(Locale.US, "blk%05d.dat", i));
-            if (!file.exists()) break;
-            list.add(file);
-        }
-        return list;
-    }
+	public static List<File> getBlockFiles (String blocksDirName) {
+		File blocksDir = new File(blocksDirName);
+		List<File> list = new ArrayList<>();
+		for (int i = 0; true; i++) {
+			File file = new File(blocksDir, String.format(Locale.US, "blk%05d.dat", i));
+            if (!file.exists()) {
+                break;
+            }
+			list.add(file);
+		}
+		return list;
+	}
 }

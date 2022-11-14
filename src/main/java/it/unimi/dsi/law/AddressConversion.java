@@ -30,7 +30,6 @@ public class AddressConversion implements Closeable {
     private final ProgressLogger progress;
 
     private long count = 0;
-    private Path location;
 
     private Options options;
     private final RocksDB db;
@@ -49,22 +48,22 @@ public class AddressConversion implements Closeable {
 
     public AddressConversion(NetworkParameters np, ProgressLogger progress, boolean readonly) throws RocksDBException, IOException {
         if (progress == null) {
-            Logger l = LoggerFactory.getLogger(getClass());
+            Logger l = LoggerFactory.getLogger(this.getClass());
             progress = new ProgressLogger(l, Parameters.logInterval, Parameters.logTimeUnit, "blocks");
         }
         
         this.np = np;
         this.progress = progress;
-        this.db = startDatabase(readonly);
+        this.db = this.startDatabase(readonly);
     }
 
-    private RocksDB startDatabase(boolean readonly) throws RocksDBException {
+    private RocksDB startDatabase (boolean readonly) throws RocksDBException {
         RocksDB.loadLibrary();
 
-        this.location = Path.of(Parameters.resources + "addressconversion");
-        this.location.toFile().mkdir();
+        Path location = Path.of(Parameters.resources + "addressconversion");
+        location.toFile().mkdir();
 
-        options = new Options()
+        this.options = new Options()
                 .setCreateIfMissing(true)
                 .setCreateMissingColumnFamilies(true)
                 .setDbWriteBufferSize(Parameters.WRITE_BUFFER_SIZE)
@@ -72,14 +71,14 @@ public class AddressConversion implements Closeable {
                 .setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
         if (readonly) {
-            return RocksDB.openReadOnly(options, location.toString());
+            return RocksDB.openReadOnly(this.options, location.toString());
         }
 
-        return RocksDB.open(options, location.toString());
+        return RocksDB.open(this.options, location.toString());
     }
 
     public void addAddresses(File tsv) throws IOException, RocksDBException {
-        progress.start("Adding addresses from " + tsv.toString());
+        this.progress.start("Adding addresses from " + tsv.toString());
 
         byte tab = 9;
         byte[] line = new byte[80]; // max length
@@ -97,7 +96,7 @@ public class AddressConversion implements Closeable {
             if (read == 0)
                 throw new RuntimeException("Malformed tsv! The right format is [address]<tab>...<newline>");
 
-            progress.update();
+            this.progress.update();
 
             byte[] address = Arrays.copyOfRange(line, 0, read);
             Address converted;
@@ -110,30 +109,30 @@ public class AddressConversion implements Closeable {
             }
         }
 
-        progress.stop();
+        this.progress.stop();
     }
 
     public void addAddresses(List<File> blockfiles) throws RocksDBException {
-        progress.start("Adding addresses from " + blockfiles.size() + " blockfiles");
+        this.progress.start("Adding addresses from " + blockfiles.size() + " blockfiles");
         BlockFileLoader bfl = new BlockFileLoader(np, blockfiles);
 
         for (Block block : bfl) {
             if (!block.hasTransactions())
                 continue;
 
-            progress.update();
+            this.progress.update();
 
             try (WriteBatch wb = new WriteBatch()) {
                 for (Transaction transaction : block.getTransactions()) {
                     for (TransactionOutput to : transaction.getOutputs()) {
-                        Address receiver = transactionOutputToAddress(to, np);
+                        Address receiver = transactionOutputToAddress(to, this.np);
 
                         if (receiver == null)
                             continue;
 
                         // I'm not using receiver.getHash() because it would lose information
                         byte[] key = receiver.toString().getBytes();
-                        wb.put(key, ByteConversion.long2bytes(count++));
+                        wb.put(key, ByteConversion.long2bytes(this.count++));
                     }
                 }
 
@@ -141,7 +140,7 @@ public class AddressConversion implements Closeable {
             }
         }
 
-        progress.done();
+        this.progress.done();
     }
 
     public void close() {
@@ -153,17 +152,11 @@ public class AddressConversion implements Closeable {
         byte[] key = address.toString().getBytes();
         byte[] value = this.db.get(key);
 
-        // NOT POSSIBLE IN READ-ONLY MODE
-        // if (value == null) {
-        //     this.db.put(key, ByteConversion.long2bytes(count));
-        //     return count++;
-        //  }
-
         return ByteConversion.bytes2long(value);
     }
 
     public RocksIterator iterator() {
-        RocksIterator rit = db.newIterator();
+        RocksIterator rit = this.db.newIterator();
         rit.seekToFirst();
 
         return rit;

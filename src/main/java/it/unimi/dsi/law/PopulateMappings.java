@@ -21,76 +21,78 @@ import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
 import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
 
 public class PopulateMappings implements Runnable {
-    private final List<byte[]> blocksBytes;
-    public final LinkedBlockingQueue<Long[]> transactionArcs;
-    private final LinkedBlockingQueue<WriteBatch> wbQueue;
-    private final AddressConversion addressConversion;
+	private final List<byte[]> blocksBytes;
+	public final LinkedBlockingQueue<Long[]> transactionArcs;
+	private final LinkedBlockingQueue<WriteBatch> wbQueue;
+	private final AddressConversion addressConversion;
 
-    private final ColumnFamilyHandle incompleteMappings;
-    private final ColumnFamilyHandle topFilter;
+	private final ColumnFamilyHandle incompleteMappings;
+	private final ColumnFamilyHandle topFilter;
 
-    private final NetworkParameters np;
-    private final ProgressLogger progress;
+	private final NetworkParameters np;
+	private final ProgressLogger progress;
 
-    private final WriteBatch wb;
+	private final WriteBatch wb;
 
-    public PopulateMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, List<ColumnFamilyHandle> columnFamilyHandleList, LinkedBlockingQueue<WriteBatch> wbQueue, NetworkParameters np, ProgressLogger progress) {
-        this.blocksBytes = blocksBytes;
-        this.transactionArcs = transactionArcs;
-        this.wbQueue = wbQueue;
-        this.addressConversion = addressConversion;
+	public PopulateMappings (List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, List<ColumnFamilyHandle> columnFamilyHandleList, LinkedBlockingQueue<WriteBatch> wbQueue, NetworkParameters np, ProgressLogger progress) {
+		this.blocksBytes = blocksBytes;
+		this.transactionArcs = transactionArcs;
+		this.wbQueue = wbQueue;
+		this.addressConversion = addressConversion;
 
-        this.incompleteMappings = columnFamilyHandleList.get(1);
-        this.topFilter = columnFamilyHandleList.get(2);
+		this.incompleteMappings = columnFamilyHandleList.get(1);
+		this.topFilter = columnFamilyHandleList.get(2);
 
-        this.np = np;
-        this.progress = progress;
+		this.np = np;
+		this.progress = progress;
 
-        this.wb = new WriteBatch();
-    }
+		this.wb = new WriteBatch();
+	}
 
-    private void populateMappings() throws RocksDBException, InterruptedException {
-        for (byte[] blockBytes : blocksBytes) {
-            Block block = np.getDefaultSerializer().makeBlock(blockBytes);
+	private void populateMappings () throws RocksDBException, InterruptedException {
+		for (byte[] blockBytes : this.blocksBytes) {
+			Block block = this.np.getDefaultSerializer().makeBlock(blockBytes);
 
-            if (!block.hasTransactions())
+            if (!block.hasTransactions()) {
                 return;
-
-            for (Transaction transaction : block.getTransactions()) {
-                List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
-
-                if (transaction.isCoinBase()) {
-                    addCoinbaseArcs(outputs);
-                } else {
-                    mapTransactionOutputs(transaction, outputs);
-                }
             }
 
-            this.progress.update();
+			for (Transaction transaction : block.getTransactions()) {
+				List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
+
+				if (transaction.isCoinBase()) {
+					this.addCoinbaseArcs(outputs);
+				} else {
+					this.mapTransactionOutputs(transaction, outputs);
+				}
+			}
+
+			this.progress.update();
+		}
+	}
+
+	public void mapTransactionOutputs (Transaction transaction, List<Long> receivers) throws RocksDBException {
+		for (TransactionInput ti : transaction.getInputs()) {
+			TransactionOutPoint top = ti.getOutpoint();
+
+			IncompleteMappings.put(this.wb, this.incompleteMappings, top, receivers, transaction.getUpdateTime());
+			TransactionOutpointFilter.put(this.wb, this.topFilter, top.getHash(), top.getIndex(), transaction.getUpdateTime());
+		}
+	}
+
+	public void addCoinbaseArcs (List<Long> receivers) throws InterruptedException {
+        for (long receiver : receivers) {
+			this.transactionArcs.put(new Long[] { COINBASE_ADDRESS, receiver });
         }
-    }
+	}
 
-    public void mapTransactionOutputs(Transaction transaction, List<Long> receivers) throws RocksDBException {
-        for (TransactionInput ti : transaction.getInputs()) {
-            TransactionOutPoint top = ti.getOutpoint();
-
-            IncompleteMappings.put(wb, incompleteMappings, top, receivers, transaction.getUpdateTime());
-            TransactionOutpointFilter.put(wb, topFilter, top.getHash(), top.getIndex(), transaction.getUpdateTime());
-        }
-    }
-
-    public void addCoinbaseArcs(List<Long> receivers) throws InterruptedException {
-        for (long receiver : receivers)
-            transactionArcs.put(new Long[] {COINBASE_ADDRESS, receiver});
-    }
-
-    @Override
-    public void run() {
-        try {
-            this.populateMappings();
-            this.wbQueue.put(wb);
-        } catch (RocksDBException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
+	@Override
+	public void run () {
+		try {
+			this.populateMappings();
+			this.wbQueue.put(this.wb);
+		} catch (RocksDBException | InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }

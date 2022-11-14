@@ -15,63 +15,66 @@ import java.util.concurrent.LinkedBlockingQueue;
 import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
 
 public class CompleteMappings implements Runnable {
-    private final List<byte[]> blocksBytes;
-    public final LinkedBlockingQueue<Long[]> transactionArcs;
-    private final PersistenceLayer mappings;
-    private final AddressConversion addressConversion;
+	private final List<byte[]> blocksBytes;
+	public final LinkedBlockingQueue<Long[]> transactionArcs;
+	private final PersistenceLayer mappings;
+	private final AddressConversion addressConversion;
 
-    private final NetworkParameters np;
-    private final ProgressLogger progress;
+	private final NetworkParameters np;
+	private final ProgressLogger progress;
 
-    public CompleteMappings(List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, PersistenceLayer mappings, NetworkParameters np, ProgressLogger progress) {
-        this.blocksBytes = blocksBytes;
-        this.addressConversion = addressConversion;
-        this.transactionArcs = transactionArcs;
-        this.mappings = mappings;
+	public CompleteMappings (List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, PersistenceLayer mappings, NetworkParameters np, ProgressLogger progress) {
+		this.blocksBytes = blocksBytes;
+		this.addressConversion = addressConversion;
+		this.transactionArcs = transactionArcs;
+		this.mappings = mappings;
 
-        this.np = np;
-        this.progress = progress;
-    }
+		this.np = np;
+		this.progress = progress;
+	}
 
-    public void completeMappings() throws RocksDBException, InterruptedException {
-        for (byte[] blockBytes : blocksBytes) {
-            Block block = np.getDefaultSerializer().makeBlock(blockBytes);
+	public void completeMappings () throws RocksDBException, InterruptedException {
+		for (byte[] blockBytes : this.blocksBytes) {
+			Block block = this.np.getDefaultSerializer().makeBlock(blockBytes);
 
-            if (!block.hasTransactions())
+            if (!block.hasTransactions()) {
                 return;
-
-            for (Transaction transaction : block.getTransactions()) {
-                List<Long> senders = outputAddressesToLongs(transaction, addressConversion, np);
-
-                Sha256Hash txId = transaction.getTxId();
-                List<Long> indices = TransactionOutpointFilter.get(mappings, txId, transaction.getUpdateTime());
-
-                if (indices.size() == 0)
-                    continue;
-
-                for (long index : indices) {
-                    TransactionOutPoint top = new TransactionOutPoint(np, index, txId);
-                    long sender = senders.get((int) index);
-
-                    for (Long receiver : IncompleteMappings.get(mappings, top, transaction.getUpdateTime())) {
-                        if (receiver == null)
-                            continue;
-
-                        transactionArcs.put(new Long[]{sender, receiver});
-                    }
-                }
             }
 
-            this.progress.update();
-        }
-    }
+			for (Transaction transaction : block.getTransactions()) {
+				List<Long> senders = outputAddressesToLongs(transaction, this.addressConversion, this.np);
 
-    @Override
-    public void run () {
-        try {
-            this.completeMappings();
-        } catch (RocksDBException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
+				Sha256Hash txId = transaction.getTxId();
+				List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
+
+                if (indices.size() == 0) {
+                    continue;
+                }
+
+				for (long index : indices) {
+					TransactionOutPoint top = new TransactionOutPoint(this.np, index, txId);
+					long sender = senders.get((int) index);
+
+					for (Long receiver : IncompleteMappings.get(this.mappings, top, transaction.getUpdateTime())) {
+                        if (receiver == null) {
+                            continue;
+                        }
+
+						this.transactionArcs.put(new Long[] { sender, receiver });
+					}
+				}
+			}
+
+			this.progress.update();
+		}
+	}
+
+	@Override
+	public void run () {
+		try {
+			this.completeMappings();
+		} catch (RocksDBException | InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }

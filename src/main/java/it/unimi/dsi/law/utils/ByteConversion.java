@@ -8,59 +8,61 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ByteConversion {
-    public static byte[] long2bytes(long l) {
-        return Longs.toByteArray(l);
-    }
+	public static byte[] long2bytes (long l) {
+		return Longs.toByteArray(l);
+	}
 
-    public static byte[] int2bytes(int n) {
-        return Ints.toByteArray(n);
-    }
+	public static byte[] int2bytes (int n) {
+		return Ints.toByteArray(n);
+	}
 
-    public static int bytes2int(byte[] bb) {
-        if (bb.length > 4)
+	public static int bytes2int (byte[] bb) {
+        if (bb.length > 4) {
             throw new ArithmeticException("byte array too big to be an integer");
+        }
 
-        bb = Bytes.ensureCapacity(bb, 4, 0);
-        return Ints.fromBytes(bb[0], bb[1], bb[2], bb[3]);
-    }
+		bb = Bytes.ensureCapacity(bb, 4, 0);
+		return Ints.fromBytes(bb[0], bb[1], bb[2], bb[3]);
+	}
 
-    public static long bytes2long(byte[] bb) {
-        if (bb.length > 8)
+	public static long bytes2long (byte[] bb) {
+        if (bb.length > 8) {
             throw new ArithmeticException("byte array too big to be a long");
-
-        bb = Bytes.ensureCapacity(bb, 8, 0);
-        return Longs.fromBytes(bb[0], bb[1], bb[2], bb[3], bb[4], bb[5], bb[6], bb[7]);
-    }
-
-    public static byte[] longList2bytes(List<Long> ll) {
-        byte[] bb = new byte[8 * ll.size()];
-
-        for (int i = 0; i < ll.size(); i++) {
-            byte[] tt = long2bytes(ll.get(i));
-            System.arraycopy(tt, 0, bb, i * 8, 8);
         }
 
-        return bb;
-    }
+		bb = Bytes.ensureCapacity(bb, 8, 0);
+		return Longs.fromBytes(bb[0], bb[1], bb[2], bb[3], bb[4], bb[5], bb[6], bb[7]);
+	}
 
-    public static List<Long> bytes2longList(byte[] bb) {
-        List<Long> l = new ArrayList<>();
+	public static byte[] longList2bytes (List<Long> ll) {
+		byte[] bb = new byte[8 * ll.size()];
 
-        for (int i = 0; i < bb.length; i += 8) {
-            byte[] el = new byte[8];
-            System.arraycopy(bb, i, el, 0, 8);
-            l.add(bytes2long(el));
-        }
+		for (int i = 0; i < ll.size(); i++) {
+			byte[] tt = long2bytes(ll.get(i));
+			System.arraycopy(tt, 0, bb, i * 8, 8);
+		}
 
-        return l;
-    }
+		return bb;
+	}
 
-    public static byte[] concat(byte[] aa, byte[] bb) {
-        byte[] result = new byte[aa.length + bb.length];
+	public static List<Long> bytes2longList (byte[] bb) {
+		List<Long> l = new ArrayList<>();
 
-        System.arraycopy(aa, 0, result, 0, aa.length);
-        System.arraycopy(bb, 0, result, aa.length, bb.length);
+		for (int i = 0; i < bb.length; i += 8) {
+			byte[] el = new byte[8];
+			System.arraycopy(bb, i, el, 0, 8);
+			l.add(bytes2long(el));
+		}
 
-        return result;
-    }
+		return l;
+	}
+
+	public static byte[] concat (byte[] aa, byte[] bb) {
+		byte[] result = new byte[aa.length + bb.length];
+
+		System.arraycopy(aa, 0, result, 0, aa.length);
+		System.arraycopy(bb, 0, result, aa.length, bb.length);
+
+		return result;
+	}
 }

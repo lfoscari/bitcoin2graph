@@ -13,88 +13,90 @@ import java.util.List;
 import static it.unimi.dsi.law.Parameters.MAX_BYTES_FOR_LEVEL_BASE;
 
 public class PersistenceLayer implements Closeable {
-    private final String location;
-    private final ColumnFamilyOptions columnOptions;
-    private final DBOptions options;
+	private final String location;
+	private final ColumnFamilyOptions columnOptions;
+	private final DBOptions options;
 
-    public final List<ColumnFamilyHandle> columnFamilyHandleList;
-    public final List<ColumnFamilyDescriptor> columnFamilyDescriptors;
-    public RocksDB db;
+	public final List<ColumnFamilyHandle> columnFamilyHandleList;
+	public final List<ColumnFamilyDescriptor> columnFamilyDescriptors;
+	public RocksDB db;
 
-    public PersistenceLayer(String location) throws RocksDBException {
-        this(location, false);
-    }
+	public PersistenceLayer (String location) throws RocksDBException {
+		this(location, false);
+	}
 
-    public PersistenceLayer(String location, boolean readonly) throws RocksDBException {
-        RocksDB.loadLibrary();
+	public PersistenceLayer (String location, boolean readonly) throws RocksDBException {
+		RocksDB.loadLibrary();
 
-        this.location = location;
+		this.location = location;
 
-        columnOptions = new ColumnFamilyOptions()
-                .optimizeUniversalStyleCompaction()
-                .setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE)
-                .setMergeOperator(new StringAppendOperator(""));
+		this.columnOptions = new ColumnFamilyOptions()
+				.optimizeUniversalStyleCompaction()
+				.setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE)
+				.setMergeOperator(new StringAppendOperator(""));
 
-        columnFamilyDescriptors = Arrays.asList(
-                new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions),
-                new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), columnOptions),
-                new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), columnOptions)
-        );
+		this.columnFamilyDescriptors = Arrays.asList(
+				new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, this.columnOptions),
+				new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), this.columnOptions),
+				new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), this.columnOptions)
+		);
 
-        columnFamilyHandleList = new ArrayList<>();
+		this.columnFamilyHandleList = new ArrayList<>();
 
-        options = new DBOptions()
-                .setCreateIfMissing(true)
-                .setCreateMissingColumnFamilies(true)
-                .setDbWriteBufferSize(Parameters.WRITE_BUFFER_SIZE)
-                .setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
-                .setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
+		this.options = new DBOptions()
+				.setCreateIfMissing(true)
+				.setCreateMissingColumnFamilies(true)
+				.setDbWriteBufferSize(Parameters.WRITE_BUFFER_SIZE)
+				.setMaxTotalWalSize(Parameters.MAX_TOTAL_WAL_SIZE)
+				.setMaxBackgroundJobs(Parameters.MAX_BACKGROUND_JOBS);
 
-        if (readonly) {
-            db = RocksDB.openReadOnly(options, location, columnFamilyDescriptors, columnFamilyHandleList);
-        } else {
-            db = RocksDB.open(options, location, columnFamilyDescriptors, columnFamilyHandleList);
-        }
-    }
+		if (readonly) {
+			this.db = RocksDB.openReadOnly(this.options, location, this.columnFamilyDescriptors, this.columnFamilyHandleList);
+		} else {
+			this.db = RocksDB.open(this.options, location, this.columnFamilyDescriptors, this.columnFamilyHandleList);
+		}
+	}
 
-    public List<ColumnFamilyHandle> getColumnFamilyHandleList() {
-        return columnFamilyHandleList;
-    }
+	public List<ColumnFamilyHandle> getColumnFamilyHandleList () {
+		return this.columnFamilyHandleList;
+	}
 
-    public void mergeWith(PersistenceLayer other) throws RocksDBException {
-        try (WriteBatch wb = new WriteBatch()) {
-            for (ColumnFamilyHandle column : other.columnFamilyHandleList) {
-                RocksIterator rit = other.db.newIterator(column);
-                rit.seekToFirst();
+	public void mergeWith (PersistenceLayer other) throws RocksDBException {
+		try (WriteBatch wb = new WriteBatch()) {
+			for (ColumnFamilyHandle column : other.columnFamilyHandleList) {
+				RocksIterator rit = other.db.newIterator(column);
+				rit.seekToFirst();
 
-                while (rit.isValid()) {
-                    wb.merge(column, rit.key(), rit.value());
-                    rit.next();
-                }
+				while (rit.isValid()) {
+					wb.merge(column, rit.key(), rit.value());
+					rit.next();
+				}
+			}
+
+			this.db.write(new WriteOptions(), wb);
+		}
+	}
+
+	public void delete () {
+		this.close();
+		this.deleteDirectory(new File(this.location));
+	}
+
+	public void close () {
+		this.columnFamilyHandleList.forEach(ColumnFamilyHandle::close);
+
+		this.options.close();
+		this.db.close();
+		this.columnOptions.close();
+	}
+
+	private boolean deleteDirectory (File directoryToBeDeleted) {
+		File[] allContents = directoryToBeDeleted.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+				this.deleteDirectory(file);
             }
-
-            this.db.write(new WriteOptions(), wb);
         }
-    }
-
-    public void delete() {
-        this.close();
-        deleteDirectory(new File(this.location));
-    }
-
-    public void close() {
-        columnFamilyHandleList.forEach(ColumnFamilyHandle::close);
-
-        options.close();
-        db.close();
-        columnOptions.close();
-    }
-
-    private boolean deleteDirectory(File directoryToBeDeleted) {
-        File[] allContents = directoryToBeDeleted.listFiles();
-        if (allContents != null)
-            for (File file : allContents)
-                deleteDirectory(file);
-        return directoryToBeDeleted.delete();
-    }
+		return directoryToBeDeleted.delete();
+	}
 }
