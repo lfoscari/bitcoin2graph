@@ -65,4 +65,16 @@ public class ByteConversion {
 
 		return result;
 	}
+
+	public static byte[] concat (List<byte[]> bbb) {
+		// Assume all the arrays are of the same length
+		int length = bbb.get(0).length;
+		byte[] result = new byte[length * bbb.size()];
+
+		for (int i = 0; i < result.length; i += length) {
+			System.arraycopy(bbb.get(i), 0, result, i, length);
+		}
+
+		return result;
+	}
 }

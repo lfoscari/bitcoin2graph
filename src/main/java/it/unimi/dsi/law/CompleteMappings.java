@@ -57,13 +57,13 @@ public class CompleteMappings implements Runnable {
 		List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
 
 		for (Long index : indices) {
-			this.extractArcs(transaction, senders, txId, index);
+			Long sender = senders.get(index.intValue());
+			this.extractArcs(transaction, sender, txId, index);
 		}
 	}
 
-	private void extractArcs (Transaction transaction, List<Long> senders, Sha256Hash txId, Long index) throws RocksDBException {
+	private void extractArcs (Transaction transaction, Long sender, Sha256Hash txId, Long index) throws RocksDBException {
 		int topHashCode = Objects.hash(index, txId);
-		long sender = senders.get(index.intValue());
 
 		for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
 			if (receiver == -1) {

@@ -1,24 +1,18 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.law.persistence.IncompleteMappings;
+import it.unimi.dsi.law.persistence.TransactionAddresses;
 import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
-import org.bitcoinj.utils.BlockFileLoader;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteBatch;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
-import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
+import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddresses;
 import static it.unimi.dsi.law.Parameters.COINBASE_ADDRESS;
 
 public class PopulateMappings implements Runnable {
@@ -29,6 +23,7 @@ public class PopulateMappings implements Runnable {
 
 	private final ColumnFamilyHandle incompleteMappings;
 	private final ColumnFamilyHandle topFilter;
+	private final ColumnFamilyHandle transactionAddresses;
 
 	private final NetworkParameters np;
 	private final ProgressLogger progress;
@@ -43,6 +38,7 @@ public class PopulateMappings implements Runnable {
 
 		this.incompleteMappings = columnFamilyHandleList.get(1);
 		this.topFilter = columnFamilyHandleList.get(2);
+		this.transactionAddresses = columnFamilyHandleList.get(3);
 
 		this.np = np;
 		this.progress = progress;
@@ -61,12 +57,12 @@ public class PopulateMappings implements Runnable {
 			List<Transaction> transactions = (List<Transaction>) Blockchain2ScatteredArcsASCIIGraph.extract(block, "transactions");
 
 			for (Transaction transaction : transactions) {
-				List<Long> outputs = outputAddressesToLongs(transaction, this.addressConversion, this.np);
+				List<byte[]> outputs = outputAddresses(transaction, this.np);
 
 				if (transaction.isCoinBase()) {
 					this.addCoinbaseArcs(outputs);
 				} else {
-					this.mapTransactionOutputs(transaction, outputs);
+					this.storeTransaction(transaction, outputs);
 				}
 			}
 
@@ -74,18 +70,21 @@ public class PopulateMappings implements Runnable {
 		}
 	}
 
-	public void mapTransactionOutputs (Transaction transaction, List<Long> receivers) throws RocksDBException {
+	public void storeTransaction (Transaction transaction, List<byte[]> receivers) throws RocksDBException {
 		for (TransactionInput ti : transaction.getInputs()) {
 			TransactionOutPoint top = ti.getOutpoint();
 
 			IncompleteMappings.put(this.wb, this.incompleteMappings, top.hashCode(), receivers, transaction.getUpdateTime());
 			TransactionOutpointFilter.put(this.wb, this.topFilter, top.getHash(), top.getIndex(), transaction.getUpdateTime());
 		}
+
+		TransactionAddresses.put(this.wb, this.transactionAddresses, transaction.getTxId(), receivers, transaction.getUpdateTime());
 	}
 
-	public void addCoinbaseArcs (List<Long> receivers) throws InterruptedException {
-		for (Long receiver : receivers) {
-			this.transactionArcs.put(new Long[] { COINBASE_ADDRESS, receiver });
+	public void addCoinbaseArcs (List<byte[]> receivers) throws InterruptedException, RocksDBException {
+		for (byte[] receiver : receivers) {
+			long r = addressConversion.map(LegacyAddress.fromPubKeyHash(np, receiver));
+			this.transactionArcs.put(new Long[] { COINBASE_ADDRESS, r });
 		}
 	}
 

@@ -78,6 +78,9 @@ public class AddressConversion implements Closeable {
     }
 
     public void addAddresses(File tsv) throws IOException, RocksDBException {
+        // WARNING: This class uses the address string to add the mapping,
+        // which is not compatible with addAddresses(List blockFiles)
+
         this.progress.start("Adding addresses from " + tsv.toString());
 
         byte tab = 9;
@@ -131,7 +134,7 @@ public class AddressConversion implements Closeable {
                             continue;
 
                         // I'm not using receiver.getHash() because it would lose information
-                        byte[] key = receiver.toString().getBytes();
+                        byte[] key = receiver.getHash();
                         wb.put(key, ByteConversion.long2bytes(this.count++));
                     }
                 }
@@ -149,7 +152,8 @@ public class AddressConversion implements Closeable {
     }
 
     public long map(Address address) throws RocksDBException {
-        byte[] key = address.toString().getBytes();
+        // To get the address in base-58 simply run toBase58() from LegacyAddress
+        byte[] key = address.getHash();
         byte[] value = this.db.get(key);
 
         return ByteConversion.bytes2long(value);

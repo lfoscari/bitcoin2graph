@@ -1,8 +1,10 @@
 package it.unimi.dsi.law;
 
+import com.google.common.primitives.Bytes;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
+import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
@@ -18,6 +20,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.*;
 
 public class CustomBlockchainIterator implements Closeable {
@@ -35,6 +38,8 @@ public class CustomBlockchainIterator implements Closeable {
 
 	private final BlockLoader blockLoader;
 	private final DBWriter dbWriter;
+
+	public static final byte[] UNKNOWN = Bytes.ensureCapacity(ByteConversion.long2bytes(-1), 20, 0);
 
 	public CustomBlockchainIterator (List<File> blockFiles, AddressConversion addressConversion, NetworkParameters np, ProgressLogger progress) throws RocksDBException {
 		this.np = np;
@@ -113,6 +118,8 @@ public class CustomBlockchainIterator implements Closeable {
 			cmTasks.add(cmFuture);
 		}
 
+		boolean ignored = this.blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+
 		for (Future<?> cmFuture : cmTasks) {
 			cmFuture.get();
 		}
@@ -120,30 +127,23 @@ public class CustomBlockchainIterator implements Closeable {
 		this.progress.stop();
 	}
 
-	public static List<Long> outputAddressesToLongs (Transaction t, AddressConversion ac, NetworkParameters np) throws RocksDBException {
-		LongList outputs = new LongArrayList();
-
-		for (TransactionOutput to : t.getOutputs()) {
-			Address receiver = transactionOutputToAddress(to, np);
-			outputs.add(receiver == null ? -1 : ac.map(receiver));
-		}
-
-		return outputs;
+	public static List<byte[]> outputAddresses (Transaction t, NetworkParameters np) {
+		return t.getOutputs().stream().map(to -> transactionOutputToAddress(to, np)).toList();
 	}
 
-	public static Address transactionOutputToAddress (TransactionOutput to, NetworkParameters np) {
+	public static byte[] transactionOutputToAddress (TransactionOutput to, NetworkParameters np) {
 		try {
 			Script script = to.getScriptPubKey();
 
 			if (script.getScriptType() == null) {
 				// No public keys are contained in this script.
-				return null;
+				return UNKNOWN;
 			}
 
-			return script.getToAddress(np, true);
+			return script.getToAddress(np, true).getHash();
 		} catch (IllegalArgumentException | ScriptException e) {
 			// Non-standard address
-			return null;
+			return UNKNOWN;
 		}
 	}
 

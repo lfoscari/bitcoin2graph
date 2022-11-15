@@ -24,11 +24,11 @@ public class IncompleteMappings {
 		return ByteConversion.bytes2longList(value);
 	}
 
-	public static void put (WriteBatch wb, ColumnFamilyHandle column, int topHashCode, List<Long> addresses, Date date) throws RocksDBException {
+	public static void put (WriteBatch wb, ColumnFamilyHandle column, int topHashCode, List<byte[]> addresses, Date date) throws RocksDBException {
 		byte[] dateBytes = Bytes.ensureCapacity(ByteConversion.long2bytes(date.getTime()), Long.BYTES, 0);
 		byte[] key = ByteConversion.concat(dateBytes, ByteConversion.int2bytes(topHashCode));
 
-		byte[] value = ByteConversion.longList2bytes(addresses);
+		byte[] value = ByteConversion.concat(addresses);
 
 		wb.merge(column, key, value);
 	}

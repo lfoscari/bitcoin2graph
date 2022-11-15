@@ -33,7 +33,8 @@ public class PersistenceLayer implements Closeable {
 		this.columnFamilyDescriptors = Arrays.asList(
 				new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, this.columnOptions),
 				new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), this.columnOptions),
-				new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), this.columnOptions)
+				new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), this.columnOptions),
+				new ColumnFamilyDescriptor("transaction-addresses".getBytes(), this.columnOptions)
 		);
 
 		this.columnFamilyHandleList = new ArrayList<>();
