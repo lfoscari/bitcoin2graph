@@ -84,6 +84,7 @@ public class CustomBlockchainIterator implements Closeable {
 		}
 
 		this.dbWriter.flush();
+		this.blockLoader.reset();
 
 		this.progress.stop();
 	}
@@ -91,7 +92,6 @@ public class CustomBlockchainIterator implements Closeable {
 	public void completeMappings () throws RocksDBException, InterruptedException, ExecutionException {
 		this.progress.start("Completing mappings with " + Parameters.numberOfThreads + " threads");
 
-		this.blockLoader.reset();
 		Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("block-loader")).submit(this.blockLoader);
 
 		List<Future<?>> cmTasks = new ArrayList<>();

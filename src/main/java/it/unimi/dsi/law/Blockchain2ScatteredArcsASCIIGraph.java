@@ -46,7 +46,7 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
 		try (AddressConversion ac = new AddressConversion(np, progress, true);
 			CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, ac, np, progress)) {
-			it.populateMappings();
+			// it.populateMappings();
 			it.completeMappings();
 		}
 

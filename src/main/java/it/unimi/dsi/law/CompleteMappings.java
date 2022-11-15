@@ -45,32 +45,38 @@ public class CompleteMappings implements Runnable {
 			List<Transaction> transactions = (List<Transaction>) Blockchain2ScatteredArcsASCIIGraph.extract(block, "transactions");
 
 			for (Transaction transaction : transactions) {
-				List<Long> senders = outputAddressesToLongs(transaction, this.addressConversion, this.np);
-
-				Sha256Hash txId = transaction.getTxId();
-				List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
-
-                if (indices.size() == 0) {
-                    continue;
-                }
-
-				for (long index : indices) {
-					int topHashCode = Objects.hash(index, txId);
-					long sender = senders.get((int) index);
-
-					for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
-                        if (receiver == null) {
-                            continue;
-                        }
-
-						this.transactionArcs.add(new Long[] { sender, receiver });
-					}
-				}
-
-				System.gc();
+				this.transactionToArcs(transaction);
 			}
 
 			this.progress.update();
+		}
+	}
+
+	private void transactionToArcs (Transaction transaction) throws RocksDBException {
+		List<Long> senders = outputAddressesToLongs(transaction, this.addressConversion, this.np);
+
+		Sha256Hash txId = transaction.getTxId();
+		List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
+
+		if (indices.size() == 0) {
+			return;
+		}
+
+		this.extractArcs(transaction, senders, txId, indices);
+	}
+
+	private void extractArcs (Transaction transaction, List<Long> senders, Sha256Hash txId, List<Long> indices) throws RocksDBException {
+		for (long index : indices) {
+			int topHashCode = Objects.hash(index, txId);
+			long sender = senders.get((int) index);
+
+			for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
+				if (receiver == null) {
+					continue;
+				}
+
+				this.transactionArcs.add(new Long[] { sender, receiver });
+			}
 		}
 	}
 
