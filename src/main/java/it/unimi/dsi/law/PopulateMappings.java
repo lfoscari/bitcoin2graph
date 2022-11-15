@@ -83,7 +83,7 @@ public class PopulateMappings implements Runnable {
 
 	public void addCoinbaseArcs (List<byte[]> receivers) throws InterruptedException, RocksDBException {
 		for (byte[] receiver : receivers) {
-			long r = addressConversion.map(LegacyAddress.fromPubKeyHash(np, receiver));
+			long r = this.addressConversion.map(LegacyAddress.fromPubKeyHash(this.np, receiver));
 			this.transactionArcs.put(new Long[] { COINBASE_ADDRESS, r });
 		}
 	}
