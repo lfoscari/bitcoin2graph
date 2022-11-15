@@ -7,8 +7,6 @@ import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
 import org.rocksdb.RocksDBException;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -58,25 +56,21 @@ public class CompleteMappings implements Runnable {
 		Sha256Hash txId = transaction.getTxId();
 		List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
 
-		if (indices.size() == 0) {
-			return;
+		for (Long index : indices) {
+			this.extractArcs(transaction, senders, txId, index);
 		}
-
-		this.extractArcs(transaction, senders, txId, indices);
 	}
 
-	private void extractArcs (Transaction transaction, List<Long> senders, Sha256Hash txId, List<Long> indices) throws RocksDBException {
-		for (long index : indices) {
-			int topHashCode = Objects.hash(index, txId);
-			long sender = senders.get((int) index);
+	private void extractArcs (Transaction transaction, List<Long> senders, Sha256Hash txId, Long index) throws RocksDBException {
+		int topHashCode = Objects.hash(index, txId);
+		long sender = senders.get(index.intValue());
 
-			for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
-				if (receiver == null) {
-					continue;
-				}
-
-				this.transactionArcs.add(new Long[] { sender, receiver });
+		for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
+			if (receiver == -1) {
+				continue;
 			}
+
+			this.transactionArcs.add(new Long[] { sender, receiver });
 		}
 	}
 

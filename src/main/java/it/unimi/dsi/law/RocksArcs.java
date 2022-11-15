@@ -36,7 +36,7 @@ public class RocksArcs implements Runnable {
 	@Override
 	public void run () {
 		while (!this.stop) {
-            if (this.transactionArcs.size() < 1000) {
+            if (this.transactionArcs.size() < 100) {
                 continue;
             }
 
@@ -46,7 +46,8 @@ public class RocksArcs implements Runnable {
 		this.close();
 	}
 
-	private void close () {
+	public void close () {
+		this.flush();
 		this.options.close();
 		this.db.close();
 	}

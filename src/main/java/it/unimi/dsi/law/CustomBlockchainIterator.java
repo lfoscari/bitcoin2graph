@@ -155,7 +155,7 @@ public class CustomBlockchainIterator implements Closeable {
 			this.blockchainParsers.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 			this.dbWriter.flush();
 			this.mappings.close();
-			this.rocksArcs.flush();
+			this.rocksArcs.close();
 		} catch (RocksDBException | InterruptedException e) {
 			throw new RuntimeException(e);
 		}
