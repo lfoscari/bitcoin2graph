@@ -22,7 +22,6 @@ public class DBWriter implements Runnable {
 
 	private void digest (WriteBatch wb) throws RocksDBException {
 		this.mappings.db.write(new WriteOptions(), wb);
-		this.progress.logger.info("New write batch completed");
 	}
 
 	@Override

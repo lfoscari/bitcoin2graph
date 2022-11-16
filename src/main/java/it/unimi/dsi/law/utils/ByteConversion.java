@@ -3,8 +3,10 @@ package it.unimi.dsi.law.utils;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import org.bitcoinj.core.LegacyAddress;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ByteConversion {
@@ -67,14 +69,22 @@ public class ByteConversion {
 	}
 
 	public static byte[] concat (List<byte[]> bbb) {
-		// Assume all the arrays are of the same length
-		int length = bbb.get(0).length;
-		byte[] result = new byte[length * bbb.size()];
+		byte[] result = new byte[bbb.stream().mapToInt(bb -> bb.length).sum()];
+		int i = 0;
 
-		for (int i = 0; i < result.length; i += length) {
-			System.arraycopy(bbb.get(i), 0, result, i, length);
+		for (byte[] bb : bbb) {
+			System.arraycopy(bb, 0, result, i, bb.length);
+			i += bb.length;
 		}
 
 		return result;
+	}
+
+	public static List<byte[]> partition(byte[] bb, int length) {
+		List<byte[]> addresses = new ArrayList<>(bb.length / length);
+		for (int i = 0; i < bb.length; i += length) {
+			addresses.add(Arrays.copyOfRange(bb, i, i + length));
+		}
+		return addresses;
 	}
 }

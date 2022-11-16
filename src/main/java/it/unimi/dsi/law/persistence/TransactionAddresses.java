@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Bytes;
 import it.unimi.dsi.law.utils.ByteConversion;
 import org.apache.commons.collections4.list.FixedSizeList;
+import org.bitcoinj.core.LegacyAddress;
 import org.bitcoinj.core.Sha256Hash;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
@@ -15,33 +16,36 @@ import java.util.Date;
 import java.util.List;
 
 public class TransactionAddresses {
-	static int LENGTH = 20;
+	public static List<byte[]> get (PersistenceLayer mappings, Sha256Hash txId) throws RocksDBException {
+		ColumnFamilyHandle column = mappings.getColumnFamilyHandleList().get(2);
 
-	public static List<byte[]> get (PersistenceLayer mappings, Sha256Hash txId, Date date) throws RocksDBException {
-		ColumnFamilyHandle column = mappings.getColumnFamilyHandleList().get(3);
+		byte[] key = txId.getBytes();
+		byte[] addresses = mappings.db.get(column, key);
 
-		byte[] dateBytes = Bytes.ensureCapacity(ByteConversion.long2bytes(date.getTime()), Long.BYTES, 0);
-		byte[] key = ByteConversion.concat(dateBytes, txId.getBytes());
-
-		byte[] value = mappings.db.get(column, key);
-
-		if (value == null) {
-			return List.of();
+		if (addresses == null) {
+			return null;
 		}
 
-		List<byte[]> addresses = new ArrayList<>(value.length / LENGTH);
-		for (int i = 0; i < value.length; i += LENGTH) {
-			addresses.add(Arrays.copyOfRange(value, i, i + LENGTH));
-		}
-		return addresses;
+		return ByteConversion.partition(addresses, LegacyAddress.LENGTH);
 	}
 
-	public static void put (WriteBatch wb, ColumnFamilyHandle column, Sha256Hash txId, List<byte[]> addresses, Date date) throws RocksDBException {
-		byte[] dateBytes = Bytes.ensureCapacity(ByteConversion.long2bytes(date.getTime()), Long.BYTES, 0);
-		byte[] key = ByteConversion.concat(dateBytes, txId.getBytes());
-
+	public static void put (WriteBatch wb, ColumnFamilyHandle column, Sha256Hash txId, List<byte[]> addresses) throws RocksDBException {
+		byte[] key = txId.getBytes();
 		byte[] value = ByteConversion.concat(addresses);
 
 		wb.merge(column, key, value);
+	}
+
+	public static byte[] getAtOffset (PersistenceLayer mappings, Sha256Hash txId, int index) throws RocksDBException {
+		ColumnFamilyHandle column = mappings.getColumnFamilyHandleList().get(2);
+
+		byte[] key = txId.getBytes();
+		byte[] addresses = mappings.db.get(column, key);
+
+		if (addresses == null) {
+			return null;
+		}
+
+		return Arrays.copyOfRange(addresses, index * LegacyAddress.LENGTH, (index + 1) * LegacyAddress.LENGTH);
 	}
 }

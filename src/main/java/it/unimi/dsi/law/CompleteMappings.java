@@ -1,85 +1,84 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.law.persistence.IncompleteMappings;
 import it.unimi.dsi.law.persistence.PersistenceLayer;
-import it.unimi.dsi.law.persistence.TransactionOutpointFilter;
+import it.unimi.dsi.law.persistence.Arcs;
+import it.unimi.dsi.law.persistence.TransactionAddresses;
+import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.*;
+import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
+import org.rocksdb.WriteBatch;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static it.unimi.dsi.law.CustomBlockchainIterator.outputAddressesToLongs;
-
-public class CompleteMappings implements Runnable {
-	private final List<byte[]> blocksBytes;
-	public final LinkedBlockingQueue<Long[]> transactionArcs;
+public class CompleteMappings {
 	private final PersistenceLayer mappings;
-	private final AddressConversion addressConversion;
+	private final ColumnFamilyHandle incompleteMappings;
+	private final ColumnFamilyHandle arcs;
 
-	private final NetworkParameters np;
+	private final LinkedBlockingQueue<WriteBatch> wbQueue;
+	private WriteBatch wb;
+
 	private final ProgressLogger progress;
 
-	public CompleteMappings (List<byte[]> blocksBytes, AddressConversion addressConversion, LinkedBlockingQueue<Long[]> transactionArcs, PersistenceLayer mappings, NetworkParameters np, ProgressLogger progress) {
-		this.blocksBytes = blocksBytes;
-		this.addressConversion = addressConversion;
-		this.transactionArcs = transactionArcs;
+	public CompleteMappings (PersistenceLayer mappings, LinkedBlockingQueue<WriteBatch> wbQueue, ProgressLogger progress) throws RocksDBException {
 		this.mappings = mappings;
 
-		this.np = np;
+		List<ColumnFamilyHandle> columnFamilyHandleList = mappings.getColumnFamilyHandleList();
+		this.incompleteMappings = columnFamilyHandleList.get(1);
+		this.arcs = columnFamilyHandleList.get(3);
+
+		this.wbQueue = wbQueue;
+		this.wb = new WriteBatch();
+
 		this.progress = progress;
+
+		this.completeMappings();
 	}
 
-	public void completeMappings () throws RocksDBException, InterruptedException {
-		for (byte[] blockBytes : this.blocksBytes) {
-			Block block = this.np.getDefaultSerializer().makeBlock(blockBytes);
+	public void completeMappings () throws RocksDBException {
+		for (RocksIterator it = this.mappings.iterator(this.incompleteMappings); it.isValid(); it.next()) {
+			Sha256Hash txId = Sha256Hash.wrap(it.key());
+			List<Pair<Sha256Hash, Long>> incomplete = IncompleteMappings.parse(it.value());
 
-            if (!block.hasTransactions()) {
-                return;
-            }
-
-			List<Transaction> transactions = (List<Transaction>) Blockchain2ScatteredArcsASCIIGraph.extract(block, "transactions");
-
-			for (Transaction transaction : transactions) {
-				this.transactionToArcs(transaction);
+			if (incomplete == null) {
+				continue;
 			}
 
+			List<byte[]> receivers = TransactionAddresses.get(this.mappings, txId);
+
+			for (Pair<Sha256Hash, Long> top : incomplete) {
+				this.findArcs(top.left(), top.right(), receivers);
+			}
+
+			this.commit();
 			this.progress.update();
 		}
 	}
 
-	private void transactionToArcs (Transaction transaction) throws RocksDBException {
-		List<Long> senders = outputAddressesToLongs(transaction, this.addressConversion, this.np);
+	private void findArcs (Sha256Hash senderTxIds, Long index, List<byte[]> receivers) throws RocksDBException {
+		byte[] sender = TransactionAddresses.getAtOffset(this.mappings, senderTxIds, index.intValue());
 
-		Sha256Hash txId = transaction.getTxId();
-		List<Long> indices = TransactionOutpointFilter.get(this.mappings, txId, transaction.getUpdateTime());
+		if (sender == null || sender == Parameters.MISSING_ADDRESS) {
+			// null -> sender transaction now available
+			// MA   -> sender address not "human"
+			return;
+		}
 
-		for (Long index : indices) {
-			Long sender = senders.get(index.intValue());
-			this.extractArcs(transaction, sender, txId, index);
+		for (byte[] receiver : receivers) {
+			Arcs.put(this.wb, this.arcs, sender, receiver);
 		}
 	}
 
-	private void extractArcs (Transaction transaction, Long sender, Sha256Hash txId, Long index) throws RocksDBException {
-		int topHashCode = Objects.hash(index, txId);
-
-		for (Long receiver : IncompleteMappings.get(this.mappings, topHashCode, transaction.getUpdateTime())) {
-			if (receiver == -1) {
-				continue;
-			}
-
-			this.transactionArcs.add(new Long[] { sender, receiver });
-		}
-	}
-
-	@Override
-	public void run () {
-		try {
-			this.completeMappings();
-		} catch (RocksDBException | InterruptedException e) {
-			throw new RuntimeException(e);
+	public void commit () {
+		if (this.wb.getDataSize() > Parameters.WRITE_BUFFER_SIZE) {
+			this.wbQueue.add(this.wb);
+			this.wb = new WriteBatch();
 		}
 	}
 }

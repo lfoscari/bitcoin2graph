@@ -40,12 +40,7 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 
 		List<File> blockFiles = getBlockFiles(Parameters.resources + "blocks");
 
-		try (AddressConversion ac = new AddressConversion(np, progress)) {
-			ac.addAddresses(blockFiles);
-		}
-
-		try (AddressConversion ac = new AddressConversion(np, progress, true);
-			CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, ac, np, progress)) {
+		try (CustomBlockchainIterator it = new CustomBlockchainIterator(blockFiles, np, progress)) {
 			it.populateMappings();
 			it.completeMappings();
 		}
@@ -74,15 +69,5 @@ public class Blockchain2ScatteredArcsASCIIGraph {
 			list.add(file);
 		}
 		return list;
-	}
-
-	public static Object extract(Object o, String fieldName) {
-		try {
-			Field f = o.getClass().getDeclaredField(fieldName);
-			f.setAccessible(true);
-			return f.get(o);
-		} catch (NoSuchFieldException | IllegalAccessException e) {
-			throw new RuntimeException(e);
-		}
 	}
 }

@@ -33,8 +33,8 @@ public class PersistenceLayer implements Closeable {
 		this.columnFamilyDescriptors = Arrays.asList(
 				new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, this.columnOptions),
 				new ColumnFamilyDescriptor("incomplete-mappings".getBytes(), this.columnOptions),
-				new ColumnFamilyDescriptor("transaction-outpoint-filter".getBytes(), this.columnOptions),
-				new ColumnFamilyDescriptor("transaction-addresses".getBytes(), this.columnOptions)
+				new ColumnFamilyDescriptor("transaction-addresses".getBytes(), this.columnOptions),
+				new ColumnFamilyDescriptor("arcs".getBytes(), this.columnOptions)
 		);
 
 		this.columnFamilyHandleList = new ArrayList<>();
@@ -51,6 +51,13 @@ public class PersistenceLayer implements Closeable {
 
 	public List<ColumnFamilyHandle> getColumnFamilyHandleList () {
 		return this.columnFamilyHandleList;
+	}
+
+	public RocksIterator iterator (ColumnFamilyHandle column) {
+		RocksIterator rit = this.db.newIterator(column);
+		rit.seekToFirst();
+
+		return rit;
 	}
 
 	public boolean delete () {

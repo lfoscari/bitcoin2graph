@@ -15,11 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class BlockLoader implements Runnable {
 	public final List<File> blockFiles;
-	private Iterator<File> blockFilesIt;
+	private final Iterator<File> blockFilesIt;
 	private final LinkedBlockingQueue<List<byte[]>> blockQueue;
 	private final ProgressLogger progress;
 	private final NetworkParameters np;
-	public volatile boolean stop = false;
 
 	public BlockLoader (List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, ProgressLogger progress, NetworkParameters np) {
 		this.blockFiles = blockFiles;
@@ -73,8 +72,6 @@ public class BlockLoader implements Runnable {
 			blockList.add(bytes);
 		}
 
-		this.progress.logger.info("New block file loaded " + blockFile);
-
 		return blockList;
 	}
 
@@ -82,13 +79,9 @@ public class BlockLoader implements Runnable {
 		return this.blockFilesIt.hasNext() || this.blockQueue.size() > 0;
 	}
 
-	public void reset () {
-		this.blockFilesIt = this.blockFiles.iterator();
-	}
-
 	@Override
 	public void run () {
-		while (!this.stop) {
+		while (this.blockFilesIt.hasNext()) {
 			try {
                 if (this.blockQueue.remainingCapacity() == 0) {
                     continue;
@@ -103,5 +96,7 @@ public class BlockLoader implements Runnable {
 				throw new RuntimeException(e);
 			}
 		}
+
+		this.progress.logger.info("All blockfiles loaded!");
 	}
 }

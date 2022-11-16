@@ -1,5 +1,9 @@
 package it.unimi.dsi.law;
 
+import com.google.common.primitives.Bytes;
+import it.unimi.dsi.law.utils.ByteConversion;
+import org.bitcoinj.core.LegacyAddress;
+import org.bitcoinj.core.Sha256Hash;
 import org.rocksdb.util.SizeUnit;
 
 import java.util.concurrent.TimeUnit;
@@ -8,7 +12,10 @@ public class Parameters {
 	public final static String resources = "src/main/resources/";
 	public final static String basename = resources + "ScatteredArcsASCIIGraph/bitcoin";
 
-	public static final long COINBASE_ADDRESS = 0L;
+	public static final byte[] COINBASE_ADDRESS = Bytes.ensureCapacity(ByteConversion.long2bytes(0), LegacyAddress.LENGTH, 0);
+	public static final byte[] UNKNOWN_ADDRESS = Bytes.ensureCapacity(ByteConversion.long2bytes(-1), LegacyAddress.LENGTH, 0);
+	public static final byte[] MISSING_ADDRESS = Bytes.ensureCapacity(ByteConversion.long2bytes(-2), LegacyAddress.LENGTH, 0);
+
 
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
