@@ -80,6 +80,7 @@ public class CustomBlockchainIterator implements Closeable {
 	public void completeMappings () throws RocksDBException {
 		this.progress.start("Completing mappings");
 		new CompleteMappings(this.mappings, this.wbQueue, this.progress);
+		this.dbWriter.stop = true;
 		this.progress.stop();
 	}
 

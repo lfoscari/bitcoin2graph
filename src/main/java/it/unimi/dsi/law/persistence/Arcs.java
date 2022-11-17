@@ -24,4 +24,8 @@ public class Arcs {
 		wb.merge(column, sender, receiver);
 	}
 
+	public static void put (WriteBatch wb, ColumnFamilyHandle column, byte[] sender, List<byte[]> receivers) throws RocksDBException {
+		wb.merge(column, sender, ByteConversion.concat(receivers));
+	}
+
 }

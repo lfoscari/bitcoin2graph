@@ -4,7 +4,6 @@ import it.unimi.dsi.law.Parameters;
 import org.rocksdb.*;
 
 import java.io.Closeable;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.List;
 import static it.unimi.dsi.law.Parameters.MAX_BYTES_FOR_LEVEL_BASE;
 
 public class PersistenceLayer implements Closeable {
-	private final String location;
 	private final ColumnFamilyOptions columnOptions;
 	private final DBOptions options;
 
@@ -22,8 +20,6 @@ public class PersistenceLayer implements Closeable {
 
 	public PersistenceLayer (String location) throws RocksDBException {
 		RocksDB.loadLibrary();
-
-		this.location = location;
 
 		this.columnOptions = new ColumnFamilyOptions()
 				.optimizeUniversalStyleCompaction()
@@ -60,26 +56,11 @@ public class PersistenceLayer implements Closeable {
 		return rit;
 	}
 
-	public boolean delete () {
-		this.close();
-		return this.deleteDirectory(new File(this.location));
-	}
-
 	public void close () {
 		this.columnFamilyHandleList.forEach(ColumnFamilyHandle::close);
 
 		this.options.close();
 		this.db.close();
 		this.columnOptions.close();
-	}
-
-	private boolean deleteDirectory (File directoryToBeDeleted) {
-		File[] allContents = directoryToBeDeleted.listFiles();
-        if (allContents != null) {
-            for (File file : allContents) {
-				this.deleteDirectory(file);
-            }
-        }
-		return directoryToBeDeleted.delete();
 	}
 }

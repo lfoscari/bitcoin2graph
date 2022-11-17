@@ -72,6 +72,8 @@ public class BlockLoader implements Runnable {
 			blockList.add(bytes);
 		}
 
+		this.progress.logger.info("Loaded blockfile " + blockFile.getName());
+
 		return blockList;
 	}
 

@@ -7,6 +7,7 @@ import it.unimi.dsi.law.persistence.Arcs;
 import it.unimi.dsi.law.persistence.TransactionAddresses;
 import it.unimi.dsi.law.utils.ByteConversion;
 import it.unimi.dsi.logging.ProgressLogger;
+import org.apache.commons.math3.geometry.spherical.oned.Arc;
 import org.bitcoinj.core.*;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
@@ -52,12 +53,19 @@ public class CompleteMappings {
 
 			List<byte[]> receivers = TransactionAddresses.get(this.mappings, txId);
 
-			for (Pair<Sha256Hash, Long> top : incomplete) {
-				this.findArcs(top.left(), top.right(), receivers);
+			if (receivers == null) {
+				continue;
 			}
 
-			this.commit();
+			// Remove duplicates
+			List<byte[]> uniqueReceivers = receivers.stream().distinct().toList();
+
+			for (Pair<Sha256Hash, Long> top : incomplete) {
+				this.findArcs(top.left(), top.right(), uniqueReceivers);
+			}
+
 			this.progress.update();
+			this.commit();
 		}
 	}
 
@@ -70,9 +78,7 @@ public class CompleteMappings {
 			return;
 		}
 
-		for (byte[] receiver : receivers) {
-			Arcs.put(this.wb, this.arcs, sender, receiver);
-		}
+		Arcs.put(this.wb, this.arcs, sender, receivers);
 	}
 
 	public void commit () {

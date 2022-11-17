@@ -54,9 +54,9 @@ public class PopulateMappings implements Runnable {
 			for (Transaction transaction : block.getTransactions()) {
 				this.storeTransaction(transaction);
 			}
-
-			this.commit();
+			
 			this.progress.update();
+			this.commit();
 		}
 	}
 
