@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
@@ -13,16 +14,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class BlockLoader implements Runnable {
+import static org.bitcoinj.core.Block.BLOCK_HEIGHT_GENESIS;
+
+public class BlockLoader implements Runnable, Iterable<byte[]>, Iterator<byte[]> {
     public final List<File> blockFiles;
     private final Iterator<File> blockFilesIt;
     private final LinkedBlockingQueue<List<byte[]>> blockQueue;
+    private boolean genesis = true;
     private final ProgressLogger progress;
     private final NetworkParameters np;
+
+    private final ObjectArrayFIFOQueue<byte[]> buffer;
 
     public BlockLoader (List<File> blockFiles, LinkedBlockingQueue<List<byte[]>> blockQueue, ProgressLogger progress, NetworkParameters np) {
         this.blockFiles = blockFiles;
         this.blockFilesIt = blockFiles.iterator();
+
+        // to remove
+        this.buffer = new ObjectArrayFIFOQueue<>();
 
         this.blockQueue = blockQueue;
         this.progress = progress;
@@ -35,6 +44,11 @@ public class BlockLoader implements Runnable {
         byte[] blocks = Files.readAllBytes(blockFile.toPath());
         ByteArrayInputStream bis = new ByteArrayInputStream(blocks);
         List<byte[]> blockList = new ArrayList<>();
+
+        if (this.genesis) {
+            bis.readNBytes(BLOCK_HEIGHT_GENESIS);
+            this.genesis = false;
+        }
 
         while (true) {
             int nextChar = bis.read();
@@ -77,6 +91,19 @@ public class BlockLoader implements Runnable {
         return blockList;
     }
 
+    // TO REMOVE
+    public byte[] next() {
+        if (this.buffer.isEmpty()) {
+            try {
+                this.loadNextBlocks().forEach(this.buffer::enqueue);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return this.buffer.dequeue();
+    }
+
     public boolean hasNext() {
         return this.blockFilesIt.hasNext(); //  || this.blockQueue.size() > 0;
     }
@@ -100,5 +127,10 @@ public class BlockLoader implements Runnable {
         }
 
         this.progress.logger.info("All blockfiles loaded!");
+    }
+
+    @Override
+    public Iterator<byte[]> iterator() {
+        return this;
     }
 }

@@ -1,21 +1,27 @@
 package it.unimi.dsi.law;
 
+import com.google.errorprone.annotations.Var;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
+import org.rocksdb.util.SizeUnit;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
 import static it.unimi.dsi.law.Parameters.MISSING_ADDRESS;
 import static it.unimi.dsi.law.Parameters.UNKNOWN_ADDRESS;
+import static org.bitcoinj.core.Block.HEADER_SIZE;
+import static org.bitcoinj.core.Message.UNKNOWN_LENGTH;
 
 public class OnlineParsing {
     private final Object2ObjectOpenHashMap<byte[], byte[][]> map;
@@ -37,54 +43,61 @@ public class OnlineParsing {
         new Context(this.np);
     }
     
-    public void run() throws IOException {
+    public void run() {
         BlockLoader bl = new BlockLoader(this.blockFiles, null, null, this.np);
 
-        while (bl.hasNext()) {
-            for (byte[] blockBytes : bl.loadNextBlocks()) {
-                Block block = this.np.getDefaultSerializer().makeBlock(blockBytes);
+        for (byte[] blockBytes : bl) {
+            List<Transaction> transactions = this.getTransactions(blockBytes);
 
-                if (!block.hasTransactions()) {
+            if (transactions == null) {
+                System.out.println("Couldn't parse the transactions in a block!");
+                continue;
+            }
+
+            if (transactions.isEmpty()) {
+                continue;
+            }
+
+            for (Transaction transaction : transactions) {
+
+                byte[][] outputs = this.getOutputAddresses(transaction);
+                this.map.put(transaction.getTxId().getBytes(), outputs);
+
+                if (transaction.isCoinBase()) {
                     continue;
                 }
 
-                for (Transaction transaction : block.getTransactions()) {
-                    byte[][] outputs = this.getOutputAddresses(transaction);
-                    this.map.put(transaction.getTxId().getBytes(), outputs);
+                for (TransactionInput source : transaction.getInputs()) {
+                    TransactionOutPoint top = source.getOutpoint();
+                    Sha256Hash txId = top.getHash();
+                    long index = top.getIndex();
 
-                    if (transaction.isCoinBase()) {
+                    byte[][] sendersAddresses = this.map.get(txId.getBytes());
+
+                    if (sendersAddresses == null) {
+                        // throw new RuntimeException();
                         continue;
                     }
 
-                    List<TransactionInput> senders = transaction.getInputs();
+                    System.out.println("Found incomplete mapping!");
 
-                    for (TransactionInput ti : senders) {
-                        TransactionOutPoint top = ti.getOutpoint();
-                        Sha256Hash txId = top.getHash();
-                        long index = top.getIndex();
+                    byte[] senderAddress = sendersAddresses[(int) index];
 
-                        byte[][] sendersAddresses = this.map.get(txId.getBytes());
+                    if (senderAddress == null) {
+                        continue;
+                    }
 
-                        if (sendersAddresses == null) {
-                            continue;
-                        }
-
-                        byte[] senderAddress = sendersAddresses[(int) index];
-
-                        if (senderAddress == null) {
-                            continue;
-                        }
-
-                        for (byte[] outputAddress : outputs) {
-                            this.arcs.put(senderAddress, outputAddress);
-                        }
+                    for (byte[] outputAddress : outputs) {
+                        this.arcs.put(senderAddress, outputAddress);
                     }
                 }
             }
         }
 
-        this.saveArcs();
-        this.saveMap();
+        System.out.println("Found " + this.arcs.size() + " arcs");
+
+        // this.saveArcs();
+        // this.saveMap();
     }
 
     public void saveArcs() {
@@ -132,6 +145,33 @@ public class OnlineParsing {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<Transaction> getTransactions (byte[] block) {
+        int cursor = 80; // Block header
+        VarInt transactionsAmount = new VarInt(block, cursor);
+        cursor += transactionsAmount.getOriginalSizeInBytes();
+
+        if (block.length == cursor) {
+            // This message is just a header, it has no transactions.
+            return List.of();
+        }
+
+        int transactionAmountInt;
+        try {
+            transactionAmountInt = transactionsAmount.intValue();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+
+        List<Transaction> transactions = new ArrayList<>(Math.min(transactionAmountInt, Utils.MAX_INITIAL_ARRAY_LENGTH));
+        for (int i = 0; i < transactionAmountInt; i++) {
+            Transaction tx = new Transaction(this.np, block, cursor, null, this.np.getDefaultSerializer(), UNKNOWN_LENGTH, null);
+            transactions.add(tx);
+            cursor += tx.getMessageSize();
+        }
+
+        return transactions;
     }
 
     public static List<File> getBlockFiles (String blocksDirName) {
