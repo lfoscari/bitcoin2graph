@@ -1,42 +1,59 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
-import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.*;
 import it.unimi.dsi.law.utils.BitcoinUtils;
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
+import org.rocksdb.util.SizeUnit;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/*
+ * Idea per parallelizzare: ogni thread considera una parte della blockchain
+ * e testa di completare i mappings, restituisce una mappa come this.maps e
+ * una lista come this.incomplete. A questo punto basta lanciare altri thread
+ * su this.incomplete utilizzando le informazioni di this.map e si chiude tutto.
+ */
 
 public class OnlineParsing {
 	private final Map<byte[], byte[][]> map;
-	private final MultiValuedMap<byte[], byte[]> arcs;
+	private final LinkedBlockingQueue<Pair<byte[], byte[]>> arcs;
 	private final List<Transaction> incomplete;
 	private final List<File> blockFiles;
 	private final NetworkParameters np;
 
-	public static void main (String[] args) {
+	private final ArcsBackup arcsBackup;
+	private final Thread arcsBackupThread;
+
+	public static void main (String[] args) throws InterruptedException, FileNotFoundException {
 		OnlineParsing op = new OnlineParsing();
 		op.run();
 	}
 
-	public OnlineParsing () {
+	public OnlineParsing () throws FileNotFoundException {
 		this.map = new Object2ObjectOpenCustomHashMap<>(ByteArrays.HASH_STRATEGY);
-		this.arcs = new HashSetValuedHashMap<>();
+		this.arcs = new LinkedBlockingQueue<>();
+
 		this.incomplete = new ObjectArrayList<>();
 		this.blockFiles = BitcoinUtils.getBlockFiles(Parameters.resources + "blocks");
 
 		this.np = new MainNetParams();
 		new Context(this.np);
+
+		this.arcsBackup = new ArcsBackup(this.arcs, this.np);
+		this.arcsBackupThread = new Thread(this.arcsBackup);
+
+		this.arcsBackupThread.start();
 	}
 
-	public void run () {
+	public void run () throws InterruptedException {
 		BlockLoader bl = new BlockLoader(this.blockFiles, null, null, this.np);
 
 		for (byte[] blockBytes : bl) {
@@ -60,14 +77,19 @@ public class OnlineParsing {
 			this.parseTransaction(transaction, outputs);
 		}
 
+		System.out.println("Finishing saving results...");
+
+		this.arcsBackup.stop = true;
+		this.arcsBackupThread.join();
+
 		System.out.println("Missing transactions " + this.incomplete.size());
 		System.out.println("Found " + this.arcs.size() + " arcs");
 
-		this.saveArcs();
+		// this.saveArcs();
 		// this.saveMap();
 	}
 
-	public void parseTransaction (Transaction transaction, byte[][] outputs) {
+	public void parseTransaction (Transaction transaction, byte[][] outputs) throws InterruptedException {
 		if (transaction.isCoinBase()) {
 			return;
 		}
@@ -87,22 +109,17 @@ public class OnlineParsing {
 			byte[] senderAddress = sendersAddresses[(int) index];
 
 			for (byte[] outputAddress : outputs) {
-				this.arcs.put(senderAddress, outputAddress);
+				this.arcs.put(Pair.of(senderAddress, outputAddress));
 			}
 		}
 	}
 
-	public void saveArcs () {
-		File arcs = new File(Parameters.resources + "arcs.txt");
-		try (FileOutputStream os = new FileOutputStream(arcs);
-			 FastBufferedOutputStream bos = new FastBufferedOutputStream(os)) {
-			this.arcs.asMap().forEach((sender, receivers) -> {
+	public void saveArcs (File destination) {
+		try (FileOutputStream os = new FileOutputStream(destination)) {
+			this.arcs.forEach(arc -> {
 				try {
-					bos.write((BitcoinUtils.addressToString(sender, this.np) + " -> ").getBytes());
-					for (byte[] receiver : receivers) {
-						bos.write((BitcoinUtils.addressToString(receiver, this.np) + " ").getBytes());
-					}
-					bos.write("\n".getBytes());
+					byte[] sender = arc.left(), receiver = arc.right();
+					os.write((BitcoinUtils.addressToString(sender, this.np) + " -> " + BitcoinUtils.addressToString(receiver, this.np) + "\n").getBytes());
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
@@ -112,10 +129,8 @@ public class OnlineParsing {
 		}
 	}
 
-	public void saveMap () {
-		File map = new File(Parameters.resources + "map.txt");
-		try (FileOutputStream os = new FileOutputStream(map);
-			 FastBufferedOutputStream bos = new FastBufferedOutputStream(os)) {
+	public void saveMap (File destination) {
+		try (FileOutputStream os = new FileOutputStream(destination)) {
 			this.map.forEach((txIdBytes, addressesBytes) -> {
 				String txId = Sha256Hash.wrap(txIdBytes).toString();
 
@@ -125,7 +140,7 @@ public class OnlineParsing {
 				}
 
 				try {
-					bos.write((txId + " -> " + addresses + "\n").getBytes());
+					os.write((txId + " -> " + addresses + "\n").getBytes());
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}

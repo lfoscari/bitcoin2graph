@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 public class Parameters {
     public final static String resources = "src/main/resources/";
     public final static String basename = resources + "ScatteredArcsASCIIGraph/bitcoin";
+    public final static String arcs = resources + "arcs/";
 
     public static final byte[] UNKNOWN_ADDRESS = ByteConversion.long2bytes(-1);
     public static final byte[] MISSING_ADDRESS = ByteConversion.long2bytes(-2);
