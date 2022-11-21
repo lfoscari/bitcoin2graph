@@ -18,7 +18,7 @@ public class TSVCleanup {
         Path.of(Parameters.resources, "inputs").toFile().mkdir();
         Path.of(Parameters.resources, "outputs").toFile().mkdir();
 
-        File[] toClean = Path.of(Parameters.resources, "original").toFile().listFiles();
+        File[] toClean = Path.of(Parameters.resources, "originals").toFile().listFiles();
 
         if (toClean == null) {
             throw new FileNotFoundException();
