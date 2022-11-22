@@ -16,9 +16,6 @@ import java.nio.file.Path;
 import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class TransactionBloom {
-
-    // Magari mettere anche gli indici?
-
     public static void main(String[] args) throws IOException {
         final Path filtersDirectory = Path.of(Parameters.resources, "filters");
         filtersDirectory.toFile().mkdir();
