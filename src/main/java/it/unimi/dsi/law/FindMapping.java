@@ -16,7 +16,11 @@ import java.util.List;
 import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.*;
 
 public class FindMapping {
-    public static void main(String[] args) throws IOException {
+    public static void main (String[] args) throws IOException {
+        run();
+    }
+
+    public static void run() throws IOException {
         ObjectList<Pair<String, BloomFilter<CharSequence>>> filters = loadFilters();
         File[] inputs = Path.of(Parameters.resources, "inputs").toFile().listFiles();
 
@@ -34,15 +38,15 @@ public class FindMapping {
         for (String[] inputLine : Utils.readTSV(input)) {
             String transaction = inputLine[0];
 
-            for (Pair<String, BloomFilter<CharSequence>> filter : filters) {
-                if (!filter.right().contains(transaction.getBytes())) {
-                    continue;
-                }
+            List<String> outputCandidates = filters.stream()
+                    .filter(f -> f.right().contains(transaction.getBytes()))
+                    .map(Pair::left).toList();
 
-                List<String> recipients = outputContains(filter.left(), inputLine);
+            for (String outputCandidate: outputCandidates) {
+                List<String> recipients = outputContains(outputCandidate, inputLine);
 
                 if (!recipients.isEmpty()) {
-                    System.out.println(inputLine[TRANSACTION_HASH] + " (" + filter.left() + "): " + inputLine[RECIPIENT] + " ~> " + recipients);
+                    System.out.println(inputLine[TRANSACTION_HASH] + " (" + outputCandidate + "): " + inputLine[RECIPIENT] + " ~> " + recipients);
                 }
             }
         }

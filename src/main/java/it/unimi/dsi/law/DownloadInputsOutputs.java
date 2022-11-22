@@ -5,25 +5,31 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class DownloadInputsOutputs {
     public static void main(String[] args) {
         File inputUrls = Path.of(Parameters.resources, "input-urls.txt").toFile();
-        download(inputUrls, "originals", 100);
+        download(inputUrls, "originals", -1);
 
         File outputUrls = Path.of(Parameters.resources, "output-urls.txt").toFile();
-        download(outputUrls, "originals", 100);
+        download(outputUrls, "originals", -1);
 
-        System.out.println("Remember to untar the files!");
+        System.out.println("Remember to untar the files!\n\t> find . -name '*.tar.gz' -exec tar -xzf {} \\;");
     }
 
     private static void download(File urls, String destinationDir, int limit) {
         Path.of(Parameters.resources, destinationDir).toFile().mkdir();
 
         try (FileReader reader = new FileReader(urls)) {
-            BufferedReader buf = new BufferedReader(reader);
-            for (String s : buf.lines().toList().subList(0, limit)) {
+            List<String> toDownload = new BufferedReader(reader).lines().toList();
+
+            if (limit < 0) {
+                toDownload = toDownload.subList(0, limit);
+            }
+
+            for (String s : toDownload) {
                 URL url = new URL(s);
 
                 String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf("?"));
