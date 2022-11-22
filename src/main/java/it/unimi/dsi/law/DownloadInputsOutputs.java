@@ -25,7 +25,7 @@ public class DownloadInputsOutputs {
         try (FileReader reader = new FileReader(urls)) {
             List<String> toDownload = new BufferedReader(reader).lines().toList();
 
-            if (limit < 0) {
+            if (limit >= 0) {
                 toDownload = toDownload.subList(0, limit);
             }
 
