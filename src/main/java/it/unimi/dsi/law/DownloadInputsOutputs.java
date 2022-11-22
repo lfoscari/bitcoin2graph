@@ -5,14 +5,15 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 public class DownloadInputsOutputs {
     public static void main(String[] args) {
         File inputUrls = Path.of(Parameters.resources, "input-urls.txt").toFile();
-        download(inputUrls, "originals", 30);
+        download(inputUrls, "originals", 100);
 
         File outputUrls = Path.of(Parameters.resources, "output-urls.txt").toFile();
-        download(outputUrls, "originals", 30);
+        download(outputUrls, "originals", 100);
 
         System.out.println("Remember to untar the files!");
     }
@@ -33,8 +34,10 @@ public class DownloadInputsOutputs {
                     fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
                     System.out.println("Saved " + filename);
                 }
+
+                Thread.sleep(100);
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

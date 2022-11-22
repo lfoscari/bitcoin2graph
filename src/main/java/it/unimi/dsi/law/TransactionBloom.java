@@ -1,6 +1,5 @@
 package it.unimi.dsi.law;
 
-import com.google.common.hash.Funnels;
 import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
@@ -12,8 +11,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+
+import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class TransactionBloom {
 
@@ -22,29 +22,30 @@ public class TransactionBloom {
     public static void main(String[] args) throws IOException {
         final Path filtersDirectory = Path.of(Parameters.resources, "filters");
         filtersDirectory.toFile().mkdir();
-        File[] inputs = Path.of(Parameters.resources, "inputs").toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
-        if (inputs == null) {
-            throw new FileNotFoundException("No inputs found!");
+        File[] outputs = Path.of(Parameters.resources, "outputs").toFile().listFiles((d, f) -> f.endsWith("tsv"));
+
+        if (outputs == null) {
+            throw new FileNotFoundException("No outputs found!");
         }
 
-        for (File input : inputs) {
-            save(input);
+        for (File output : outputs) {
+            save(output);
         }
 
         System.out.println("Filters saved in " + filtersDirectory);
     }
 
-    public static void save(File input) throws IOException {
-        BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, Funnels.stringFunnel(StandardCharsets.UTF_8));
+    public static void save(File output) throws IOException {
+        BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
 
-        FileReader originalReader = new FileReader(input);
+        FileReader originalReader = new FileReader(output);
         CSVParser tsvParser = new CSVParserBuilder().withSeparator('\t').build();
         CSVReader tsvReader = new CSVReaderBuilder(originalReader).withCSVParser(tsvParser).build();
 
         tsvReader.readNext(); // header
-        tsvReader.iterator().forEachRemaining(line -> transactionFilter.add(line[0].getBytes()));
+        tsvReader.iterator().forEachRemaining(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 
-        BinIO.storeObject(transactionFilter, Path.of(Parameters.resources, "filters", input.getName()).toFile());
+        BinIO.storeObject(transactionFilter, Path.of(Parameters.resources, "filters", output.getName()).toFile());
     }
 }
