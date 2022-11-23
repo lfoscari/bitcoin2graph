@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.BloomFilter;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
@@ -15,7 +16,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
-import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 
 public class DownloadInputsOutputs {
@@ -24,17 +24,26 @@ public class DownloadInputsOutputs {
 	private long count = 0;
 
 	public DownloadInputsOutputs () {
-		this(new ProgressLogger(LoggerFactory.getLogger(DownloadInputsOutputs.class), logInterval, logTimeUnit, "sources"));
+		this(null);
 	}
 
 	public DownloadInputsOutputs (ProgressLogger progress) {
+		if (progress == null) {
+			Logger logger = LoggerFactory.getLogger(DownloadInputsOutputs.class);
+			progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "sources");
+		}
+
 		this.progress = progress;
 		this.addressLong = new Object2LongArrayMap<>();
 	}
 
 	public void run () throws IOException {
-		this.download(Parameters.inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
-		this.download(Parameters.outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
+		String[] inputs = Parameters.inputsDirectory.toFile().list();
+		String[] outputs = Parameters.inputsDirectory.toFile().list();
+		this.progress.expectedUpdates = (inputs != null ? inputs.length : -1) + (outputs != null ? outputs.length : -1);
+
+		this.download(Parameters.inputsUrlsFilename.toFile(), Parameters.INPUTS_AMOUNT, false);
+		this.download(Parameters.outputsUrlsFilename.toFile(), Parameters.OUTPUTS_AMOUNT, true);
 		this.saveAddressMap();
 	}
 
