@@ -33,6 +33,9 @@ public class DownloadInputsOutputs {
 
 	private final ProgressLogger progress;
 
+	private final Object2LongFunction<String> addressLong;
+	private long count = 0;
+
 	public DownloadInputsOutputs () {
 		this(null);
 	}
@@ -44,64 +47,60 @@ public class DownloadInputsOutputs {
 		}
 
 		this.progress = progress;
+		this.addressLong = new Object2LongArrayMap<>();
 	}
 
 	public void run () throws IOException {
 		this.download(Parameters.inputsUrlsFilename.toFile(), INPUTS_AMOUNT);
 		this.download(Parameters.outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT);
 
-		this.computeAddressMap();
+		this.saveAddressMap();
 		this.createBloomFilters();
 	}
 
 	private void download (File urls, int limit) throws IOException {
-
 		Parameters.inputsDirectory.toFile().mkdir();
 		Parameters.outputsDirectory.toFile().mkdir();
 
 		Path tempDir = Files.createTempDirectory(Parameters.resources, "download-");
 		tempDir.toFile().deleteOnExit();
 
-		FileReader reader = new FileReader(urls);
-		List<String> toDownload = new BufferedReader(reader).lines().toList();
+		try (FileReader reader = new FileReader(urls)) {
+			List<String> toDownload = new BufferedReader(reader).lines().toList();
 
-		if (limit >= 0) {
-			this.progress.start("Downloading and unpacking first " + INPUTS_AMOUNT + " lines in " + urls + "...");
-			toDownload = toDownload.subList(0, limit);
-		} else {
-			this.progress.start("Downloading and unpacking " + urls + "...");
-		}
-
-		FileWriter addressesFile = new FileWriter(Parameters.addressesTSV.toFile());
-
-		for (String s : toDownload) {
-			URL url = new URL(s);
-
-			String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf(".gz?"));
-			Path tempPath = tempDir.resolve(filename);
-
-			try (GZIPInputStream gzip = new GZIPInputStream(url.openStream());
-				 ReadableByteChannel rbc = Channels.newChannel(gzip);
-				 FileOutputStream fos = new FileOutputStream(tempPath.toFile())) {
-
-				fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-				boolean contentful = this.parseTSV(tempPath.toFile(), addressesFile);
-
-				if (contentful) {
-					this.progress.lightUpdate();
-				}
+			if (limit >= 0) {
+				this.progress.start("Downloading and unpacking first " + INPUTS_AMOUNT + " lines in " + urls + "...");
+				toDownload = toDownload.subList(0, limit);
+			} else {
+				this.progress.start("Downloading and unpacking " + urls + "...");
 			}
 
-			tempPath.toFile().delete();
-		}
+			for (String s : toDownload) {
+				URL url = new URL(s);
 
-		addressesFile.close();
-		reader.close();
+				String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf(".gz?"));
+				Path tempPath = tempDir.resolve(filename);
+
+				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream());
+					 ReadableByteChannel rbc = Channels.newChannel(gzip);
+					 FileOutputStream fos = new FileOutputStream(tempPath.toFile())) {
+
+					fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+					boolean contentful = this.parseTSV(tempPath.toFile());
+
+					if (contentful) {
+						this.progress.lightUpdate();
+					}
+				}
+
+				tempPath.toFile().delete();
+			}
+		}
 
 		this.progress.stop();
 	}
 
-	public boolean parseTSV (File tsv, FileWriter addressesFile) throws IOException {
+	public boolean parseTSV (File tsv) throws IOException {
 		List<Integer> important;
 		Path destinationPath;
 
@@ -124,7 +123,7 @@ public class DownloadInputsOutputs {
 		}
 
 		this.saveTSV(content, destinationPath);
-		this.saveAddresses(content, addressesFile);
+		this.saveAddresses(content);
 
 		return true;
 	}
@@ -136,41 +135,28 @@ public class DownloadInputsOutputs {
 		}
 	}
 
-	private void saveAddresses (List<String[]> content, FileWriter addressesFile) throws IOException {
-		Set<String> addresses = content.stream().map(line -> line[Parameters.CleanedBitcoinColumn.RECIPIENT]).collect(Collectors.toSet());
-
-		for (String address : addresses) {
-			addressesFile.write(address + "\n");
+	private void saveAddresses (List<String[]> content) {
+		for (String[] line : content) {
+			String address = line[Parameters.CleanedBitcoinColumn.RECIPIENT];
+			this.addressLong.put(address, this.count++);
 		}
 	}
 
-	private void computeAddressMap () throws IOException {
-		this.progress.start("Computing address-to-long map...");
-
-		if (!Parameters.addressesTSV.toFile().exists()) {
-			throw new NoSuchFileException("Couldn't find addresses tsv");
-		}
-
-		long count = 0;
-		Object2LongFunction<String> addressLong = new Object2LongArrayMap<>();
-
-		for (String address : Files.readAllLines(Parameters.addressesTSV)) {
-			addressLong.put(address, count++);
-		}
-
-		BinIO.storeObject(addressLong, Parameters.addressLongMap.toFile());
-
-		this.progress.stop("Map stored in " + Parameters.addressLongMap);
+	private void saveAddressMap () throws IOException {
+		this.progress.start("Saving address map...");
+		BinIO.storeObject(this.addressLong, Parameters.addressLongMap.toFile());
+		this.progress.stop("Address map saved in " + Parameters.addressLongMap);
 	}
 
-	public void createBloomFilters () throws IOException {
+	private void createBloomFilters () throws IOException {
 		this.progress.start("Creating bloom filters...");
 
 		Parameters.filtersDirectory.toFile().mkdir();
 		File[] outputs = Parameters.outputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
 		if (outputs == null) {
-			throw new FileNotFoundException("No outputs found!");
+			this.progress.stop("No outputs found!");
+			return;
 		}
 
 		for (File output : outputs) {
@@ -180,7 +166,7 @@ public class DownloadInputsOutputs {
 		this.progress.stop("Filters saved in " + Parameters.filtersDirectory);
 	}
 
-	public void bloom (File output) throws IOException {
+	private void bloom (File output) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
 
 		FileReader originalReader = new FileReader(output);
