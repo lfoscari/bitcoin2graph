@@ -165,14 +165,7 @@ public class DownloadInputsOutputs {
 
 	private void bloom (File output) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
-
-		FileReader originalReader = new FileReader(output);
-		CSVParser tsvParser = new CSVParserBuilder().withSeparator('\t').build();
-		CSVReader tsvReader = new CSVReaderBuilder(originalReader).withCSVParser(tsvParser).build();
-
-		tsvReader.readNext(); // header
-		tsvReader.iterator().forEachRemaining(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
-
+		Utils.readTSV(output).forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(output.getName()).toFile());
 	}
 
