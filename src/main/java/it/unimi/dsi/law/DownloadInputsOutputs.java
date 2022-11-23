@@ -10,17 +10,14 @@ import java.util.concurrent.TimeUnit;
 
 public class DownloadInputsOutputs {
 	public static void main (String[] args) {
-		File inputUrls = Path.of(Parameters.resources, Parameters.inputsUrlsFilename).toFile();
-		download(inputUrls, -1);
+		download(Parameters.inputsUrlsFilename.toFile(), -1);
+		download(Parameters.outputsUrlsFilename.toFile(), -1);
 
-		File outputUrls = Path.of(Parameters.resources, Parameters.outputsUrlsFilename).toFile();
-		download(outputUrls, -1);
-
-		System.out.println("Remember to untar the files!\n\t> find . -name '*.tar.gz' -exec tar -xzf {} \\;");
+		System.out.println("Remember to unpack the files!\n\t> find . -name '*.tsv.gz' -exec gunzip {} \\;");
 	}
 
 	private static void download (File urls, int limit) {
-		Path.of(Parameters.resources, Parameters.originalsDirectory).toFile().mkdir();
+		Parameters.originalsDirectory.toFile().mkdir();
 
 		try (FileReader reader = new FileReader(urls)) {
 			List<String> toDownload = new BufferedReader(reader).lines().toList();
@@ -33,7 +30,7 @@ public class DownloadInputsOutputs {
 				URL url = new URL(s);
 
 				String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf("?"));
-				Path fullPath = Path.of(Parameters.resources, Parameters.originalsDirectory, filename);
+				Path fullPath = Parameters.originalsDirectory.resolve(filename);
 
 				try (ReadableByteChannel rbc = Channels.newChannel(url.openStream());
 					 FileOutputStream fos = new FileOutputStream(fullPath.toFile())) {

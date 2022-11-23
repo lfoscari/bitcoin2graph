@@ -1,26 +1,26 @@
 package it.unimi.dsi.law;
 
-import java.util.List;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 public class Parameters {
-	public final static String resources = "src/main/resources/";
-	public final static String graph = resources + "graph/";
+	public final static Path resources = Path.of("src/main/resources/");
+	public final static Path graph = resources.resolve("graph");
 
-	public final static String basename = graph + "bitcoin";
-	public final static String ids = graph + "bitcoin-ids";
+	public final static Path basename = graph.resolve("bitcoin");
+	public final static Path ids = graph.resolve("bitcoin-ids");
 
-	public final static String inputsUrlsFilename = "input-urls.txt";
-	public final static String inputsDirectory = "inputs";
+	public final static Path inputsUrlsFilename = resources.resolve("input-urls.txt");
+	public final static Path inputsDirectory = resources.resolve("inputs");
 
-	public final static String outputsUrlsFilename = "output-urls.txt";
-	public final static String outputsDirectory = "outputs";
+	public final static Path outputsUrlsFilename = resources.resolve("output-urls.txt");
+	public final static Path outputsDirectory = resources.resolve("outputs");
 
-	public final static String filtersDirectory = "filters";
-	public final static String originalsDirectory = "originals";
+	public final static Path filtersDirectory = resources.resolve("filters");
+	public final static Path originalsDirectory = resources.resolve("originals");
 
-	public final static String addressesTSV = "addresses.tsv";
-	public final static String addressLongMap = "addressLong.map";
+	public final static Path addressesTSV = resources.resolve("addresses.tsv");
+	public final static Path addressLongMap = resources.resolve("addressLong.map");
 
 	public static class BitcoinColumn {
 		public static final int

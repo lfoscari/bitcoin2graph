@@ -31,23 +31,23 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "arcs");
 		progress.displayLocalSpeed = true;
 
-		Path.of(Parameters.graph).toFile().mkdir();
+		Parameters.graph.toFile().mkdir();
 
 		LinkedBlockingQueue<long[]> arcs = new LinkedBlockingQueue<>();
-		File addressLongFile = Path.of(Parameters.resources, Parameters.addressLongMap).toFile();
+		File addressLongFile = Parameters.addressLongMap.toFile();
 		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressLongFile);
 
 		FindMapping fm = new FindMapping(arcs, addressLong, progress);
 
-		File tempDir = Files.createTempDirectory(Path.of(Parameters.resources), "bw_temp").toFile();
+		File tempDir = Files.createTempDirectory(Parameters.resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
 
 		Thread t = new Thread(fm);
 		Blockchain2Webgraph bw = new Blockchain2Webgraph(arcs, t);
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
-		BVGraph.store(graph, Parameters.basename);
-		BinIO.storeObject(graph.ids, Parameters.ids);
+		BVGraph.store(graph, Parameters.basename.toString());
+		BinIO.storeObject(graph.ids, Parameters.ids.toFile());
 
 		t.join();
 	}

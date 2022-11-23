@@ -11,7 +11,6 @@ import it.unimi.dsi.util.BloomFilter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -49,7 +48,7 @@ public class FindMapping implements Runnable {
 
 	public void findMapping() throws IOException {
 		ObjectList<Pair<String, BloomFilter<CharSequence>>> filters = loadFilters();
-		File[] inputs = Path.of(Parameters.resources, Parameters.inputsDirectory).toFile().listFiles();
+		File[] inputs = Parameters.inputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
 		if (inputs == null) {
 			throw new FileNotFoundException("No inputs found!");
@@ -101,7 +100,7 @@ public class FindMapping implements Runnable {
 	}
 
 	private static List<String> outputContains (String outputName, String[] inputLine) throws IOException {
-		File output = Path.of(Parameters.resources, Parameters.outputsDirectory, outputName).toFile();
+		File output = Parameters.outputsDirectory.resolve(outputName).toFile();
 
 		if (!output.exists()) {
 			throw new FileNotFoundException("Couldn't find " + output);
@@ -119,7 +118,7 @@ public class FindMapping implements Runnable {
 	}
 
 	private static ObjectList<Pair<String, BloomFilter<CharSequence>>> loadFilters () throws FileNotFoundException {
-		File[] filterFiles = Path.of(Parameters.resources, Parameters.filtersDirectory).toFile().listFiles();
+		File[] filterFiles = Parameters.filtersDirectory.toFile().listFiles();
 
 		if (filterFiles == null) {
 			throw new FileNotFoundException("Generate the filters first!");

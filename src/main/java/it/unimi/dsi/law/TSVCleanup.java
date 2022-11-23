@@ -14,10 +14,10 @@ public class TSVCleanup {
 	private static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
 
 	public static void main (String[] args) throws IOException {
-		Path.of(Parameters.resources, Parameters.inputsDirectory).toFile().mkdir();
-		Path.of(Parameters.resources, Parameters.outputsDirectory).toFile().mkdir();
+		Parameters.inputsDirectory.toFile().mkdir();
+		Parameters.outputsDirectory.toFile().mkdir();
 
-		File[] toClean = Path.of(Parameters.resources, Parameters.originalsDirectory).toFile().listFiles();
+		File[] toClean = Parameters.originalsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
 		if (toClean == null) {
 			throw new FileNotFoundException();
@@ -34,8 +34,8 @@ public class TSVCleanup {
 		}
 	}
 
-	public static void clean (File tsv, String destinationDirectory, List<Integer> important) throws IOException {
-		Path destinationPath = Path.of(Parameters.resources, destinationDirectory, tsv.getName());
+	public static void clean (File tsv, Path destinationDirectory, List<Integer> important) throws IOException {
+		Path destinationPath = destinationDirectory.resolve(tsv.getName());
 
 		FileReader originalReader = new FileReader(tsv);
 		CSVParser tsvParser = new CSVParserBuilder().withSeparator('\t').build();

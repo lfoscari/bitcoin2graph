@@ -11,7 +11,7 @@ import java.nio.file.Path;
 
 public class AddressToLong {
 	public static void main (String[] args) throws IOException {
-		File addressesFile = Path.of(Parameters.resources, Parameters.addressesTSV).toFile();
+		File addressesFile = Parameters.addressesTSV.toFile();
 
 		if (!addressesFile.exists()) {
 			throw new NoSuchFileException("Couldn't find addresses tsv");
@@ -24,7 +24,7 @@ public class AddressToLong {
 			addressLong.put(line[0], count++);
 		}
 
-		File destinationFile = Path.of(Parameters.resources, Parameters.addressLongMap).toFile();
+		File destinationFile = Parameters.addressLongMap.toFile();
 		BinIO.storeObject(addressLong, destinationFile);
 	}
 }

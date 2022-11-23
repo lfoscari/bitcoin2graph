@@ -17,8 +17,8 @@ import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class TransactionBloom {
 	public static void main (String[] args) throws IOException {
-		Path.of(Parameters.resources, Parameters.filtersDirectory).toFile().mkdir();
-		File[] outputs = Path.of(Parameters.resources, Parameters.outputsDirectory).toFile().listFiles((d, f) -> f.endsWith("tsv"));
+		Parameters.filtersDirectory.toFile().mkdir();
+		File[] outputs = Parameters.outputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
 		if (outputs == null) {
 			throw new FileNotFoundException("No outputs found!");
@@ -41,6 +41,6 @@ public class TransactionBloom {
 		tsvReader.readNext(); // header
 		tsvReader.iterator().forEachRemaining(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 
-		BinIO.storeObject(transactionFilter, Path.of(Parameters.resources, Parameters.filtersDirectory, output.getName()).toFile());
+		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(output.getName()).toFile());
 	}
 }
