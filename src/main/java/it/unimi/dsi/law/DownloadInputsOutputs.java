@@ -4,16 +4,13 @@ import com.opencsv.*;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
-import it.unimi.dsi.io.ByteBufferInputStream;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.BloomFilter;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
@@ -39,6 +36,35 @@ public class DownloadInputsOutputs {
 		this.download(Parameters.inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
 		this.download(Parameters.outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
 		this.saveAddressMap();
+	}
+
+	public void run (Path rawInputsOutputs) throws IOException {
+		this.download(rawInputsOutputs.toFile());
+		this.saveAddressMap();
+	}
+
+	private void download (File raws) throws IOException {
+		this.progress.start("Parsing raw inputs and outputs from " + raws + "...");
+
+		Parameters.inputsDirectory.toFile().mkdir();
+		Parameters.outputsDirectory.toFile().mkdir();
+		Parameters.filtersDirectory.toFile().mkdir();
+
+		File[] rawFiles = raws.listFiles((d, f) -> f.endsWith("tsv"));
+		if (rawFiles == null) {
+			throw new NoSuchFileException("No outputs or inputs found in " + raws);
+		}
+
+		for (File raw : rawFiles) {
+			List<String[]> content = Utils.readTSV(raw, false);
+
+			boolean contentful = this.parseTSV(content, raw.getName(), raw.getName().contains("output"));
+			if (contentful) {
+				this.progress.lightUpdate();
+			}
+		}
+
+		this.progress.stop();
 	}
 
 	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
@@ -140,6 +166,10 @@ public class DownloadInputsOutputs {
 	}
 
 	public static void main (String[] args) throws IOException {
-		new DownloadInputsOutputs().run();
+		if (args.length > 0) {
+			new DownloadInputsOutputs().run(Parameters.resources.resolve(args[0]));
+		} else {
+			new DownloadInputsOutputs().run();
+		}
 	}
 }
