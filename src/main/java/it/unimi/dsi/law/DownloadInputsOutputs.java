@@ -167,7 +167,7 @@ public class DownloadInputsOutputs {
 
 	public static void main (String[] args) throws IOException {
 		if (args.length > 0) {
-			new DownloadInputsOutputs().run(Parameters.resources.resolve(args[0]));
+			new DownloadInputsOutputs().run(Path.of(args[0]));
 		} else {
 			new DownloadInputsOutputs().run();
 		}
