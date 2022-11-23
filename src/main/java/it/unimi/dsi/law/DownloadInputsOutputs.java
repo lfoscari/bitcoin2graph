@@ -85,7 +85,7 @@ public class DownloadInputsOutputs {
 				 FileOutputStream fos = new FileOutputStream(tempPath.toFile())) {
 
 				fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-				boolean contentful = parseTSV(tempPath.toFile(), addressesFile);
+				boolean contentful = this.parseTSV(tempPath.toFile(), addressesFile);
 
 				if (contentful) {
 					this.progress.lightUpdate();
@@ -123,8 +123,8 @@ public class DownloadInputsOutputs {
 			return false;
 		}
 
-		saveTSV(content, destinationPath);
-		saveAddresses(content, addressesFile);
+		this.saveTSV(content, destinationPath);
+		this.saveAddresses(content, addressesFile);
 
 		return true;
 	}
@@ -174,7 +174,7 @@ public class DownloadInputsOutputs {
 		}
 
 		for (File output : outputs) {
-			bloom(output);
+			this.bloom(output);
 		}
 
 		this.progress.stop("Filters saved in " + Parameters.filtersDirectory);
