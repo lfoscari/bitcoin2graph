@@ -50,7 +50,7 @@ public class DownloadInputsOutputs {
 
 	public void run (Path rawInputsOutputs) throws IOException {
 		String[] raws = rawInputsOutputs.toFile().list();
-		this.progress.expectedUpdates = raws != null ? inputs.length : -1;
+		this.progress.expectedUpdates = raws != null ? raws.length : -1;
 
 		this.download(rawInputsOutputs.toFile());
 		this.saveAddressMap();
