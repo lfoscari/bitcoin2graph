@@ -1,9 +1,16 @@
 package it.unimi.dsi.law;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
+import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
+
 public class Parameters {
+
+	// Paths
+
 	public final static Path resources = Path.of("src/main/resources/");
 	public final static Path graph = resources.resolve("graph");
 
@@ -17,10 +24,10 @@ public class Parameters {
 	public final static Path outputsDirectory = resources.resolve("outputs");
 
 	public final static Path filtersDirectory = resources.resolve("filters");
-	public final static Path originalsDirectory = resources.resolve("originals");
 
-	public final static Path addressesTSV = resources.resolve("addresses.tsv");
 	public final static Path addressLongMap = resources.resolve("addresslong.map");
+
+	// Bitcoin blockchair schema
 
 	public static class BitcoinColumn {
 		public static final int
@@ -46,6 +53,18 @@ public class Parameters {
 				LIFESPAN = 19,
 				CDD = 20;
 	}
+
+	// Download parameters
+	// Select with columns to keep from the TSV and how many inputs and outputs to download
+	// from the inputsUrlsFilename and outputsUrlsFilename urls lists.
+
+	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
+	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, INDEX, RECIPIENT);
+
+	public static final Integer INPUTS_AMOUNT = 10;
+	public static final Integer OUTPUTS_AMOUNT = 10;
+
+	// TSV columns after removing unnecessary data
 
 	public static class CleanedBitcoinColumn {
 		public static final int

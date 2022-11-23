@@ -18,18 +18,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class DownloadInputsOutputs {
-	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
-	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, INDEX, RECIPIENT);
-
-	public static final Integer INPUTS_AMOUNT = 10;
-	public static final Integer OUTPUTS_AMOUNT = 10;
-
 	private final ProgressLogger progress;
-
 	private final Object2LongFunction<String> addressLong;
 	private long count = 0;
 
@@ -48,16 +42,18 @@ public class DownloadInputsOutputs {
 	}
 
 	public void run () throws IOException {
-		this.download(Parameters.inputsUrlsFilename.toFile(), INPUTS_AMOUNT);
-		this.download(Parameters.outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT);
-
+		this.download(Parameters.inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
+		this.download(Parameters.outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
 		this.saveAddressMap();
-		this.createBloomFilters();
 	}
 
-	private void download (File urls, int limit) throws IOException {
+	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
 		Parameters.inputsDirectory.toFile().mkdir();
 		Parameters.outputsDirectory.toFile().mkdir();
+
+		if (computeBloomFilters) {
+			Parameters.filtersDirectory.toFile().mkdir();
+		}
 
 		Path tempDir = Files.createTempDirectory(Parameters.resources, "download-");
 		tempDir.toFile().deleteOnExit();
@@ -83,7 +79,7 @@ public class DownloadInputsOutputs {
 					 FileOutputStream fos = new FileOutputStream(tempPath.toFile())) {
 
 					fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-					boolean contentful = this.parseTSV(tempPath.toFile());
+					boolean contentful = this.parseTSV(tempPath.toFile(), computeBloomFilters);
 
 					if (contentful) {
 						this.progress.lightUpdate();
@@ -92,12 +88,16 @@ public class DownloadInputsOutputs {
 
 				tempPath.toFile().delete();
 			}
+
+			if (computeBloomFilters) {
+				this.progress.stop("Bloom filters saved in " + Parameters.filtersDirectory);
+			}
 		}
 
 		this.progress.stop();
 	}
 
-	public boolean parseTSV (File tsv) throws IOException {
+	public boolean parseTSV (File tsv, boolean computeBloomFilters) throws IOException {
 		List<Integer> important;
 		Path destinationPath;
 
@@ -122,6 +122,10 @@ public class DownloadInputsOutputs {
 		this.saveTSV(content, destinationPath);
 		this.saveAddresses(content);
 
+		if (computeBloomFilters) {
+			this.saveBloomFilter(destinationPath);
+		}
+
 		return true;
 	}
 
@@ -145,28 +149,10 @@ public class DownloadInputsOutputs {
 		this.progress.stop("Address map saved in " + Parameters.addressLongMap);
 	}
 
-	private void createBloomFilters () throws IOException {
-		this.progress.start("Creating bloom filters...");
-
-		Parameters.filtersDirectory.toFile().mkdir();
-		File[] outputs = Parameters.outputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
-
-		if (outputs == null) {
-			this.progress.stop("No outputs found!");
-			return;
-		}
-
-		for (File output : outputs) {
-			this.bloom(output);
-		}
-
-		this.progress.stop("Filters saved in " + Parameters.filtersDirectory);
-	}
-
-	private void bloom (File output) throws IOException {
+	private void saveBloomFilter (Path outputPath) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
-		Utils.readTSV(output).forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
-		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(output.getName()).toFile());
+		Utils.readTSV(outputPath.toFile()).forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
+		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
 	public static void main (String[] args) throws IOException {
