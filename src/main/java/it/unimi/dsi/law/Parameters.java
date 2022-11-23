@@ -20,7 +20,7 @@ public class Parameters {
 	public final static Path originalsDirectory = resources.resolve("originals");
 
 	public final static Path addressesTSV = resources.resolve("addresses.tsv");
-	public final static Path addressLongMap = resources.resolve("addressLong.map");
+	public final static Path addressLongMap = resources.resolve("addresslong.map");
 
 	public static class BitcoinColumn {
 		public static final int
