@@ -4,9 +4,9 @@ import com.opencsv.*;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.io.ByteBufferInputStream;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.BloomFilter;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
@@ -20,7 +20,6 @@ import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
@@ -28,15 +27,10 @@ public class DownloadInputsOutputs {
 	private long count = 0;
 
 	public DownloadInputsOutputs () {
-		this(null);
+		this(new ProgressLogger(LoggerFactory.getLogger(DownloadInputsOutputs.class)));
 	}
 
 	public DownloadInputsOutputs (ProgressLogger progress) {
-		if (progress == null) {
-			Logger logger = LoggerFactory.getLogger(DownloadInputsOutputs.class);
-			progress = new ProgressLogger(logger);
-		}
-
 		this.progress = progress;
 		this.addressLong = new Object2LongArrayMap<>();
 	}
@@ -55,38 +49,28 @@ public class DownloadInputsOutputs {
 			Parameters.filtersDirectory.toFile().mkdir();
 		}
 
-		Path tempDir = Files.createTempDirectory(Parameters.resources, "download-");
-		tempDir.toFile().deleteOnExit();
-
 		try (FileReader reader = new FileReader(urls)) {
 			List<String> toDownload = new BufferedReader(reader).lines().toList();
 
 			if (limit >= 0) {
-				this.progress.start("Downloading and unpacking first " + INPUTS_AMOUNT + " lines in " + urls + "...");
+				this.progress.start("Downloading and unpacking first " + INPUTS_AMOUNT + " url in " + urls + "...");
 				toDownload = toDownload.subList(0, limit);
 			} else {
-				this.progress.start("Downloading and unpacking " + urls + "...");
+				this.progress.start("Downloading and unpacking all urls in " + urls + "...");
 			}
 
 			for (String s : toDownload) {
 				URL url = new URL(s);
-
 				String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf(".gz?"));
-				Path tempPath = tempDir.resolve(filename);
 
-				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream());
-					 ReadableByteChannel rbc = Channels.newChannel(gzip);
-					 FileOutputStream fos = new FileOutputStream(tempPath.toFile())) {
-
-					fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-					boolean contentful = this.parseTSV(tempPath.toFile(), computeBloomFilters);
+				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream())) {
+					List<String[]> tsv = Utils.readTSV(gzip, false);
+					boolean contentful = this.parseTSV(tsv, filename, computeBloomFilters);
 
 					if (contentful) {
 						this.progress.lightUpdate();
 					}
 				}
-
-				tempPath.toFile().delete();
 			}
 
 			if (computeBloomFilters) {
@@ -97,30 +81,30 @@ public class DownloadInputsOutputs {
 		this.progress.stop();
 	}
 
-	public boolean parseTSV (File tsv, boolean computeBloomFilters) throws IOException {
+	public boolean parseTSV (List<String[]> tsv, String filename, boolean computeBloomFilters) throws IOException {
 		List<Integer> important;
 		Path destinationPath;
 
-		if (tsv.toString().contains("input")) {
+		if (filename.contains("input")) {
 			important = INPUTS_IMPORTANT;
-			destinationPath = Parameters.inputsDirectory.resolve(tsv.getName());
+			destinationPath = Parameters.inputsDirectory.resolve(filename);
 		} else {
 			important = OUTPUTS_IMPORTANT;
-			destinationPath = Parameters.outputsDirectory.resolve(tsv.getName());
+			destinationPath = Parameters.outputsDirectory.resolve(filename);
 		}
 
-		List<String[]> content = Utils.readTSV(tsv)
+		List<String[]> filtered = tsv
 				.stream()
-				.filter(line -> line[IS_FROM_COINBASE].equals("0"))
+				.filter(line -> !line[IS_FROM_COINBASE].equals("1"))
 				.map(line -> important.stream().map(i -> line[i]).toList().toArray(String[]::new))
 				.toList();
 
-		if (content.size() <= 1) {
+		if (filtered.size() <= 1) {
 			return false;
 		}
 
-		this.saveTSV(content, destinationPath);
-		this.saveAddresses(content);
+		this.saveTSV(filtered, destinationPath);
+		this.saveAddresses(filtered);
 
 		if (computeBloomFilters) {
 			this.saveBloomFilter(destinationPath);
@@ -129,16 +113,16 @@ public class DownloadInputsOutputs {
 		return true;
 	}
 
-	private void saveTSV (List<String[]> content, Path destinationPath) throws IOException {
+	private void saveTSV (List<String[]> filtered, Path destinationPath) throws IOException {
 		try (FileWriter destinationWriter = new FileWriter(destinationPath.toString());
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
-			tsvWriter.writeAll(content, false);
+			tsvWriter.writeAll(filtered, false);
 		}
 	}
 
-	private void saveAddresses (List<String[]> content) {
-		for (String[] line : content) {
-			String address = line[Parameters.CleanedBitcoinColumn.RECIPIENT];
+	private void saveAddresses (List<String[]> filtered) {
+		for (String[] line : filtered) {
+			String address = line[INPUTS_IMPORTANT.indexOf(RECIPIENT)];
 			this.addressLong.put(address, this.count++);
 		}
 	}
@@ -151,7 +135,7 @@ public class DownloadInputsOutputs {
 
 	private void saveBloomFilter (Path outputPath) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
-		Utils.readTSV(outputPath.toFile()).forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
+		Utils.readTSV(outputPath.toFile(), true).forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
 		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 

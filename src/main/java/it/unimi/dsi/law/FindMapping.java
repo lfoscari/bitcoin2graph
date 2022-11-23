@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.*;
+import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
+import static it.unimi.dsi.law.Parameters.INPUTS_IMPORTANT;
+import static it.unimi.dsi.law.Parameters.OUTPUTS_IMPORTANT;
 
 public class FindMapping implements Runnable {
 	private final LinkedBlockingQueue<long[]> arcs;
@@ -60,12 +62,14 @@ public class FindMapping implements Runnable {
 	}
 
 	private void searchMapping (File input, ObjectList<Pair<String, BloomFilter<CharSequence>>> filters) throws IOException {
-		for (String[] inputLine : Utils.readTSV(input)) {
-			String transaction = inputLine[0];
+		for (String[] inputLine : Utils.readTSV(input, true)) {
+			String transaction = inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)];
 
-			List<String> outputCandidates = filters.stream()
+			List<String> outputCandidates = filters
+					.stream()
 					.filter(f -> f.right().contains(transaction.getBytes()))
-					.map(Pair::left).toList();
+					.map(Pair::left)
+					.toList();
 
 			for (String outputCandidate : outputCandidates) {
 				List<String> recipients = outputContains(outputCandidate, inputLine);
@@ -75,9 +79,14 @@ public class FindMapping implements Runnable {
 				}
 
 				if (this.arcs == null) {
-					System.out.println(inputLine[TRANSACTION_HASH] + " (" + outputCandidate + "): " + inputLine[RECIPIENT] + " ~> " + recipients);
+					this.progress.logger.info(
+							inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)]
+							+ " (" + outputCandidate + "): "
+							+ inputLine[INPUTS_IMPORTANT.indexOf(RECIPIENT)]
+							+ " ~> " + recipients
+					);
 				} else if (this.addressMap != null) {
-					this.addArc(inputLine[TRANSACTION_HASH], recipients);
+					this.addArc(inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)], recipients);
 				} else {
 					throw new NullPointerException("You need to pass a function from addresses to longs");
 				}
@@ -108,9 +117,13 @@ public class FindMapping implements Runnable {
 
 		List<String> recipients = new ArrayList<>();
 
-		for (String[] outputLine : Utils.readTSV(output)) {
-			if (inputLine[TRANSACTION_HASH].equals(outputLine[TRANSACTION_HASH])) {
-				recipients.add(outputLine[RECIPIENT]);
+		for (String[] outputLine : Utils.readTSV(output, true)) {
+			String spendingTransaction = inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)];
+			String outputTransaction = outputLine[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)];
+
+			if (spendingTransaction.equals(outputTransaction)) {
+				String outputAddress = outputLine[OUTPUTS_IMPORTANT.indexOf(RECIPIENT)];
+				recipients.add(outputAddress);
 			}
 		}
 

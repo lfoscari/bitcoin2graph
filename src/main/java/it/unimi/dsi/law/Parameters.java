@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Parameters.CleanedBitcoinColumn.TRANSACTION_HASH;
 
 public class Parameters {
 
@@ -27,7 +26,7 @@ public class Parameters {
 
 	public final static Path addressLongMap = resources.resolve("addresslong.map");
 
-	// Bitcoin blockchair schema
+	// Bitcoin blockchair schema for both inputs and outputs
 
 	public static class BitcoinColumn {
 		public static final int
@@ -54,24 +53,17 @@ public class Parameters {
 				CDD = 20;
 	}
 
-	// Download parameters
+	// Download
 	// Select with columns to keep from the TSV and how many inputs and outputs to download
 	// from the inputsUrlsFilename and outputsUrlsFilename urls lists.
 
 	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, INDEX, RECIPIENT);
 
-	public static final Integer INPUTS_AMOUNT = 10;
-	public static final Integer OUTPUTS_AMOUNT = 10;
+	public static final Integer INPUTS_AMOUNT = 100;
+	public static final Integer OUTPUTS_AMOUNT = 100;
 
-	// TSV columns after removing unnecessary data
-
-	public static class CleanedBitcoinColumn {
-		public static final int
-				TRANSACTION_HASH = 0,
-				INDEX = 1,
-				RECIPIENT = 2;
-	}
+	// Logging
 
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
