@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
+import static it.unimi.dsi.law.Parameters.*;
 
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
@@ -30,7 +31,7 @@ public class DownloadInputsOutputs {
 	public DownloadInputsOutputs (ProgressLogger progress) {
 		if (progress == null) {
 			Logger logger = LoggerFactory.getLogger(DownloadInputsOutputs.class);
-			progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "sources");
+			progress = new ProgressLogger(logger, logInterval, logTimeUnit, "sources");
 		}
 
 		this.progress = progress;
@@ -38,12 +39,12 @@ public class DownloadInputsOutputs {
 	}
 
 	public void run () throws IOException {
-		String[] inputs = Parameters.inputsDirectory.toFile().list();
-		String[] outputs = Parameters.inputsDirectory.toFile().list();
+		String[] inputs = inputsDirectory.toFile().list();
+		String[] outputs = inputsDirectory.toFile().list();
 		this.progress.expectedUpdates = (inputs != null ? inputs.length : -1) + (outputs != null ? outputs.length : -1);
 
-		this.download(Parameters.inputsUrlsFilename.toFile(), Parameters.INPUTS_AMOUNT, false);
-		this.download(Parameters.outputsUrlsFilename.toFile(), Parameters.OUTPUTS_AMOUNT, true);
+		this.download(inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
+		this.download(outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
 		this.saveAddressMap();
 	}
 
@@ -55,9 +56,9 @@ public class DownloadInputsOutputs {
 	private void download (File raws) throws IOException {
 		this.progress.start("Parsing raw inputs and outputs from " + raws + "...");
 
-		Parameters.inputsDirectory.toFile().mkdir();
-		Parameters.outputsDirectory.toFile().mkdir();
-		Parameters.filtersDirectory.toFile().mkdir();
+		inputsDirectory.toFile().mkdir();
+		outputsDirectory.toFile().mkdir();
+		filtersDirectory.toFile().mkdir();
 
 		File[] rawFiles = raws.listFiles((d, f) -> f.endsWith("tsv"));
 		if (rawFiles == null) {
@@ -77,11 +78,11 @@ public class DownloadInputsOutputs {
 	}
 
 	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
-		Parameters.inputsDirectory.toFile().mkdir();
-		Parameters.outputsDirectory.toFile().mkdir();
+		inputsDirectory.toFile().mkdir();
+		outputsDirectory.toFile().mkdir();
 
 		if (computeBloomFilters) {
-			Parameters.filtersDirectory.toFile().mkdir();
+			filtersDirectory.toFile().mkdir();
 		}
 
 		try (FileReader reader = new FileReader(urls)) {
@@ -109,7 +110,7 @@ public class DownloadInputsOutputs {
 			}
 
 			if (computeBloomFilters) {
-				this.progress.stop("Bloom filters saved in " + Parameters.filtersDirectory);
+				this.progress.stop("Bloom filters saved in " + filtersDirectory);
 			}
 		}
 
@@ -122,10 +123,10 @@ public class DownloadInputsOutputs {
 
 		if (filename.contains("input")) {
 			important = INPUTS_IMPORTANT;
-			destinationPath = Parameters.inputsDirectory.resolve(filename);
+			destinationPath = inputsDirectory.resolve(filename);
 		} else {
 			important = OUTPUTS_IMPORTANT;
-			destinationPath = Parameters.outputsDirectory.resolve(filename);
+			destinationPath = outputsDirectory.resolve(filename);
 		}
 
 		List<String[]> filtered = tsv
@@ -164,14 +165,14 @@ public class DownloadInputsOutputs {
 
 	private void saveAddressMap () throws IOException {
 		this.progress.start("Saving address map...");
-		BinIO.storeObject(this.addressLong, Parameters.addressLongMap.toFile());
-		this.progress.stop("Address map saved in " + Parameters.addressLongMap);
+		BinIO.storeObject(this.addressLong, addressLongMap.toFile());
+		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	private void saveBloomFilter (Path outputPath) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
 		Utils.readTSV(outputPath.toFile(), true).forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
-		BinIO.storeObject(transactionFilter, Parameters.filtersDirectory.resolve(outputPath.getFileName()).toFile());
+		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
 	public static void main (String[] args) throws IOException {
