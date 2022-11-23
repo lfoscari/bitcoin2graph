@@ -24,7 +24,7 @@ public class DownloadInputsOutputs {
 	private long count = 0;
 
 	public DownloadInputsOutputs () {
-		this(new ProgressLogger(LoggerFactory.getLogger(DownloadInputsOutputs.class)));
+		this(new ProgressLogger(LoggerFactory.getLogger(DownloadInputsOutputs.class), logInterval, logTimeUnit, "sources"));
 	}
 
 	public DownloadInputsOutputs (ProgressLogger progress) {
