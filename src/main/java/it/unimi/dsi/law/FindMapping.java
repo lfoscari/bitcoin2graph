@@ -46,7 +46,7 @@ public class FindMapping implements Runnable {
 		}
 	}
 
-	public void findMapping() throws IOException {
+	public void findMapping () throws IOException {
 		ObjectList<Pair<String, BloomFilter<CharSequence>>> filters = loadFilters();
 		File[] inputs = Parameters.inputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
