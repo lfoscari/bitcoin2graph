@@ -60,8 +60,8 @@ public class Parameters {
 	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, INDEX, RECIPIENT);
 
-	public static final Integer INPUTS_AMOUNT = 100;
-	public static final Integer OUTPUTS_AMOUNT = 100;
+	public static final Integer INPUTS_AMOUNT = 100; // -1 to download everything
+	public static final Integer OUTPUTS_AMOUNT = 100; // -1 to download everything
 
 	// Logging
 

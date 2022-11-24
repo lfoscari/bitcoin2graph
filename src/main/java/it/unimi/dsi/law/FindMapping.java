@@ -81,8 +81,7 @@ public class FindMapping implements Runnable {
 				if (this.arcs == null) {
 					this.progress.logger.info(
 							inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)]
-							+ " (" + outputCandidate + "): "
-							+ inputLine[INPUTS_IMPORTANT.indexOf(RECIPIENT)]
+							+ ": " + inputLine[INPUTS_IMPORTANT.indexOf(RECIPIENT)]
 							+ " ~> " + recipients
 					);
 				} else if (this.addressMap != null) {

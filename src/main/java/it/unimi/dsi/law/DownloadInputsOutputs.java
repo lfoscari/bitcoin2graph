@@ -39,12 +39,13 @@ public class DownloadInputsOutputs {
 	}
 
 	public void run () throws IOException {
-		String[] inputs = inputsDirectory.toFile().list();
-		String[] outputs = inputsDirectory.toFile().list();
-		this.progress.expectedUpdates = (inputs != null ? inputs.length : -1) + (outputs != null ? outputs.length : -1);
+		this.progress.expectedUpdates = INPUTS_AMOUNT + OUTPUTS_AMOUNT;
 
+		this.progress.start("Downloading urls from " + inputsUrlsFilename + " and " + outputsUrlsFilename);
 		this.download(inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
 		this.download(outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
+		this.progress.stop("Bloom filters saved in " + filtersDirectory);
+
 		this.saveAddressMap();
 	}
 
@@ -52,13 +53,14 @@ public class DownloadInputsOutputs {
 		String[] raws = rawInputsOutputs.toFile().list();
 		this.progress.expectedUpdates = raws != null ? raws.length : -1;
 
+		this.progress.start("Parsing raw inputs and outputs from " + raws + "...");
 		this.download(rawInputsOutputs.toFile());
+		this.progress.stop("Bloom filters saved in " + filtersDirectory);
+
 		this.saveAddressMap();
 	}
 
 	private void download (File raws) throws IOException {
-		this.progress.start("Parsing raw inputs and outputs from " + raws + "...");
-
 		inputsDirectory.toFile().mkdir();
 		outputsDirectory.toFile().mkdir();
 		filtersDirectory.toFile().mkdir();
@@ -73,11 +75,9 @@ public class DownloadInputsOutputs {
 
 			boolean contentful = this.parseTSV(content, raw.getName(), raw.getName().contains("output"));
 			if (contentful) {
-				this.progress.lightUpdate();
+				this.progress.update();
 			}
 		}
-
-		this.progress.stop();
 	}
 
 	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
@@ -92,10 +92,7 @@ public class DownloadInputsOutputs {
 			List<String> toDownload = new BufferedReader(reader).lines().toList();
 
 			if (limit >= 0) {
-				this.progress.start("Downloading and unpacking first " + INPUTS_AMOUNT + " url in " + urls + "...");
 				toDownload = toDownload.subList(0, limit);
-			} else {
-				this.progress.start("Downloading and unpacking all urls in " + urls + "...");
 			}
 
 			for (String s : toDownload) {
@@ -107,17 +104,11 @@ public class DownloadInputsOutputs {
 					boolean contentful = this.parseTSV(tsv, filename, computeBloomFilters);
 
 					if (contentful) {
-						this.progress.lightUpdate();
+						this.progress.update();
 					}
 				}
 			}
-
-			if (computeBloomFilters) {
-				this.progress.stop("Bloom filters saved in " + filtersDirectory);
-			}
 		}
-
-		this.progress.stop();
 	}
 
 	public boolean parseTSV (List<String[]> tsv, String filename, boolean computeBloomFilters) throws IOException {
