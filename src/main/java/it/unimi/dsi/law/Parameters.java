@@ -63,6 +63,8 @@ public class Parameters {
 	public static final Integer INPUTS_AMOUNT = 100; // -1 to download everything
 	public static final Integer OUTPUTS_AMOUNT = 100; // -1 to download everything
 
+	public static final Integer MINIMUM_FILTER_ELEMENTS_LINES = 10;
+
 	// Logging
 
 	public final static long logInterval = 10;

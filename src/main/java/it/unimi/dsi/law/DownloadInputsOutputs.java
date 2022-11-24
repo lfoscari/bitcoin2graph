@@ -13,7 +13,9 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -23,6 +25,12 @@ public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
 	private final Object2LongFunction<String> addressLong;
 	private long count = 0;
+
+	private final List<String[]> inputBuffer;
+	private long savedInputs = 1;
+
+	private final List<String[]> outputBuffer;
+	private long savedOutputs = 1;
 
 	public DownloadInputsOutputs () {
 		this(null);
@@ -35,6 +43,8 @@ public class DownloadInputsOutputs {
 		}
 
 		this.progress = progress;
+		this.inputBuffer = new ArrayList<>();
+		this.outputBuffer = new ArrayList<>();
 		this.addressLong = new Object2LongArrayMap<>();
 	}
 
@@ -53,7 +63,7 @@ public class DownloadInputsOutputs {
 		String[] raws = rawInputsOutputs.toFile().list();
 		this.progress.expectedUpdates = raws != null ? raws.length : -1;
 
-		this.progress.start("Parsing raw inputs and outputs from " + raws + "...");
+		this.progress.start("Parsing raw inputs and outputs from " + rawInputsOutputs + "...");
 		this.download(rawInputsOutputs.toFile());
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 
@@ -73,11 +83,13 @@ public class DownloadInputsOutputs {
 		for (File raw : rawFiles) {
 			List<String[]> content = Utils.readTSV(raw, false);
 
-			boolean contentful = this.parseTSV(content, raw.getName(), raw.getName().contains("output"));
+			boolean contentful = this.parseTSV(content, raw.getName());
 			if (contentful) {
 				this.progress.update();
 			}
 		}
+
+		this.flush();
 	}
 
 	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
@@ -101,7 +113,7 @@ public class DownloadInputsOutputs {
 
 				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream())) {
 					List<String[]> tsv = Utils.readTSV(gzip, false);
-					boolean contentful = this.parseTSV(tsv, filename, computeBloomFilters);
+					boolean contentful = this.parseTSV(tsv, filename);
 
 					if (contentful) {
 						this.progress.update();
@@ -109,49 +121,83 @@ public class DownloadInputsOutputs {
 				}
 			}
 		}
+
+		this.flush();
 	}
 
-	public boolean parseTSV (List<String[]> tsv, String filename, boolean computeBloomFilters) throws IOException {
-		List<Integer> important;
-		Path destinationPath;
-
+	public boolean parseTSV (List<String[]> tsv, String filename) throws IOException {
 		if (filename.contains("input")) {
-			important = INPUTS_IMPORTANT;
-			destinationPath = inputsDirectory.resolve(filename);
+			return this.parseInputTSV(tsv);
 		} else {
-			important = OUTPUTS_IMPORTANT;
-			destinationPath = outputsDirectory.resolve(filename);
+			return this.parseOutputTSV(tsv);
 		}
+	}
 
-		List<String[]> filtered = tsv
-				.stream()
-				.filter(line -> !line[IS_FROM_COINBASE].equals("1"))
-				.map(line -> important.stream().map(i -> line[i]).toList().toArray(String[]::new))
+	private List<String[]> filterTSV (List<String[]> tsv, List<Integer> columnMask) {
+		return tsv.stream()
+				.filter(line -> line[IS_FROM_COINBASE].equals("0"))
+				.map(line -> columnMask.stream().map(i -> line[i]).toList().toArray(String[]::new))
 				.toList();
+	}
 
-		if (filtered.size() <= 1) {
+	private boolean parseOutputTSV(List<String[]> tsv) throws IOException {
+		List<String[]> filtered = this.filterTSV(tsv, OUTPUTS_IMPORTANT);
+
+		if (filtered.size() == 0) {
 			return false;
 		}
 
-		this.saveTSV(filtered, destinationPath);
-		this.saveAddresses(filtered);
+		this.outputBuffer.addAll(filtered);
+		this.saveAddresses(this.outputBuffer);
 
-		if (computeBloomFilters) {
-			this.saveBloomFilter(destinationPath);
+		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
+			String filename = String.format("%05d", this.savedOutputs);
+			this.saveTSV(this.outputBuffer, outputsDirectory.resolve(filename + ".tsv"));
+			this.saveBloomFilter(filtersDirectory.resolve(filename + ".bloom"));
+
+			this.outputBuffer.clear();
+			this.savedOutputs++;
 		}
 
 		return true;
 	}
 
-	private void saveTSV (List<String[]> filtered, Path destinationPath) throws IOException {
-		try (FileWriter destinationWriter = new FileWriter(destinationPath.toString());
+	private boolean parseInputTSV(List<String[]> tsv) throws IOException {
+		List<String[]> filtered = this.filterTSV(tsv, INPUTS_IMPORTANT);
+
+		if (filtered.size() == 0) {
+			return false;
+		}
+
+		this.inputBuffer.addAll(filtered);
+		this.saveAddresses(this.inputBuffer);
+
+		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
+			String filename = String.format("%05d", this.savedInputs);
+			this.saveTSV(this.inputBuffer, inputsDirectory.resolve(filename + ".tsv"));
+
+			this.inputBuffer.clear();
+			this.savedInputs++;
+		}
+
+		return true;
+	}
+
+	private void saveTSV (List<String[]> content, Path destinationPath) throws IOException {
+		try (FileWriter destinationWriter = new FileWriter(destinationPath.toFile());
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
-			tsvWriter.writeAll(filtered, false);
+			tsvWriter.writeAll(content, false);
 		}
 	}
 
-	private void saveAddresses (List<String[]> filtered) {
-		for (String[] line : filtered) {
+	private void saveBloomFilter (Path outputPath) throws IOException {
+		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MINIMUM_FILTER_ELEMENTS_LINES, BloomFilter.STRING_FUNNEL);
+		this.outputBuffer.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
+		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
+	}
+
+	private void saveAddresses (List<String[]> content) {
+		for (String[] line : content) {
 			String address = line[INPUTS_IMPORTANT.indexOf(RECIPIENT)];
 			this.addressLong.put(address, this.count++);
 		}
@@ -163,10 +209,10 @@ public class DownloadInputsOutputs {
 		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
-	private void saveBloomFilter (Path outputPath) throws IOException {
-		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(1000, BloomFilter.STRING_FUNNEL);
-		Utils.readTSV(outputPath.toFile(), true).forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
-		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
+	private void flush () throws IOException {
+		this.saveTSV(this.inputBuffer, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
+		this.saveTSV(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
+		this.saveBloomFilter(outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
 	}
 
 	public static void main (String[] args) throws IOException {

@@ -139,7 +139,9 @@ public class FindMapping implements Runnable {
 		ObjectList<Pair<String, BloomFilter<CharSequence>>> filters = new ObjectArrayList<>(filterFiles.length);
 		for (File filter : filterFiles) {
 			try {
-				filters.add(Pair.of(filter.getName(), (BloomFilter<CharSequence>) BinIO.loadObject(filter)));
+				String filterFilename = filter.getName();
+				String outputFilename = filterFilename.substring(0, filterFilename.indexOf(".bloom")) + ".tsv";
+				filters.add(Pair.of(outputFilename, (BloomFilter<CharSequence>) BinIO.loadObject(filter)));
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
