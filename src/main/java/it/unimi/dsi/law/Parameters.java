@@ -28,6 +28,7 @@ public class Parameters {
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 
+	public static final int bitcoinColumnsTotal = 21;
 	public static class BitcoinColumn {
 		public static final int
 				BLOCK_ID = 0,

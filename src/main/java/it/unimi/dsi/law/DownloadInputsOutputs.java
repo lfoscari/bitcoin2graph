@@ -14,9 +14,11 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -26,6 +28,9 @@ public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
 	private final Object2LongFunction<String> addressLong;
 	private long count = 0;
+
+	private final boolean[] inputMask;
+	private final boolean[] outputMask;
 
 	private List<String[]> inputBuffer;
 	private long savedInputs = 1;
@@ -47,6 +52,13 @@ public class DownloadInputsOutputs {
 		this.inputBuffer = new ArrayList<>();
 		this.outputBuffer = new ArrayList<>();
 		this.addressLong = new Object2LongArrayMap<>();
+
+		this.inputMask = new boolean[bitcoinColumnsTotal];
+		this.outputMask = new boolean[bitcoinColumnsTotal];
+		for (int i = 0; i < this.inputMask.length; i++) {
+			this.inputMask[i] = INPUTS_IMPORTANT.contains(i);
+			this.outputMask[i] = OUTPUTS_IMPORTANT.contains(i);
+		}
 	}
 
 	public void run () throws IOException {
@@ -133,18 +145,14 @@ public class DownloadInputsOutputs {
 	}
 
 	private void parseInputTSV(List<String[]> tsv) throws IOException {
-		List<String[]> filtered = this.filterTSV(tsv, INPUTS_IMPORTANT);
-
-		if (filtered.size() == 0) {
-			return;
-		}
+		List<String[]> filtered = this.filterTSV(tsv);
 
 		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
-			List<List<String[]>> split = Lists.partition(this.inputBuffer, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(split.get(0), inputsDirectory.resolve(filename + ".tsv"));
+			List<String[]> first = this.inputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(first, this.inputMask, INPUTS_IMPORTANT.size(), inputsDirectory.resolve(filename + ".tsv"));
 
-			this.inputBuffer = split.get(1);
+			this.inputBuffer = this.inputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.inputBuffer.size());
 			this.savedInputs++;
 		}
 
@@ -153,19 +161,15 @@ public class DownloadInputsOutputs {
 	}
 
 	private void parseOutputTSV(List<String[]> tsv) throws IOException {
-		List<String[]> filtered = this.filterTSV(tsv, OUTPUTS_IMPORTANT);
-
-		if (filtered.size() == 0) {
-			return;
-		}
+		List<String[]> filtered = this.filterTSV(tsv);
 
 		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
-			List<List<String[]>> split = Lists.partition(this.outputBuffer, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(split.get(0), outputsDirectory.resolve(filename + ".tsv"));
-			this.saveBloomFilter(split.get(0), filtersDirectory.resolve(filename + ".bloom"));
+			List<String[]> first = this.outputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(first, this.outputMask, OUTPUTS_IMPORTANT.size(), outputsDirectory.resolve(filename + ".tsv"));
+			this.saveBloomFilter(first, filtersDirectory.resolve(filename + ".bloom"));
 
-			this.outputBuffer = split.get(1);
+			this.outputBuffer = this.outputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.outputBuffer.size());
 			this.savedOutputs++;
 		}
 
@@ -173,29 +177,37 @@ public class DownloadInputsOutputs {
 		this.saveAddresses(filtered);
 	}
 
-	private List<String[]> filterTSV (List<String[]> tsv, List<Integer> columnMask) {
-		return tsv.stream()
-				.filter(line -> line[IS_FROM_COINBASE].equals("0"))
-				.map(line -> columnMask.stream().map(i -> line[i]).toList().toArray(String[]::new))
-				.toList();
+	private List<String[]> filterTSV (List<String[]> tsv) {
+		return tsv.stream().filter(l -> l[IS_FROM_COINBASE].equals("0")).toList();
 	}
 
-	private void saveTSV (List<String[]> content, Path destinationPath) throws IOException {
+	private void saveTSV (List<String[]> content, boolean[] columnMask, int size, Path destinationPath) throws IOException {
 		try (FileWriter destinationWriter = new FileWriter(destinationPath.toFile());
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
-			tsvWriter.writeAll(content, false);
+
+			String[] filteredLine = new String[size];
+			for (String[] line : content) {
+				int j = 0;
+				for (int i = 0; i < line.length; i++) {
+					if (columnMask[i]) {
+						filteredLine[j++] = line[i];
+					}
+				}
+
+				tsvWriter.writeNext(filteredLine, false);
+			}
 		}
 	}
 
 	private void saveBloomFilter (List<String[]> content, Path outputPath) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MINIMUM_FILTER_ELEMENTS_LINES, BloomFilter.STRING_FUNNEL);
-		content.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
+		content.forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
 	private void saveAddresses (List<String[]> content) {
 		for (String[] line : content) {
-			String address = line[INPUTS_IMPORTANT.indexOf(RECIPIENT)];
+			String address = line[RECIPIENT];
 			if (this.addressLong.containsKey(address)) {
 				this.addressLong.put(address, this.count++);
 			}
@@ -207,8 +219,8 @@ public class DownloadInputsOutputs {
 	}
 
 	private void flush () throws IOException {
-		this.saveTSV(this.inputBuffer, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
-		this.saveTSV(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
+		this.saveTSV(this.inputBuffer, this.inputMask, INPUTS_IMPORTANT.size(), inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
+		this.saveTSV(this.outputBuffer, this.outputMask, OUTPUTS_IMPORTANT.size(), outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
 		this.saveBloomFilter(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
 
 		this.inputBuffer.clear();
