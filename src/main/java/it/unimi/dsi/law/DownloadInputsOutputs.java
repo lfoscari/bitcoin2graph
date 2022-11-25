@@ -141,10 +141,10 @@ public class DownloadInputsOutputs {
 
 		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
-			List<String[]> first = this.inputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, inputsDirectory.resolve(filename + ".tsv"));
+			List<List<String[]>> split = Lists.partition(this.inputBuffer, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(split.get(0), inputsDirectory.resolve(filename + ".tsv"));
 
-			this.inputBuffer = this.inputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.inputBuffer.size());
+			this.inputBuffer = split.get(1);
 			this.savedInputs++;
 		}
 
@@ -161,11 +161,11 @@ public class DownloadInputsOutputs {
 
 		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
-			List<String[]> first = this.outputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, outputsDirectory.resolve(filename + ".tsv"));
-			this.saveBloomFilter(first, filtersDirectory.resolve(filename + ".bloom"));
+			List<List<String[]>> split = Lists.partition(this.outputBuffer, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(split.get(0), outputsDirectory.resolve(filename + ".tsv"));
+			this.saveBloomFilter(split.get(0), filtersDirectory.resolve(filename + ".bloom"));
 
-			this.outputBuffer = this.outputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.outputBuffer.size());
+			this.outputBuffer = split.get(1);
 			this.savedOutputs++;
 		}
 
