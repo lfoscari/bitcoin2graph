@@ -139,16 +139,16 @@ public class DownloadInputsOutputs {
 			return false;
 		}
 
-		this.inputBuffer.addAll(filtered);
-		this.saveAddresses(filtered);
-
-		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (this.inputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
 			this.saveTSV(this.inputBuffer, inputsDirectory.resolve(filename + ".tsv"));
 
 			this.inputBuffer.clear();
 			this.savedInputs++;
 		}
+
+		this.inputBuffer.addAll(filtered);
+		this.saveAddresses(filtered);
 
 		return true;
 	}
@@ -160,10 +160,7 @@ public class DownloadInputsOutputs {
 			return false;
 		}
 
-		this.outputBuffer.addAll(filtered);
-		this.saveAddresses(filtered);
-
-		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (this.outputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
 			this.saveTSV(this.outputBuffer, outputsDirectory.resolve(filename + ".tsv"));
 			this.saveBloomFilter(filtersDirectory.resolve(filename + ".bloom"));
@@ -171,6 +168,9 @@ public class DownloadInputsOutputs {
 			this.outputBuffer.clear();
 			this.savedOutputs++;
 		}
+
+		this.outputBuffer.addAll(filtered);
+		this.saveAddresses(filtered);
 
 		return true;
 	}
