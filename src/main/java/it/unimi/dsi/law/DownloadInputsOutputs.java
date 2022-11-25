@@ -2,11 +2,16 @@ package it.unimi.dsi.law;
 
 import com.google.common.collect.Lists;
 import com.opencsv.*;
+import it.unimi.dsi.fastutil.ints.Int2LongFunction;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenCustomHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.BloomFilter;
+import it.unimi.dsi.util.StringMaps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +31,6 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
-	private final Object2LongFunction<String> addressLong;
-	private long count = 0;
-
 	private List<String[]> inputBuffer;
 	private long savedInputs = 1;
 
@@ -48,7 +50,6 @@ public class DownloadInputsOutputs {
 		this.progress = progress;
 		this.inputBuffer = new ArrayList<>();
 		this.outputBuffer = new ArrayList<>();
-		this.addressLong = new Object2LongArrayMap<>();
 	}
 
 	public void run () throws IOException {
@@ -58,10 +59,6 @@ public class DownloadInputsOutputs {
 		this.download(inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
 		this.download(outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
-
-		this.progress.start("Saving address map...");
-		this.saveAddressMap();
-		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	public void run (Path rawInputsOutputs) throws IOException {
@@ -71,10 +68,6 @@ public class DownloadInputsOutputs {
 		this.progress.start("Parsing raw inputs and outputs from " + rawInputsOutputs + "...");
 		this.download(rawInputsOutputs.toFile());
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
-
-		this.progress.start("Saving address map...");
-		this.saveAddressMap();
-		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	private void download (File raws) throws IOException {
@@ -89,7 +82,11 @@ public class DownloadInputsOutputs {
 
 		for (File raw : rawFiles) {
 			List<String[]> content = Utils.readTSV(raw, true);
-			this.parseTSV(content, raw.getName());
+			if (raw.getName().contains("input")) {
+				this.parseInputTSV(content);
+			} else {
+				this.parseOutputTSV(content);
+			}
 			this.progress.update();
 		}
 
@@ -136,7 +133,6 @@ public class DownloadInputsOutputs {
 
 	private void parseInputTSV(List<String[]> tsv) throws IOException {
 		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
-		this.saveAddresses(tsv);
 		this.inputBuffer.addAll(tsv);
 
 		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
@@ -153,7 +149,6 @@ public class DownloadInputsOutputs {
 	private void parseOutputTSV(List<String[]> tsv) throws IOException {
 		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
 		this.outputBuffer.addAll(tsv);
-		this.saveAddresses(tsv);
 
 		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
@@ -187,19 +182,6 @@ public class DownloadInputsOutputs {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MINIMUM_FILTER_ELEMENTS_LINES, BloomFilter.STRING_FUNNEL);
 		content.forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
-	}
-
-	private void saveAddresses (List<String[]> content) {
-		for (String[] line : content) {
-			String address = line[RECIPIENT];
-			if (this.addressLong.containsKey(address)) {
-				this.addressLong.put(address, this.count++);
-			}
-		}
-	}
-
-	private void saveAddressMap () throws IOException {
-		BinIO.storeObject(this.addressLong, addressLongMap.toFile());
 	}
 
 	private void flush () throws IOException {
