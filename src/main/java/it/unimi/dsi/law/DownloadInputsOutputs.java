@@ -82,10 +82,8 @@ public class DownloadInputsOutputs {
 
 		for (File raw : rawFiles) {
 			List<String[]> content = Utils.readTSV(raw, false);
-			boolean contentful = this.parseTSV(content, raw.getName());
-			if (contentful) {
-				this.progress.update();
-			}
+			this.parseTSV(content, raw.getName());
+			this.progress.update();
 		}
 
 		this.flush();
@@ -112,11 +110,8 @@ public class DownloadInputsOutputs {
 
 				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream())) {
 					List<String[]> tsv = Utils.readTSV(gzip, false);
-					boolean contentful = this.parseTSV(tsv, filename);
-
-					if (contentful) {
-						this.progress.update();
-					}
+					this.parseTSV(tsv, filename);
+					this.progress.update();
 				}
 			}
 		}
@@ -124,22 +119,22 @@ public class DownloadInputsOutputs {
 		this.flush();
 	}
 
-	public boolean parseTSV (List<String[]> tsv, String filename) throws IOException {
+	public void parseTSV (List<String[]> tsv, String filename) throws IOException {
 		if (filename.contains("input")) {
-			return this.parseInputTSV(tsv);
+			this.parseInputTSV(tsv);
 		} else {
-			return this.parseOutputTSV(tsv);
+			this.parseOutputTSV(tsv);
 		}
 	}
 
-	private boolean parseInputTSV(List<String[]> tsv) throws IOException {
+	private void parseInputTSV(List<String[]> tsv) throws IOException {
 		List<String[]> filtered = this.filterTSV(tsv, INPUTS_IMPORTANT);
 
 		if (filtered.size() == 0) {
-			return false;
+			return;
 		}
 
-		if (this.inputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (filtered.size() < MINIMUM_FILTER_ELEMENTS_LINES && this.inputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
 			this.saveTSV(this.inputBuffer, inputsDirectory.resolve(filename + ".tsv"));
 
@@ -149,18 +144,16 @@ public class DownloadInputsOutputs {
 
 		this.inputBuffer.addAll(filtered);
 		this.saveAddresses(filtered);
-
-		return true;
 	}
 
-	private boolean parseOutputTSV(List<String[]> tsv) throws IOException {
+	private void parseOutputTSV(List<String[]> tsv) throws IOException {
 		List<String[]> filtered = this.filterTSV(tsv, OUTPUTS_IMPORTANT);
 
 		if (filtered.size() == 0) {
-			return false;
+			return;
 		}
 
-		if (this.outputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (filtered.size() < MINIMUM_FILTER_ELEMENTS_LINES && this.outputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
 			this.saveTSV(this.outputBuffer, outputsDirectory.resolve(filename + ".tsv"));
 			this.saveBloomFilter(filtersDirectory.resolve(filename + ".bloom"));
@@ -171,8 +164,6 @@ public class DownloadInputsOutputs {
 
 		this.outputBuffer.addAll(filtered);
 		this.saveAddresses(filtered);
-
-		return true;
 	}
 
 	private List<String[]> filterTSV (List<String[]> tsv, List<Integer> columnMask) {
