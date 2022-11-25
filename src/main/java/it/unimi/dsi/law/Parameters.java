@@ -28,7 +28,6 @@ public class Parameters {
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 
-	public static final int bitcoinColumnsTotal = 21;
 	public static class BitcoinColumn {
 		public static final int
 				BLOCK_ID = 0,
@@ -58,8 +57,8 @@ public class Parameters {
 	// Select with columns to keep from the TSV and how many inputs and outputs to download
 	// from the inputsUrlsFilename and outputsUrlsFilename urls lists.
 
-	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, INDEX, RECIPIENT);
-	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, INDEX, RECIPIENT);
+	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, RECIPIENT);
+	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
 
 	public static final Integer INPUTS_AMOUNT = 100; // -1 to download everything
 	public static final Integer OUTPUTS_AMOUNT = 100; // -1 to download everything

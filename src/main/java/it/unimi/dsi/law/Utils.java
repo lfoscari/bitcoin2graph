@@ -10,13 +10,15 @@ import java.util.List;
 
 public class Utils {
 	static List<String[]> readTSV (File f, boolean skipHeader) throws IOException {
-		FileReader fr = new FileReader(f);
-		return readTSV(fr, skipHeader);
+		try (FileReader fr = new FileReader(f)) {
+			return readTSV(fr, skipHeader);
+		}
 	}
 
 	static List<String[]> readTSV (InputStream is,  boolean skipHeader) throws IOException {
-		InputStreamReader isr = new InputStreamReader(is);
-		return readTSV(isr, skipHeader);
+		try (InputStreamReader isr = new InputStreamReader(is)) {
+			return readTSV(isr, skipHeader);
+		}
 	}
 
 	static List<String[]> readTSV (Reader r, boolean skipHeader) throws IOException {

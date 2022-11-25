@@ -31,6 +31,7 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
+
 	private List<String[]> inputBuffer;
 	private long savedInputs = 1;
 
@@ -70,29 +71,6 @@ public class DownloadInputsOutputs {
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 	}
 
-	private void download (File raws) throws IOException {
-		inputsDirectory.toFile().mkdir();
-		outputsDirectory.toFile().mkdir();
-		filtersDirectory.toFile().mkdir();
-
-		File[] rawFiles = raws.listFiles((d, f) -> f.endsWith("tsv"));
-		if (rawFiles == null) {
-			throw new NoSuchFileException("No outputs or inputs found in " + raws);
-		}
-
-		for (File raw : rawFiles) {
-			List<String[]> content = Utils.readTSV(raw, true);
-			if (raw.getName().contains("input")) {
-				this.parseInputTSV(content);
-			} else {
-				this.parseOutputTSV(content);
-			}
-			this.progress.update();
-		}
-
-		this.flush();
-	}
-
 	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
 		inputsDirectory.toFile().mkdir();
 		outputsDirectory.toFile().mkdir();
@@ -123,42 +101,43 @@ public class DownloadInputsOutputs {
 		this.flush();
 	}
 
+	private void download (File raws) throws IOException {
+		inputsDirectory.toFile().mkdir();
+		outputsDirectory.toFile().mkdir();
+		filtersDirectory.toFile().mkdir();
+
+		File[] rawFiles = raws.listFiles((d, f) -> f.endsWith("tsv"));
+		if (rawFiles == null) {
+			throw new NoSuchFileException("No outputs or inputs found in " + raws);
+		}
+
+		for (File raw : rawFiles) {
+			List<String[]> content = Utils.readTSV(raw, true);
+			this.parseTSV(content, raw.getName());
+			this.progress.update();
+		}
+
+		this.flush();
+	}
+
 	public void parseTSV (List<String[]> tsv, String filename) throws IOException {
-		if (filename.contains("input")) {
-			this.parseInputTSV(tsv);
-		} else {
-			this.parseOutputTSV(tsv);
-		}
-	}
+		boolean isInput = filename.contains("input");
+		List<String[]> buffer = isInput ? this.inputBuffer : this.outputBuffer;
 
-	private void parseInputTSV(List<String[]> tsv) throws IOException {
 		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
-		this.inputBuffer.addAll(tsv);
+		buffer.addAll(tsv);
 
-		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
-			String filename = String.format("%05d", this.savedInputs);
+		if (buffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
+			String chunkFilename = String.format("%05d", this.savedInputs);
+			Path destinationFile = isInput ?
+					inputsDirectory.resolve(chunkFilename + ".tsv") :
+					outputsDirectory.resolve(chunkFilename + ".tsv");
 
-			List<String[]> first = this.inputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, INPUTS_IMPORTANT, inputsDirectory.resolve(filename + ".tsv"));
+			List<String[]> first = buffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(first, isInput ? INPUTS_IMPORTANT : OUTPUTS_IMPORTANT, destinationFile);
 
-			this.inputBuffer = this.inputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.inputBuffer.size());
+			first.clear();
 			this.savedInputs++;
-		}
-	}
-
-	private void parseOutputTSV(List<String[]> tsv) throws IOException {
-		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
-		this.outputBuffer.addAll(tsv);
-
-		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
-			String filename = String.format("%05d", this.savedOutputs);
-
-			List<String[]> first = this.outputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, OUTPUTS_IMPORTANT, outputsDirectory.resolve(filename + ".tsv"));
-			this.saveBloomFilter(first, filtersDirectory.resolve(filename + ".bloom"));
-
-			this.outputBuffer = this.outputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.outputBuffer.size());
-			this.savedOutputs++;
 		}
 	}
 
