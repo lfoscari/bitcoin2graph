@@ -32,10 +32,10 @@ import static it.unimi.dsi.law.Parameters.*;
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
 
-	private List<String[]> inputBuffer;
+	private final List<String[]> inputBuffer;
 	private long savedInputs = 1;
 
-	private List<String[]> outputBuffer;
+	private final List<String[]> outputBuffer;
 	private long savedOutputs = 1;
 
 	public DownloadInputsOutputs () {
@@ -128,16 +128,20 @@ public class DownloadInputsOutputs {
 		buffer.addAll(tsv);
 
 		if (buffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
-			String chunkFilename = String.format("%05d", this.savedInputs);
+			String chunkFilename = String.format("%05d", isInput ? this.savedInputs : this.savedOutputs);
 			Path destinationFile = isInput ?
 					inputsDirectory.resolve(chunkFilename + ".tsv") :
 					outputsDirectory.resolve(chunkFilename + ".tsv");
 
-			List<String[]> first = buffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, isInput ? INPUTS_IMPORTANT : OUTPUTS_IMPORTANT, destinationFile);
+			this.saveTSV(buffer, isInput ? INPUTS_IMPORTANT : OUTPUTS_IMPORTANT, destinationFile);
 
-			first.clear();
-			this.savedInputs++;
+			buffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES).clear();
+
+			if (isInput) {
+				this.savedInputs++;
+			} else {
+				this.savedOutputs++;
+			}
 		}
 	}
 
@@ -146,7 +150,12 @@ public class DownloadInputsOutputs {
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
 
 			String[] filteredLine = new String[importantColumns.size()];
+			int index = 0;
 			for (String[] line : content) {
+				if (index++ >= MINIMUM_FILTER_ELEMENTS_LINES) {
+					break;
+				}
+
 				int j = 0;
 				for (int i : importantColumns) {
 					filteredLine[j++] = line[i];
