@@ -56,7 +56,9 @@ public class DownloadInputsOutputs {
 		this.download(outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 
+		this.progress.start("Saving address map...");
 		this.saveAddressMap();
+		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	public void run (Path rawInputsOutputs) throws IOException {
@@ -67,7 +69,9 @@ public class DownloadInputsOutputs {
 		this.download(rawInputsOutputs.toFile());
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 
+		this.progress.start("Saving address map...");
 		this.saveAddressMap();
+		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	private void download (File raws) throws IOException {
@@ -196,15 +200,17 @@ public class DownloadInputsOutputs {
 	}
 
 	private void saveAddressMap () throws IOException {
-		this.progress.start("Saving address map...");
 		BinIO.storeObject(this.addressLong, addressLongMap.toFile());
-		this.progress.stop("Address map saved in " + addressLongMap);
 	}
 
 	private void flush () throws IOException {
 		this.saveTSV(this.inputBuffer, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
 		this.saveTSV(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
 		this.saveBloomFilter(outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
+
+		this.inputBuffer.clear();
+		this.outputBuffer.clear();
+		this.savedInputs++;
 	}
 
 	public static void main (String[] args) throws IOException {
