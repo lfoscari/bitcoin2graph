@@ -29,9 +29,6 @@ public class DownloadInputsOutputs {
 	private final Object2LongFunction<String> addressLong;
 	private long count = 0;
 
-	private final boolean[] inputMask;
-	private final boolean[] outputMask;
-
 	private List<String[]> inputBuffer;
 	private long savedInputs = 1;
 
@@ -52,13 +49,6 @@ public class DownloadInputsOutputs {
 		this.inputBuffer = new ArrayList<>();
 		this.outputBuffer = new ArrayList<>();
 		this.addressLong = new Object2LongArrayMap<>();
-
-		this.inputMask = new boolean[bitcoinColumnsTotal];
-		this.outputMask = new boolean[bitcoinColumnsTotal];
-		for (int i = 0; i < this.inputMask.length; i++) {
-			this.inputMask[i] = INPUTS_IMPORTANT.contains(i);
-			this.outputMask[i] = OUTPUTS_IMPORTANT.contains(i);
-		}
 	}
 
 	public void run () throws IOException {
@@ -98,7 +88,7 @@ public class DownloadInputsOutputs {
 		}
 
 		for (File raw : rawFiles) {
-			List<String[]> content = Utils.readTSV(raw, false);
+			List<String[]> content = Utils.readTSV(raw, true);
 			this.parseTSV(content, raw.getName());
 			this.progress.update();
 		}
@@ -126,7 +116,7 @@ public class DownloadInputsOutputs {
 				String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf(".gz?"));
 
 				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream())) {
-					List<String[]> tsv = Utils.readTSV(gzip, false);
+					List<String[]> tsv = Utils.readTSV(gzip, true);
 					this.parseTSV(tsv, filename);
 					this.progress.update();
 				}
@@ -145,53 +135,47 @@ public class DownloadInputsOutputs {
 	}
 
 	private void parseInputTSV(List<String[]> tsv) throws IOException {
-		List<String[]> filtered = this.filterTSV(tsv);
+		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
+		this.saveAddresses(tsv);
+		this.inputBuffer.addAll(tsv);
 
 		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
+
 			List<String[]> first = this.inputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, this.inputMask, INPUTS_IMPORTANT.size(), inputsDirectory.resolve(filename + ".tsv"));
+			this.saveTSV(first, INPUTS_IMPORTANT, inputsDirectory.resolve(filename + ".tsv"));
 
 			this.inputBuffer = this.inputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.inputBuffer.size());
 			this.savedInputs++;
 		}
-
-		this.inputBuffer.addAll(filtered);
-		this.saveAddresses(filtered);
 	}
 
 	private void parseOutputTSV(List<String[]> tsv) throws IOException {
-		List<String[]> filtered = this.filterTSV(tsv);
+		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
+		this.outputBuffer.addAll(tsv);
+		this.saveAddresses(tsv);
 
 		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
+
 			List<String[]> first = this.outputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
-			this.saveTSV(first, this.outputMask, OUTPUTS_IMPORTANT.size(), outputsDirectory.resolve(filename + ".tsv"));
+			this.saveTSV(first, OUTPUTS_IMPORTANT, outputsDirectory.resolve(filename + ".tsv"));
 			this.saveBloomFilter(first, filtersDirectory.resolve(filename + ".bloom"));
 
 			this.outputBuffer = this.outputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.outputBuffer.size());
 			this.savedOutputs++;
 		}
-
-		this.outputBuffer.addAll(filtered);
-		this.saveAddresses(filtered);
 	}
 
-	private List<String[]> filterTSV (List<String[]> tsv) {
-		return tsv.stream().filter(l -> l[IS_FROM_COINBASE].equals("0")).toList();
-	}
-
-	private void saveTSV (List<String[]> content, boolean[] columnMask, int size, Path destinationPath) throws IOException {
+	private void saveTSV (List<String[]> content, List<Integer> importantColumns, Path destinationPath) throws IOException {
 		try (FileWriter destinationWriter = new FileWriter(destinationPath.toFile());
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
 
-			String[] filteredLine = new String[size];
+			String[] filteredLine = new String[importantColumns.size()];
 			for (String[] line : content) {
 				int j = 0;
-				for (int i = 0; i < line.length; i++) {
-					if (columnMask[i]) {
-						filteredLine[j++] = line[i];
-					}
+				for (int i : importantColumns) {
+					filteredLine[j++] = line[i];
 				}
 
 				tsvWriter.writeNext(filteredLine, false);
@@ -219,8 +203,8 @@ public class DownloadInputsOutputs {
 	}
 
 	private void flush () throws IOException {
-		this.saveTSV(this.inputBuffer, this.inputMask, INPUTS_IMPORTANT.size(), inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
-		this.saveTSV(this.outputBuffer, this.outputMask, OUTPUTS_IMPORTANT.size(), outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
+		this.saveTSV(this.inputBuffer, INPUTS_IMPORTANT, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
+		this.saveTSV(this.outputBuffer, OUTPUTS_IMPORTANT, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
 		this.saveBloomFilter(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
 
 		this.inputBuffer.clear();
