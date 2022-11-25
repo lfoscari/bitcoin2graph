@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import com.google.common.collect.Lists;
 import com.opencsv.*;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
@@ -15,7 +16,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -26,10 +27,10 @@ public class DownloadInputsOutputs {
 	private final Object2LongFunction<String> addressLong;
 	private long count = 0;
 
-	private final List<String[]> inputBuffer;
+	private List<String[]> inputBuffer;
 	private long savedInputs = 1;
 
-	private final List<String[]> outputBuffer;
+	private List<String[]> outputBuffer;
 	private long savedOutputs = 1;
 
 	public DownloadInputsOutputs () {
@@ -138,11 +139,12 @@ public class DownloadInputsOutputs {
 			return;
 		}
 
-		if (filtered.size() < MINIMUM_FILTER_ELEMENTS_LINES && this.inputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (this.inputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedInputs);
-			this.saveTSV(this.inputBuffer, inputsDirectory.resolve(filename + ".tsv"));
+			List<String[]> first = this.inputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(first, inputsDirectory.resolve(filename + ".tsv"));
 
-			this.inputBuffer.clear();
+			this.inputBuffer = this.inputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.inputBuffer.size());
 			this.savedInputs++;
 		}
 
@@ -157,12 +159,13 @@ public class DownloadInputsOutputs {
 			return;
 		}
 
-		if (filtered.size() < MINIMUM_FILTER_ELEMENTS_LINES && this.outputBuffer.size() + filtered.size() >= MINIMUM_FILTER_ELEMENTS_LINES) {
+		if (this.outputBuffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
 			String filename = String.format("%05d", this.savedOutputs);
-			this.saveTSV(this.outputBuffer, outputsDirectory.resolve(filename + ".tsv"));
-			this.saveBloomFilter(filtersDirectory.resolve(filename + ".bloom"));
+			List<String[]> first = this.outputBuffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES);
+			this.saveTSV(first, outputsDirectory.resolve(filename + ".tsv"));
+			this.saveBloomFilter(first, filtersDirectory.resolve(filename + ".bloom"));
 
-			this.outputBuffer.clear();
+			this.outputBuffer = this.outputBuffer.subList(MINIMUM_FILTER_ELEMENTS_LINES, this.outputBuffer.size());
 			this.savedOutputs++;
 		}
 
@@ -184,9 +187,9 @@ public class DownloadInputsOutputs {
 		}
 	}
 
-	private void saveBloomFilter (Path outputPath) throws IOException {
+	private void saveBloomFilter (List<String[]> content, Path outputPath) throws IOException {
 		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MINIMUM_FILTER_ELEMENTS_LINES, BloomFilter.STRING_FUNNEL);
-		this.outputBuffer.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
+		content.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
@@ -206,7 +209,7 @@ public class DownloadInputsOutputs {
 	private void flush () throws IOException {
 		this.saveTSV(this.inputBuffer, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
 		this.saveTSV(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
-		this.saveBloomFilter(outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
+		this.saveBloomFilter(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
 
 		this.inputBuffer.clear();
 		this.outputBuffer.clear();

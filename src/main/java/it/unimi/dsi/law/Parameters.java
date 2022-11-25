@@ -10,7 +10,7 @@ public class Parameters {
 
 	// Paths
 
-	public final static Path resources = Path.of("src/main/resources/");
+	public final static Path resources = Path.of("src/main/resources");
 	public final static Path graph = resources.resolve("graph");
 
 	public final static Path basename = graph.resolve("bitcoin");
@@ -26,7 +26,7 @@ public class Parameters {
 
 	public final static Path addressLongMap = resources.resolve("addresslong.map");
 
-	// Bitcoin blockchair schema for both inputs and outputs
+	// Bitcoin Blockchair schema for both inputs and outputs
 
 	public static class BitcoinColumn {
 		public static final int
