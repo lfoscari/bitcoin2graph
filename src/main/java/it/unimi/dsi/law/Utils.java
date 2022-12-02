@@ -84,7 +84,11 @@ public class Utils {
 			}
 
 			File f = this.files.next();
-			this.progress.update();
+
+			if (this.progress != null) {
+				this.progress.update();
+			}
+
 			FileReader r = new FileReader(f);
 
 			this.tsvReader = new CSVReaderBuilder(r)
