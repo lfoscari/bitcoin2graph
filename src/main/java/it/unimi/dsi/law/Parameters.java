@@ -18,9 +18,11 @@ public class Parameters {
 
 	public final static Path inputsUrlsFilename = resources.resolve("input-urls.txt");
 	public final static Path inputsDirectory = resources.resolve("inputs");
+	public final static Path parsedInputsDirectory = resources.resolve("inputs").resolve("chunks");
 
 	public final static Path outputsUrlsFilename = resources.resolve("output-urls.txt");
 	public final static Path outputsDirectory = resources.resolve("outputs");
+	public final static Path parsedOutputsDirectory = resources.resolve("outputs").resolve("chunks");
 
 	public final static Path filtersDirectory = resources.resolve("filters");
 

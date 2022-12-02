@@ -15,9 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Parameters.INPUTS_IMPORTANT;
-import static it.unimi.dsi.law.Parameters.OUTPUTS_IMPORTANT;
 
 public class FindMapping implements Runnable {
 	private final LinkedBlockingQueue<long[]> arcs;
@@ -34,10 +33,6 @@ public class FindMapping implements Runnable {
 		this(null, null, new ProgressLogger());
 	}
 
-	public static void main (String[] args) {
-		new FindMapping().run();
-	}
-
 	public void run () {
 		try {
 			this.progress.start("Searching mappings...");
@@ -50,7 +45,7 @@ public class FindMapping implements Runnable {
 
 	public void findMapping () throws IOException {
 		ObjectList<Pair<String, BloomFilter<CharSequence>>> filters = loadFilters();
-		File[] inputs = Parameters.inputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
+		File[] inputs = parsedInputsDirectory.toFile().listFiles((d, f) -> f.endsWith("tsv"));
 
 		if (inputs == null) {
 			throw new FileNotFoundException("No inputs found!");
@@ -62,7 +57,7 @@ public class FindMapping implements Runnable {
 	}
 
 	private void searchMapping (File input, ObjectList<Pair<String, BloomFilter<CharSequence>>> filters) throws IOException {
-		for (String[] inputLine : Utils.readTSV(input, true, (line) -> true)) {
+		for (String[] inputLine : Utils.readTSV(input, false, (line) -> true)) {
 			String transaction = inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)];
 
 			List<String> outputCandidates = filters
@@ -108,7 +103,7 @@ public class FindMapping implements Runnable {
 	}
 
 	private static List<String> outputContains (String outputName, String[] inputLine) throws IOException {
-		File output = Parameters.outputsDirectory.resolve(outputName).toFile();
+		File output = parsedOutputsDirectory.resolve(outputName).toFile();
 
 		if (!output.exists()) {
 			throw new FileNotFoundException("Couldn't find " + output);
@@ -148,5 +143,9 @@ public class FindMapping implements Runnable {
 		}
 
 		return filters;
+	}
+
+	public static void main (String[] args) {
+		new FindMapping().run();
 	}
 }

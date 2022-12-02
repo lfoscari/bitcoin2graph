@@ -5,6 +5,7 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
+import it.unimi.dsi.logging.ProgressLogger;
 
 import javax.sound.sampled.Line;
 import java.io.*;
@@ -26,7 +27,7 @@ public class Utils {
 	}
 
 	interface LineFilter {
-		boolean filter(String[] line);
+		boolean accept(String[] line);
 	}
 
 	interface LineCleaner {
@@ -48,7 +49,7 @@ public class Utils {
 					break;
 				}
 
-				if (filter.filter(line)) {
+				if (filter.accept(line)) {
 					lines.add(line);
 				}
 			}
@@ -63,13 +64,14 @@ public class Utils {
 
 		private final Iterator<File> files;
 		private final CSVParser tsvParser;
+		private final ProgressLogger progress;
 		private CSVReader tsvReader;
-		private String[] currentLine;
 
-		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner) throws FileNotFoundException {
+		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, ProgressLogger progress) throws FileNotFoundException {
 			this.tsvParser = new CSVParserBuilder().withSeparator('\t').build();
 			this.filter = filter;
 			this.cleaner = cleaner;
+			this.progress = progress;
 
 			this.files = Arrays.stream(files).iterator();
 			this.nextFile();
@@ -82,6 +84,7 @@ public class Utils {
 			}
 
 			File f = this.files.next();
+			this.progress.update();
 			FileReader r = new FileReader(f);
 
 			this.tsvReader = new CSVReaderBuilder(r)
@@ -113,7 +116,7 @@ public class Utils {
 						if (!this.nextFile()) {
 							throw new NoSuchElementException();
 						}
-					} else if (this.filter.filter(candidate)) {
+					} else if (this.filter.accept(candidate)) {
 						return this.cleaner.clean(candidate);
 					}
 				}
