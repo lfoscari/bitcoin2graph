@@ -26,6 +26,7 @@ public class Parameters {
 
 	public final static Path filtersDirectory = resources.resolve("filters");
 
+	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressLongMap = resources.resolve("addresslong.map");
 
 	// Bitcoin Blockchair schema for both inputs and outputs
