@@ -14,7 +14,10 @@
     $ gunzip -r -S ".gz" outputs
 
 4. Run ParseTSVs to remove unnecessary data, compute the bloom filters
-   and split the data into more compact chunks
+   and split the data into more compact chunks.
+
+5. Run AddressMap to build the address-to-long map, used by webgraph to
+   build the transaction graph, skip this step otherwise.
 
 5. Run either FindMapping to view the mappings in stdin or
    Blockchain2Webgraph to save the results in the Webgraph format.
