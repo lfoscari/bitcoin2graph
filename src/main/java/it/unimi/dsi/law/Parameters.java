@@ -16,11 +16,9 @@ public class Parameters {
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin-ids");
 
-	public final static Path inputsUrlsFilename = resources.resolve("input-urls.txt");
 	public final static Path inputsDirectory = resources.resolve("inputs");
 	public final static Path parsedInputsDirectory = resources.resolve("inputs").resolve("chunks");
 
-	public final static Path outputsUrlsFilename = resources.resolve("output-urls.txt");
 	public final static Path outputsDirectory = resources.resolve("outputs");
 	public final static Path parsedOutputsDirectory = resources.resolve("outputs").resolve("chunks");
 
@@ -62,9 +60,6 @@ public class Parameters {
 
 	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, RECIPIENT);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
-
-	public static final Integer INPUTS_AMOUNT = 100; // -1 to download everything
-	public static final Integer OUTPUTS_AMOUNT = 100; // -1 to download everything
 
 	public static final Integer MAX_TSV_LINES = 10;
 
