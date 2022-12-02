@@ -14,6 +14,9 @@ import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static it.unimi.dsi.law.Parameters.addressesFile;
+import static it.unimi.dsi.law.Parameters.addressesMapFile;
+
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final LinkedBlockingQueue<long[]> arcs;
 	private final Thread findMapping;
@@ -33,8 +36,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		Parameters.graph.toFile().mkdir();
 
 		LinkedBlockingQueue<long[]> arcs = new LinkedBlockingQueue<>();
-		File addressLongFile = Parameters.addressLongMap.toFile();
-		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressLongFile);
+		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressesMapFile.toFile());
 
 		FindMapping fm = new FindMapping(arcs, addressLong, progress);
 

@@ -5,17 +5,13 @@ import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.law.Utils.TSVDirectoryLineReader;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.util.StringMap;
-import it.unimi.dsi.util.StringMaps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 
-import static it.unimi.dsi.law.AddressMap.compute;
-import static it.unimi.dsi.law.Parameters.addressesFile;
+import static it.unimi.dsi.law.Parameters.*;
 
 public class AddressMap {
 	static void compute() throws IOException {
@@ -27,7 +23,7 @@ public class AddressMap {
 		progress.displayLocalSpeed = true;
 		progress.start("Building address to long map");
 
-		TSVDirectoryLineReader addresses = new TSVDirectoryLineReader(new File[] {addressesFile.toFile()}, (l) -> true, (l) -> l, null);
+		TSVDirectoryLineReader addresses = new TSVDirectoryLineReader(addressesFile.toFile());
 
 		while (true) {
 			try {
@@ -40,8 +36,8 @@ public class AddressMap {
 		}
 
 		progress.done();
-		BinIO.storeObject(addressMap, addressesFile.toFile());
-		progress.stop("Map saved in " + addressesFile);
+		BinIO.storeObject(addressMap, addressesMapFile.toFile());
+		progress.stop("Map saved in " + addressesMapFile);
 	}
 
 	public static void main (String[] args) throws IOException {

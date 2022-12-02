@@ -22,8 +22,6 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class ParseTSVs {
 	private final ProgressLogger progress;
-	Object2LongFunction<String> addressToLong = new Object2LongOpenHashMap<>();
-	long count = 0;
 
 	public ParseTSVs () {
 		this(null);
@@ -52,7 +50,6 @@ public class ParseTSVs {
 		this.progress.done();
 
 		this.progress.logger.info("Bloom filters saved in " + filtersDirectory);
-		BinIO.storeObject(this.addressToLong, addressLongMap.toFile());
 	}
 
 	private void parseTSV (File[] tsvs, List<Integer> importantColumns, Path parsedDirectory, boolean computeBloomFilters) throws IOException {
@@ -70,12 +67,6 @@ public class ParseTSVs {
 			try {
 				for (int i = 0; i < MAX_TSV_LINES; i++) {
 					String[] transactionLine = transactionLines.next();
-
-					String address = transactionLine[OUTPUTS_IMPORTANT.indexOf(RECIPIENT)];
-					if (!this.addressToLong.containsKey(address)) {
-						this.addressToLong.put(address, this.count++);
-					}
-
 					buffer.add(transactionLine);
 				}
 			} catch (NoSuchElementException e) {

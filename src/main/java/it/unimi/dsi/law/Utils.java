@@ -67,6 +67,10 @@ public class Utils {
 		private final ProgressLogger progress;
 		private CSVReader tsvReader;
 
+		public TSVDirectoryLineReader(File file) throws FileNotFoundException {
+			this(new File[] { file }, null, null, null);
+		}
+
 		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, ProgressLogger progress) throws FileNotFoundException {
 			this.tsvParser = new CSVParserBuilder().withSeparator('\t').build();
 			this.filter = filter;
@@ -120,8 +124,8 @@ public class Utils {
 						if (!this.nextFile()) {
 							throw new NoSuchElementException();
 						}
-					} else if (this.filter.accept(candidate)) {
-						return this.cleaner.clean(candidate);
+					} else if (this.filter == null || this.filter.accept(candidate)) {
+						return this.cleaner != null ? this.cleaner.clean(candidate) : candidate;
 					}
 				}
 			} catch (IOException e) {
