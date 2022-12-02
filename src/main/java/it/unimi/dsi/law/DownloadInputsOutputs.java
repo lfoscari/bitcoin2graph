@@ -23,20 +23,16 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.Utils.*;
 
 public class DownloadInputsOutputs {
 	private final ProgressLogger progress;
-
-	private final List<String[]> inputBuffer;
-	private long savedInputs = 1;
-
-	private final List<String[]> outputBuffer;
-	private long savedOutputs = 1;
 
 	public DownloadInputsOutputs () {
 		this(null);
@@ -49,17 +45,6 @@ public class DownloadInputsOutputs {
 		}
 
 		this.progress = progress;
-		this.inputBuffer = new ArrayList<>();
-		this.outputBuffer = new ArrayList<>();
-	}
-
-	public void run () throws IOException {
-		this.progress.expectedUpdates = INPUTS_AMOUNT + OUTPUTS_AMOUNT;
-
-		this.progress.start("Downloading urls from " + inputsUrlsFilename + " and " + outputsUrlsFilename);
-		this.download(inputsUrlsFilename.toFile(), INPUTS_AMOUNT, false);
-		this.download(outputsUrlsFilename.toFile(), OUTPUTS_AMOUNT, true);
-		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 	}
 
 	public void run (Path rawInputsOutputs) throws IOException {
@@ -71,122 +56,71 @@ public class DownloadInputsOutputs {
 		this.progress.stop("Bloom filters saved in " + filtersDirectory);
 	}
 
-	private void download (File urls, int limit, boolean computeBloomFilters) throws IOException {
-		inputsDirectory.toFile().mkdir();
-		outputsDirectory.toFile().mkdir();
-
-		if (computeBloomFilters) {
-			filtersDirectory.toFile().mkdir();
-		}
-
-		try (FileReader reader = new FileReader(urls)) {
-			List<String> toDownload = new BufferedReader(reader).lines().toList();
-
-			if (limit >= 0) {
-				toDownload = toDownload.subList(0, limit);
-			}
-
-			for (String s : toDownload) {
-				URL url = new URL(s);
-				String filename = s.substring(s.lastIndexOf("/") + 1, s.indexOf(".gz?"));
-
-				try (GZIPInputStream gzip = new GZIPInputStream(url.openStream())) {
-					List<String[]> tsv = Utils.readTSV(gzip, true);
-					this.parseTSV(tsv, filename);
-					this.progress.update();
-				}
-			}
-		}
-
-		this.flush();
-	}
-
 	private void download (File raws) throws IOException {
 		inputsDirectory.toFile().mkdir();
 		outputsDirectory.toFile().mkdir();
 		filtersDirectory.toFile().mkdir();
 
-		File[] rawFiles = raws.listFiles((d, f) -> f.endsWith("tsv"));
-		if (rawFiles == null) {
-			throw new NoSuchFileException("No outputs or inputs found in " + raws);
-		}
+		// cat *input* | awk -F'\t' '{if ($10 == "0") { print $13, $7 }}' | split -d -l MAX_TSV_LINES
+		this.parseTSV(raws.listFiles((d, s) -> s.endsWith("tsv") && s.contains("input")), INPUTS_IMPORTANT, inputsDirectory);
 
-		for (File raw : rawFiles) {
-			List<String[]> content = Utils.readTSV(raw, true);
-			this.parseTSV(content, raw.getName());
-			this.progress.update();
-		}
-
-		this.flush();
+		// cat *output* | awk -F'\t' '{if ($10 == "0") { print $2, $7 }}' | split -d -l MAX_TSV_LINES
+		this.parseTSV(raws.listFiles((d, s) -> s.endsWith("tsv") && s.contains("output")), OUTPUTS_IMPORTANT, outputsDirectory);
 	}
 
-	public void parseTSV (List<String[]> tsv, String filename) throws IOException {
-		boolean isInput = filename.contains("input");
-		List<String[]> buffer = isInput ? this.inputBuffer : this.outputBuffer;
+	private void parseTSV(File[] tsvs, List<Integer> importantColumns, Path directory) throws FileNotFoundException {
+		TSVDirectoryLineReader transactionLines = new TSVDirectoryLineReader(tsvs,
+				(line) -> line[IS_FROM_COINBASE].equals("0"),
+				(line) -> this.keepImportant(line, importantColumns)
+		);
 
-		tsv.removeIf(l -> l[IS_FROM_COINBASE].equals("1"));
-		buffer.addAll(tsv);
+		List<String[]> buffer = new ArrayList<>();
+		int totalTSVs = 0;
+		boolean stop = false;
 
-		if (buffer.size() > MINIMUM_FILTER_ELEMENTS_LINES) {
-			String chunkFilename = String.format("%05d", isInput ? this.savedInputs : this.savedOutputs);
-			Path destinationFile = isInput ?
-					inputsDirectory.resolve(chunkFilename + ".tsv") :
-					outputsDirectory.resolve(chunkFilename + ".tsv");
-
-			this.saveTSV(buffer, isInput ? INPUTS_IMPORTANT : OUTPUTS_IMPORTANT, destinationFile);
-
-			buffer.subList(0, MINIMUM_FILTER_ELEMENTS_LINES).clear();
-
-			if (isInput) {
-				this.savedInputs++;
-			} else {
-				this.savedOutputs++;
+		while (!stop) {
+			try {
+				for (int i = 0; i < MAX_TSV_LINES; i++) {
+					buffer.add(transactionLines.next());
+				}
+			} catch (NoSuchElementException e) {
+				stop = true;
 			}
+
+			String filename = String.format("%05d", totalTSVs++) + ".tsv";
+			this.saveTSV(buffer, directory.resolve(filename));
+			buffer.clear();
 		}
 	}
 
-	private void saveTSV (List<String[]> content, List<Integer> importantColumns, Path destinationPath) throws IOException {
-		try (FileWriter destinationWriter = new FileWriter(destinationPath.toFile());
+	private void saveTSV(List<String[]> buffer, Path destination) {
+		System.out.println("Saving to " + destination);
+		try (FileWriter destinationWriter = new FileWriter(destination.toFile());
 			 CSVWriter tsvWriter = new CSVWriter(destinationWriter, '\t', '"', '\\', "\n")) {
-
-			String[] filteredLine = new String[importantColumns.size()];
-			int index = 0;
-			for (String[] line : content) {
-				if (index++ >= MINIMUM_FILTER_ELEMENTS_LINES) {
-					break;
-				}
-
-				int j = 0;
-				for (int i : importantColumns) {
-					filteredLine[j++] = line[i];
-				}
-
-				tsvWriter.writeNext(filteredLine, false);
-			}
+			tsvWriter.writeAll(buffer, false);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
+	}
+
+	public String[] keepImportant(String[] line, List<Integer> importantColumns) {
+		String[] filteredLine = new String[importantColumns.size()];
+
+		int j = 0;
+		for (int i : importantColumns) {
+			filteredLine[j++] = line[i];
+		}
+
+		return filteredLine;
 	}
 
 	private void saveBloomFilter (List<String[]> content, Path outputPath) throws IOException {
-		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MINIMUM_FILTER_ELEMENTS_LINES, BloomFilter.STRING_FUNNEL);
+		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MAX_TSV_LINES, BloomFilter.STRING_FUNNEL);
 		content.forEach(line -> transactionFilter.add(line[TRANSACTION_HASH].getBytes()));
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
-	private void flush () throws IOException {
-		this.saveTSV(this.inputBuffer, INPUTS_IMPORTANT, inputsDirectory.resolve(String.format("%05d.tsv", this.savedInputs)));
-		this.saveTSV(this.outputBuffer, OUTPUTS_IMPORTANT, outputsDirectory.resolve(String.format("%05d.tsv", this.savedOutputs)));
-		this.saveBloomFilter(this.outputBuffer, outputsDirectory.resolve(String.format("%05d.bloom", this.savedOutputs)));
-
-		this.inputBuffer.clear();
-		this.outputBuffer.clear();
-		this.savedInputs++;
-	}
-
 	public static void main (String[] args) throws IOException {
-		if (args.length > 0) {
-			new DownloadInputsOutputs().run(Path.of(args[0]));
-		} else {
-			new DownloadInputsOutputs().run();
-		}
+		new DownloadInputsOutputs().run(Path.of(args[0]));
 	}
 }

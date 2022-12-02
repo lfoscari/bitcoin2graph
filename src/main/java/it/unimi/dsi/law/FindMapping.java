@@ -62,7 +62,7 @@ public class FindMapping implements Runnable {
 	}
 
 	private void searchMapping (File input, ObjectList<Pair<String, BloomFilter<CharSequence>>> filters) throws IOException {
-		for (String[] inputLine : Utils.readTSV(input, true)) {
+		for (String[] inputLine : Utils.readTSV(input, true, (line) -> true)) {
 			String transaction = inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)];
 
 			List<String> outputCandidates = filters
@@ -116,7 +116,7 @@ public class FindMapping implements Runnable {
 
 		List<String> recipients = new ArrayList<>();
 
-		for (String[] outputLine : Utils.readTSV(output, true)) {
+		for (String[] outputLine : Utils.readTSV(output, true, (line) -> true)) {
 			String spendingTransaction = inputLine[INPUTS_IMPORTANT.indexOf(SPENDING_TRANSACTION_HASH)];
 			String outputTransaction = outputLine[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)];
 
