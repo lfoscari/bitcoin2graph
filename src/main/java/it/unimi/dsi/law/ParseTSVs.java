@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.opencsv.*;
+import it.unimi.dsi.fastutil.Size64;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
@@ -11,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +25,7 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class ParseTSVs {
 	private final ProgressLogger progress;
+	private int tsvLines;
 
 	public ParseTSVs () {
 		this(null);
@@ -41,12 +45,20 @@ public class ParseTSVs {
 		parsedInputsDirectory.toFile().mkdir();
 		parsedOutputsDirectory.toFile().mkdir();
 
-		this.progress.start("Parsing input files");
-		this.parseTSV(inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv")), INPUTS_IMPORTANT, parsedInputsDirectory, false);
+		File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
+		if (files == null) throw new NoSuchFileException("No inputs found!");
+		this.tsvLines = this.numberOfLines(files) * 2;
+
+		this.progress.start("Parsing input files with " + this.tsvLines + " lines per chunk");
+		this.parseTSV(files, INPUTS_IMPORTANT, parsedInputsDirectory, false);
 		this.progress.stop();
 
-		this.progress.start("Parsing output files");
-		this.parseTSV(outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv")), OUTPUTS_IMPORTANT, parsedOutputsDirectory, true);
+		files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
+		if (files == null) throw new NoSuchFileException("No outputs found!");
+		this.tsvLines = this.numberOfLines(files) * 2;
+
+		this.progress.start("Parsing output files with " + this.tsvLines + " lines per chunk");
+		this.parseTSV(files, OUTPUTS_IMPORTANT, parsedOutputsDirectory, true);
 		this.progress.done();
 
 		this.progress.logger.info("Bloom filters saved in " + filtersDirectory);
@@ -65,7 +77,7 @@ public class ParseTSVs {
 
 		while (!stop) {
 			try {
-				for (int i = 0; i < MAX_TSV_LINES; i++) {
+				for (int i = 0; i < this.tsvLines; i++) {
 					String[] transactionLine = transactionLines.next();
 					buffer.add(transactionLine);
 				}
@@ -105,9 +117,21 @@ public class ParseTSVs {
 	}
 
 	private void saveBloomFilter (List<String[]> content, Path outputPath) throws IOException {
-		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(MAX_TSV_LINES, BloomFilter.STRING_FUNNEL);
+		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(this.tsvLines, BloomFilter.STRING_FUNNEL);
 		content.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
+	}
+
+	private int numberOfLines (File[] files) throws IOException {
+		int avgLineLength = 543 * Byte.SIZE;
+		float numberOfLines = 0f;
+
+		for (int i = 0; i < files.length; i++) {
+			float approxLines = (float) Files.size(files[i].toPath()) / avgLineLength;
+			numberOfLines = ((numberOfLines * i) + approxLines) / (i + 1);
+		}
+
+		return (int) numberOfLines;
 	}
 
 	public static void main (String[] args) throws IOException {

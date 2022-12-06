@@ -61,8 +61,6 @@ public class Parameters {
 	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, RECIPIENT);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
 
-	public static final Integer MAX_TSV_LINES = 10;
-
 	// Logging
 
 	public final static long logInterval = 10;
