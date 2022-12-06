@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.BloomFilter;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,7 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class ParseTSVs {
 	private final ProgressLogger progress;
-	private int tsvLines;
+	private int tsvLines, chunkDigits;
 
 	public ParseTSVs () {
 		this(null);
@@ -47,7 +48,8 @@ public class ParseTSVs {
 
 		File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 		if (files == null) throw new NoSuchFileException("No inputs found!");
-		this.tsvLines = this.numberOfLines(files) * 2;
+		this.tsvLines = this.avgNumberOfLines(files) * 2;
+		this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
 
 		this.progress.start("Parsing input files with " + this.tsvLines + " lines per chunk");
 		this.parseTSV(files, INPUTS_IMPORTANT, parsedInputsDirectory, false);
@@ -55,7 +57,8 @@ public class ParseTSVs {
 
 		files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 		if (files == null) throw new NoSuchFileException("No outputs found!");
-		this.tsvLines = this.numberOfLines(files) * 2;
+		this.tsvLines = this.avgNumberOfLines(files) * 2;
+		this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
 
 		this.progress.start("Parsing output files with " + this.tsvLines + " lines per chunk");
 		this.parseTSV(files, OUTPUTS_IMPORTANT, parsedOutputsDirectory, true);
@@ -85,7 +88,7 @@ public class ParseTSVs {
 				stop = true;
 			}
 
-			String filename = String.format("%05d", count++);
+			String filename = StringUtils.leftPad(String.valueOf(count++), this.chunkDigits + 1, '0');
 			this.saveTSV(buffer, parsedDirectory.resolve(filename + ".tsv"));
 
 			if (computeBloomFilters) {
@@ -122,7 +125,7 @@ public class ParseTSVs {
 		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
-	private int numberOfLines (File[] files) throws IOException {
+	private int avgNumberOfLines (File[] files) throws IOException {
 		int avgLineLength = 543 * Byte.SIZE;
 		float numberOfLines = 0f;
 
