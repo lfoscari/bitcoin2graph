@@ -65,13 +65,14 @@ public class Utils {
 		private final Iterator<File> files;
 		private final CSVParser tsvParser;
 		private final ProgressLogger progress;
-		private CSVReader tsvReader;
+		private FileReader fileReader = null;
+		private CSVReader tsvReader = null;
 
-		public TSVDirectoryLineReader(File file) throws FileNotFoundException {
+		public TSVDirectoryLineReader(File file) throws IOException {
 			this(new File[] { file }, null, null, null);
 		}
 
-		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, ProgressLogger progress) throws FileNotFoundException {
+		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, ProgressLogger progress) throws IOException {
 			this.tsvParser = new CSVParserBuilder().withSeparator('\t').build();
 			this.filter = filter;
 			this.cleaner = cleaner;
@@ -81,25 +82,36 @@ public class Utils {
 			this.nextFile();
 		}
 
-		boolean nextFile () throws FileNotFoundException {
+		boolean nextFile () throws IOException {
 			if (!this.files.hasNext()) {
-				this.tsvReader = null;
+				this.close();
 				return false;
 			}
 
 			File f = this.files.next();
 
+			this.close();
+
+			this.fileReader = new FileReader(f);
+			this.tsvReader = new CSVReaderBuilder(this.fileReader)
+					.withCSVParser(this.tsvParser)
+					.build();
+
 			if (this.progress != null) {
 				this.progress.update();
 			}
 
-			FileReader r = new FileReader(f);
-
-			this.tsvReader = new CSVReaderBuilder(r)
-					.withCSVParser(this.tsvParser)
-					.build();
-
 			return true;
+		}
+
+		private void close () throws IOException {
+			if (this.fileReader != null) {
+				this.fileReader.close();
+			}
+
+			if (this.tsvReader != null) {
+				this.tsvReader.close();
+			}
 		}
 
 		@Override
