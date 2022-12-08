@@ -39,12 +39,11 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressesMapFile.toFile());
 
 		FindMapping fm = new FindMapping(arcs, addressLong, progress);
+		Thread t = new Thread(fm);
+		Blockchain2Webgraph bw = new Blockchain2Webgraph(arcs, t);
 
 		File tempDir = Files.createTempDirectory(Parameters.resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
-
-		Thread t = new Thread(fm);
-		Blockchain2Webgraph bw = new Blockchain2Webgraph(arcs, t);
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
 		BVGraph.store(graph, Parameters.basename.toString());
