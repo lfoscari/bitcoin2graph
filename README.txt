@@ -23,5 +23,5 @@
    Blockchain2Webgraph to save the results in the Webgraph format.
 
 TODO: keep track of the inputs and outputs already added to the graph.
-IMPROVEMENT: use one thread to load the inputs, and keep a cache for the
-outputs most recently used. Multiple threads read the inputs and search for mappings.
+TODO: avoid writing a file for each transaction, but instead group multiple
+    transactions together and use a bloom filter to find the right group.
