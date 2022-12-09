@@ -25,3 +25,5 @@
 TODO: keep track of the inputs and outputs already added to the graph.
 TODO: avoid writing a file for each transaction, but instead group multiple
     transactions together and use a bloom filter to find the right group.
+    Write a class which loads the right transaction group and stores the MRU.
+    Then you can parallelize.
