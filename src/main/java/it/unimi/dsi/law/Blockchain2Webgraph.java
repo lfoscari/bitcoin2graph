@@ -14,8 +14,7 @@ import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static it.unimi.dsi.law.Parameters.addressesFile;
-import static it.unimi.dsi.law.Parameters.addressesMapFile;
+import static it.unimi.dsi.law.Parameters.*;
 
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final LinkedBlockingQueue<long[]> arcs;
@@ -24,30 +23,32 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	public Blockchain2Webgraph (final LinkedBlockingQueue<long[]> arcs, final Thread findMapping) {
 		this.arcs = arcs;
 		this.findMapping = findMapping;
-
 		this.findMapping.start();
 	}
 
 	public static void main (String[] args) throws IOException, ClassNotFoundException, InterruptedException {
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
-		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "arcs");
+		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
 		progress.displayLocalSpeed = true;
 
-		Parameters.graph.toFile().mkdir();
+		graph.toFile().mkdir();
 
 		LinkedBlockingQueue<long[]> arcs = new LinkedBlockingQueue<>();
-		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressesMapFile.toFile());
+		Object2LongFunction<String> addressLong =
+				(Object2LongFunction<String>) BinIO.loadObject(addressesMapFile.toFile());
 
-		FindMapping fm = new FindMapping(arcs, addressLong, progress);
+		FindMapping fm = new FindMapping(arcs, progress);
 		Thread t = new Thread(fm);
 		Blockchain2Webgraph bw = new Blockchain2Webgraph(arcs, t);
 
-		File tempDir = Files.createTempDirectory(Parameters.resources, "bw_temp").toFile();
+		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
-		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
-		BVGraph.store(graph, Parameters.basename.toString());
-		BinIO.storeObject(graph.ids, Parameters.ids.toFile());
+		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(),
+				false, false, 100_000, tempDir, progress);
+
+		BVGraph.store(graph, basename.toString());
+		BinIO.storeObject(graph.ids, ids.toFile());
 
 		t.join();
 	}

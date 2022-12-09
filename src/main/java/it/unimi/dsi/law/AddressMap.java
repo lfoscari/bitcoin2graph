@@ -1,11 +1,7 @@
 package it.unimi.dsi.law;
 
-import com.google.common.primitives.Chars;
-import it.unimi.dsi.fastutil.Hash;
-import it.unimi.dsi.fastutil.chars.CharHash;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.law.Utils.TSVDirectoryLineReader;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -18,7 +14,7 @@ import java.util.NoSuchElementException;
 import static it.unimi.dsi.law.Parameters.*;
 
 public class AddressMap {
-	static void compute() throws IOException {
+	void compute() throws IOException {
 		Object2LongFunction<CharSequence> addressMap = new Object2LongOpenHashMap<>();
 		long count = 0;
 
@@ -39,12 +35,12 @@ public class AddressMap {
 			}
 		}
 
-		progress.done();
+		progress.start("Saving address map");
 		BinIO.storeObject(addressMap, addressesMapFile.toFile());
 		progress.stop("Map saved in " + addressesMapFile);
 	}
 
 	public static void main (String[] args) throws IOException {
-		AddressMap.compute();
+		new AddressMap().compute();
 	}
 }

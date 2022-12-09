@@ -42,37 +42,38 @@ public class ParseTSVs {
 	}
 
 	private void download () throws IOException {
-		filtersDirectory.toFile().mkdir();
 		parsedInputsDirectory.toFile().mkdir();
 		parsedOutputsDirectory.toFile().mkdir();
 
-		File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
-		if (files == null) throw new NoSuchFileException("No inputs found!");
-		this.tsvLines = this.avgNumberOfLines(files) * 2;
-		this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
+		{
+			File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
+			if (files == null) throw new NoSuchFileException("No inputs found!");
+			this.tsvLines = this.avgNumberOfLines(files) * 2;
+			this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
 
-		this.progress.start("Parsing input files with " + this.tsvLines + " lines per chunk");
-		this.parseTSV(files, INPUTS_IMPORTANT, parsedInputsDirectory, false);
-		this.progress.stop();
+			this.progress.start("Parsing input files with " + this.tsvLines + " lines per chunk");
+			this.parseTSV(files, parsedInputsDirectory,
+					(line) -> true,
+					(line) -> this.keepImportant(line, INPUTS_IMPORTANT));
+			this.progress.stop();
+		}
 
-		files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
-		if (files == null) throw new NoSuchFileException("No outputs found!");
-		this.tsvLines = this.avgNumberOfLines(files) * 2;
-		this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
+		{
+			File[] files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
+			if (files == null) throw new NoSuchFileException("No outputs found!");
+			this.tsvLines = this.avgNumberOfLines(files) * 2;
+			this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
 
-		this.progress.start("Parsing output files with " + this.tsvLines + " lines per chunk");
-		this.parseTSV(files, OUTPUTS_IMPORTANT, parsedOutputsDirectory, true);
-		this.progress.done();
-
-		this.progress.logger.info("Bloom filters saved in " + filtersDirectory);
+			this.progress.start("Parsing output files with " + this.tsvLines + " lines per chunk");
+			this.parseTSV(files, parsedOutputsDirectory,
+					(line) -> line[IS_FROM_COINBASE].equals("0"),
+					(line) -> this.keepImportant(line, OUTPUTS_IMPORTANT));
+			this.progress.done();
+		}
 	}
 
-	private void parseTSV (File[] tsvs, List<Integer> importantColumns, Path parsedDirectory, boolean computeBloomFilters) throws IOException {
-		TSVDirectoryLineReader transactionLines = new TSVDirectoryLineReader(tsvs,
-				(line) -> line[IS_FROM_COINBASE].equals("0"),
-				(line) -> this.keepImportant(line, importantColumns),
-				this.progress
-		);
+	private void parseTSV (File[] tsvs, Path parsedDirectory, LineFilter filter, LineCleaner cleaner) throws IOException {
+		TSVDirectoryLineReader transactionLines = new TSVDirectoryLineReader(tsvs, filter, cleaner, this.progress);
 
 		List<String[]> buffer = new ArrayList<>();
 		int count = 0;
@@ -90,10 +91,6 @@ public class ParseTSVs {
 
 			String filename = StringUtils.leftPad(String.valueOf(count++), this.chunkDigits + 1, '0');
 			this.saveTSV(buffer, parsedDirectory.resolve(filename + ".tsv"));
-
-			if (computeBloomFilters) {
-				this.saveBloomFilter(buffer, filtersDirectory.resolve(filename + ".bloom"));
-			}
 
 			buffer.clear();
 		}
@@ -117,12 +114,6 @@ public class ParseTSVs {
 		}
 
 		return filteredLine;
-	}
-
-	private void saveBloomFilter (List<String[]> content, Path outputPath) throws IOException {
-		BloomFilter<CharSequence> transactionFilter = BloomFilter.create(this.tsvLines, BloomFilter.STRING_FUNNEL);
-		content.forEach(line -> transactionFilter.add(line[OUTPUTS_IMPORTANT.indexOf(TRANSACTION_HASH)].getBytes()));
-		BinIO.storeObject(transactionFilter, filtersDirectory.resolve(outputPath.getFileName()).toFile());
 	}
 
 	private int avgNumberOfLines (File[] files) throws IOException {

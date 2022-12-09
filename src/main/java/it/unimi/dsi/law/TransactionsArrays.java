@@ -11,17 +11,21 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsArrays {
-    static void compute() throws IOException, ClassNotFoundException {
-        Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
-        ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "___");
-        progress.displayLocalSpeed = true;
+    private final Object2LongFunction<CharSequence> addressMap;
+    private final ProgressLogger progress;
 
+    public TransactionsArrays() throws IOException, ClassNotFoundException {
+        this(null);
+    }
+
+    public TransactionsArrays(ProgressLogger progress) throws IOException, ClassNotFoundException {
         if (parsedInputsDirectory.toFile().listFiles() == null) {
             throw new NoSuchFileException("Parse inputs first with ParseTSVs");
         } else if (parsedOutputsDirectory.toFile().listFiles() == null) {
@@ -30,25 +34,34 @@ public class TransactionsArrays {
             throw new NoSuchFileException("Compute address map first with AddressMap");
         }
 
-        Object2LongFunction<CharSequence> addressMap =
-                (Object2LongFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
+        if (progress == null) {
+            Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
+            progress = new ProgressLogger(logger, logInterval, logTimeUnit, "transactions");
+            progress.displayLocalSpeed = true;
+        }
 
-        progress.start("Building input transactions arrays");
-
-        TSVDirectoryLineReader transactions = new TSVDirectoryLineReader(
-                parsedInputsDirectory.toFile().listFiles(),
-                (line) -> true, (line) -> line, progress
-        );
-        addTransactions(transactions, inputTransactionsDirectory, addressMap, progress);
-
-        transactions = new TSVDirectoryLineReader(
-                parsedInputsDirectory.toFile().listFiles(),
-                (line) -> true, (line) -> line, progress
-        );
-        addTransactions(transactions, outputTransactionsDirectory, addressMap, progress);
+        this.progress = progress;
+        this.addressMap = (Object2LongFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
     }
 
-    private static void addTransactions(TSVDirectoryLineReader transactions, Path destinationDirectory, Object2LongFunction<CharSequence> addressMap, ProgressLogger progress) throws IOException, ClassNotFoundException {
+    void compute() throws IOException, ClassNotFoundException {
+        this.progress.start("Building input transactions arrays");
+
+        this.buildTransactionArrays(parsedInputsDirectory, inputTransactionsDirectory);
+        this.buildTransactionArrays(parsedOutputsDirectory, outputTransactionsDirectory);
+
+        this.progress.done();
+    }
+
+    private void buildTransactionArrays(Path parsedDirectory, Path transactionsDirectory) throws IOException, ClassNotFoundException {
+        TSVDirectoryLineReader transactions = new TSVDirectoryLineReader(
+                parsedDirectory.toFile().listFiles(),
+                (line) -> true, (line) -> line, null
+        );
+        this.addTransactions(transactions, transactionsDirectory);
+    }
+
+    private void addTransactions(TSVDirectoryLineReader transactions, Path destinationDirectory) throws IOException, ClassNotFoundException {
         destinationDirectory.toFile().mkdir();
 
         while (true) {
@@ -56,21 +69,32 @@ public class TransactionsArrays {
                 String[] line = transactions.next();
                 String transaction = line[0], address = line[1];
 
-                long addressLong = addressMap.getLong(address);
-
+                long addressLong = this.addressMap.getLong(address);
                 File transactionFile = destinationDirectory.resolve(transaction).toFile();
-                long[] la;
 
+                long[] la;
                 if (transactionFile.exists()) {
                     la = (long[]) BinIO.loadObject(transactionFile);
+
+                    boolean skip = false;
+                    for (long a : la) {
+                        if (a == addressLong) {
+                            skip = true;
+                            break;
+                        }
+                    }
+
+                    if (skip) {
+                        continue;
+                    }
+
                     la = LongArrays.ensureCapacity(la, la.length + 1);
                     la[la.length - 1] = addressLong;
                 } else {
                     la = new long[] { addressLong };
                 }
-
                 BinIO.storeObject(la, transactionFile);
-                progress.lightUpdate();
+                this.progress.lightUpdate();
             } catch (NoSuchElementException e) {
                 break;
             }
@@ -78,6 +102,6 @@ public class TransactionsArrays {
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        TransactionsArrays.compute();
+        new TransactionsArrays().compute();
     }
 }
