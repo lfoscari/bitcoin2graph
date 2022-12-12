@@ -1,5 +1,7 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.ints.Int2LongFunction;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -15,7 +17,7 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class AddressMap {
 	void compute() throws IOException {
-		Object2LongFunction<CharSequence> addressMap = new Object2LongOpenHashMap<>();
+		Int2LongFunction addressMap = new Int2LongOpenHashMap();
 		long count = 0;
 
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
@@ -27,7 +29,7 @@ public class AddressMap {
 
 		while (true) {
 			try {
-				String address = addresses.next()[0];
+				int address = addresses.next()[0].hashCode();
 				addressMap.put(address, count++);
 				progress.lightUpdate();
 			} catch (NoSuchElementException e) {

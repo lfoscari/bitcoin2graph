@@ -6,10 +6,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.rocksdb.Options;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.WriteBatch;
+import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +22,12 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsArrays {
     private final Object2LongFunction<CharSequence> addressMap;
+    private final Object2LongFunction<CharSequence> transactionMap;
 
     private RocksDB db;
     private Options options;
+
+    private final int WB_LIMIT = 10_000;
 
     private final ProgressLogger progress;
 
@@ -44,6 +44,7 @@ public class TransactionsArrays {
 
         this.progress = progress;
         this.addressMap = (Object2LongFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
+        this.transactionMap = (Object2LongFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
     }
 
     void compute() throws IOException, RocksDBException {
@@ -78,13 +79,17 @@ public class TransactionsArrays {
         while (true) {
             try {
                 String[] line = sourcesReader.next();
-                String transaction = line[0], address = line[1];
+                long addressId = this.addressMap.getLong(line[1]);
+                long transactionId = this.transactionMap.getLong(line[0]);
 
-                long addressId = this.addressMap.getLong(address);
-
-
+                wb.merge(Utils.longtoBytes(transactionId), Utils.longtoBytes(addressId));
             } catch (NoSuchElementException e) {
                 break;
+            }
+
+            if (wb.getDataSize() >= this.WB_LIMIT) {
+                this.db.write(new WriteOptions(), wb);
+                wb = new WriteBatch();
             }
         }
 

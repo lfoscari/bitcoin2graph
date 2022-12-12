@@ -1,5 +1,8 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.ints.Int2LongFunction;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -17,13 +20,13 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsMap {
 	void compute() throws IOException {
-		Object2LongFunction<CharSequence> transactionMap = new Object2LongOpenHashMap<>();
+		Int2LongFunction transactionMap = new Int2LongOpenHashMap();
 		long count = 0;
 
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "transactions");
 		progress.displayLocalSpeed = true;
-		progress.start("Building address to long map");
+		progress.start("Building transaction to long map");
 
 		File[] inputs = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 
@@ -38,7 +41,7 @@ public class TransactionsMap {
 
 		while (true) {
 			try {
-				String transaction = transactions.next()[0];
+				int transaction = transactions.next()[0].hashCode();
 
 				if (!transactionMap.containsKey(transaction)) {
 					transactionMap.put(transaction, count++);
