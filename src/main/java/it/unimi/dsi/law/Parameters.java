@@ -24,7 +24,7 @@ public class Parameters {
 
 	public final static Path outputsDirectory = resources.resolve("outputs");
 	public final static Path parsedOutputsDirectory = resources.resolve("outputs").resolve("chunks");
-	public final static Path outputTransactionDatabaseDirectory = inputsDirectory.resolve("transactions");
+	public final static Path outputTransactionDatabaseDirectory = outputsDirectory.resolve("transactions");
 
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressesMapFile = resources.resolve("addresses.map");

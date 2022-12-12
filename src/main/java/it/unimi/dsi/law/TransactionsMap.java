@@ -1,11 +1,8 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.ints.Int2LongFunction;
-import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import static it.unimi.dsi.law.Parameters.*;
@@ -25,7 +23,6 @@ public class TransactionsMap {
 
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "transactions");
-		progress.displayLocalSpeed = true;
 		progress.start("Building transaction to long map");
 
 		File[] inputs = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
@@ -34,25 +31,21 @@ public class TransactionsMap {
 			throw new NoSuchFileException("Download inputs first");
 		}
 
-		TSVDirectoryLineReader transactions = new TSVDirectoryLineReader(
+		Iterable<String[]> transactions = Utils.readTSVs(
 			inputs, (line) -> true,
 			(line) -> new String[] { line[BitcoinColumn.SPENDING_TRANSACTION_HASH] },
 			true, null);
 
-		while (true) {
-			try {
-				int transaction = transactions.next()[0].hashCode();
+		for (String[] transactionLine : transactions) {
+			int transaction = transactionLine[0].hashCode();
 
-				if (!transactionMap.containsKey(transaction)) {
-					transactionMap.put(transaction, count++);
-					progress.lightUpdate();
-				}
-			} catch (NoSuchElementException e) {
-				break;
+			if (!transactionMap.containsKey(transaction)) {
+				transactionMap.put(transaction, count++);
+				progress.lightUpdate();
 			}
 		}
 
-		progress.start("Saving transactions map");
+		progress.start("Saving transactions (total " + count + " transactions)");
 		BinIO.storeObject(transactionMap, transactionsMapFile.toFile());
 		progress.stop("Map saved in " + transactionsMapFile);
 	}

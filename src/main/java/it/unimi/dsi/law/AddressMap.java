@@ -3,15 +3,12 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.ints.Int2LongFunction;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import it.unimi.dsi.law.Utils.TSVDirectoryLineReader;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.NoSuchElementException;
+import java.util.Arrays;
 
 import static it.unimi.dsi.law.Parameters.*;
 
@@ -22,22 +19,15 @@ public class AddressMap {
 
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, Parameters.logInterval, Parameters.logTimeUnit, "addresses");
-		progress.displayLocalSpeed = true;
 		progress.start("Building address to long map");
 
-		TSVDirectoryLineReader addresses = new TSVDirectoryLineReader(addressesFile.toFile());
-
-		while (true) {
-			try {
-				int address = addresses.next()[0].hashCode();
-				addressMap.put(address, count++);
-				progress.lightUpdate();
-			} catch (NoSuchElementException e) {
-				break;
-			}
+		for (String[] line : Utils.readTSVs(addressesFile.toFile())) {
+			int address = line[0].hashCode();
+			addressMap.put(address, count++);
+			progress.lightUpdate();
 		}
 
-		progress.start("Saving address map");
+		progress.start("Saving address map (total " + count + " addresses)");
 		BinIO.storeObject(addressMap, addressesMapFile.toFile());
 		progress.stop("Map saved in " + addressesMapFile);
 	}
