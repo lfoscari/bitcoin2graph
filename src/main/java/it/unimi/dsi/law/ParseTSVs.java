@@ -26,7 +26,7 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class ParseTSVs {
 	private final ProgressLogger progress;
-	private int tsvLines, chunkDigits;
+	private int chunkDigits;
 
 	public ParseTSVs () {
 		this(null);
@@ -48,10 +48,9 @@ public class ParseTSVs {
 		{
 			File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 			if (files == null) throw new NoSuchFileException("No inputs found!");
-			this.tsvLines = this.avgNumberOfLines(files) * 2;
-			this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
+			this.chunkDigits = (int) (Math.log10(MAX_TVS_LINES * files.length) + 1);
 
-			this.progress.start("Parsing input files with " + this.tsvLines + " lines per chunk");
+			this.progress.start("Parsing input files with " + MAX_TVS_LINES + " lines per chunk");
 			this.parseTSV(files, parsedInputsDirectory,
 					(line) -> true,
 					(line) -> this.keepImportant(line, INPUTS_IMPORTANT));
@@ -61,10 +60,9 @@ public class ParseTSVs {
 		{
 			File[] files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 			if (files == null) throw new NoSuchFileException("No outputs found!");
-			this.tsvLines = this.avgNumberOfLines(files) * 2;
-			this.chunkDigits = (int) (Math.log10(this.tsvLines * files.length) + 1);
+			this.chunkDigits = (int) (Math.log10(MAX_TVS_LINES * files.length) + 1);
 
-			this.progress.start("Parsing output files with " + this.tsvLines + " lines per chunk");
+			this.progress.start("Parsing output files with " + MAX_TVS_LINES + " lines per chunk");
 			this.parseTSV(files, parsedOutputsDirectory,
 					(line) -> line[IS_FROM_COINBASE].equals("0"),
 					(line) -> this.keepImportant(line, OUTPUTS_IMPORTANT));
@@ -73,7 +71,7 @@ public class ParseTSVs {
 	}
 
 	private void parseTSV (File[] tsvs, Path parsedDirectory, LineFilter filter, LineCleaner cleaner) throws IOException {
-		TSVDirectoryLineReader transactionLines = new TSVDirectoryLineReader(tsvs, filter, cleaner, this.progress);
+		TSVDirectoryLineReader transactionLines = new TSVDirectoryLineReader(tsvs, filter, cleaner, true, this.progress);
 
 		List<String[]> buffer = new ArrayList<>();
 		int count = 0;
@@ -81,7 +79,7 @@ public class ParseTSVs {
 
 		while (!stop) {
 			try {
-				for (int i = 0; i < this.tsvLines; i++) {
+				for (int i = 0; i < MAX_TVS_LINES; i++) {
 					String[] transactionLine = transactionLines.next();
 					buffer.add(transactionLine);
 				}
@@ -114,18 +112,6 @@ public class ParseTSVs {
 		}
 
 		return filteredLine;
-	}
-
-	private int avgNumberOfLines (File[] files) throws IOException {
-		int avgLineLength = 543 * Byte.SIZE;
-		float numberOfLines = 0f;
-
-		for (int i = 0; i < files.length; i++) {
-			float approxLines = (float) Files.size(files[i].toPath()) / avgLineLength;
-			numberOfLines = ((numberOfLines * i) + approxLines) / (i + 1);
-		}
-
-		return (int) numberOfLines;
 	}
 
 	public static void main (String[] args) throws IOException {

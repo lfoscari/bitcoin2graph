@@ -61,6 +61,7 @@ public class Utils {
 	static class TSVDirectoryLineReader implements Iterator<String[]>, Iterable<String[]> {
 		private final LineFilter filter;
 		private final LineCleaner cleaner;
+		private final boolean skipHeader;
 
 		private final Iterator<File> files;
 		private final CSVParser tsvParser;
@@ -69,13 +70,14 @@ public class Utils {
 		private CSVReader tsvReader = null;
 
 		public TSVDirectoryLineReader(File file) throws IOException {
-			this(new File[] { file }, null, null, null);
+			this(new File[] { file }, null, null, false, null);
 		}
 
-		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, ProgressLogger progress) throws IOException {
+		public TSVDirectoryLineReader(File[] files, LineFilter filter, LineCleaner cleaner, boolean skipHeader, ProgressLogger progress) throws IOException {
 			this.tsvParser = new CSVParserBuilder().withSeparator('\t').build();
 			this.filter = filter;
 			this.cleaner = cleaner;
+			this.skipHeader = skipHeader;
 			this.progress = progress;
 
 			this.files = Arrays.stream(files).iterator();
@@ -95,6 +97,7 @@ public class Utils {
 			this.fileReader = new FileReader(f);
 			this.tsvReader = new CSVReaderBuilder(this.fileReader)
 					.withCSVParser(this.tsvParser)
+					.withSkipLines(this.skipHeader ? 1 : 0)
 					.build();
 
 			if (this.progress != null) {

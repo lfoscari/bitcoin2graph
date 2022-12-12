@@ -29,6 +29,8 @@ public class Parameters {
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressesMapFile = resources.resolve("addresses.map");
 
+	public final static int MAX_TVS_LINES = 100;
+
 	// Bitcoin Blockchair schema for both inputs and outputs
 
 	public static class BitcoinColumn {
