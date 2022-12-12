@@ -43,18 +43,20 @@ public class TransactionsDatabase {
     }
 
     void compute() throws IOException, RocksDBException {
-        this.progress.start("Building input transactions arrays");
-
         {
+            this.progress.start("Building input transactions database");
             LineFilter filter = (line) -> true;
             LineCleaner cleaner = (line) -> Utils.keepImportant(line, INPUTS_IMPORTANT);
             this.saveTransactions(inputsDirectory, inputTransactionDatabaseDirectory, filter, cleaner);
+            this.progress.stop();
         }
 
         {
+            this.progress.start("Building output transactions database");
             LineFilter filter = (line) -> line[IS_FROM_COINBASE].equals("0");
             LineCleaner cleaner = (line) -> Utils.keepImportant(line, OUTPUTS_IMPORTANT);
             this.saveTransactions(outputsDirectory, outputTransactionDatabaseDirectory, filter, cleaner);
+            this.progress.stop();
         }
 
         this.progress.done();
@@ -75,6 +77,7 @@ public class TransactionsDatabase {
             long transactionId = this.transactionMap.get(line[0].hashCode());
 
             wb.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
+            this.progress.lightUpdate();
 
             if (wb.getDataSize() >= this.WB_LIMIT) {
                 database.write(new WriteOptions(), wb);
