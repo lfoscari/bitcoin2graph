@@ -34,12 +34,12 @@ public class TransactionsMap {
 		Iterable<String[]> transactions = Utils.readTSVs(
 			inputs, (line) -> true,
 			(line) -> new String[] { line[BitcoinColumn.SPENDING_TRANSACTION_HASH] },
-			true, null);
+			true);
 
 		for (String[] transactionLine : transactions) {
 			int transaction = transactionLine[0].hashCode();
 
-			if (!transactionMap.containsKey(transaction)) {
+			if (!transactionMap.containsKey(transaction)) { // Is there a better way?
 				transactionMap.put(transaction, count++);
 				progress.lightUpdate();
 			}

@@ -37,8 +37,8 @@ public class FindMapping implements Runnable {
 
 		this.arcs = arcs;
 
-		this.inputs = this.startDatabase(true, inputTransactionDatabaseDirectory);
-		this.outputs = this.startDatabase(true, outputTransactionDatabaseDirectory);
+		this.inputs = Utils.startDatabase(true, inputTransactionDatabaseDirectory);
+		this.outputs = Utils.startDatabase(true, outputTransactionDatabaseDirectory);
 
 		this.progress = progress;
 	}
@@ -79,25 +79,6 @@ public class FindMapping implements Runnable {
 	private void close () {
 		this.inputs.close();
 		this.outputs.close();
-	}
-
-	private RocksDB startDatabase(boolean readonly, Path location) throws RocksDBException {
-		RocksDB.loadLibrary();
-
-		try (Options options = new Options()
-				.setCreateIfMissing(true)
-				.setCreateMissingColumnFamilies(true)
-				.setMergeOperator(new StringAppendOperator())
-				.setDbWriteBufferSize(WRITE_BUFFER_SIZE)
-				.setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
-				.setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)) {
-
-			if (readonly) {
-				return RocksDB.openReadOnly(options, location.toString());
-			}
-
-			return RocksDB.open(options, location.toString());
-		}
 	}
 
 	public static void main (String[] args) throws RocksDBException {

@@ -3,11 +3,13 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import org.rocksdb.MergeOperator;
-import org.rocksdb.StringAppendOperator;
+import org.rocksdb.*;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
+
+import static it.unimi.dsi.law.Parameters.*;
 
 public class Utils {
 	public static String[] keepImportant (String[] line, List<Integer> importantColumns) {
@@ -43,6 +45,24 @@ public class Utils {
 			}
 		}
 		return result;
+	}
+
+	public static RocksDB startDatabase(boolean readonly, Path location) throws RocksDBException {
+		RocksDB.loadLibrary();
+
+		try (Options options = new Options()
+				.setCreateIfMissing(true)
+				.setMergeOperator(new StringAppendOperator())
+				.setDbWriteBufferSize(WRITE_BUFFER_SIZE)
+				.setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
+				.setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)) {
+
+			if (readonly) {
+				return RocksDB.openReadOnly(options, location.toString());
+			}
+
+			return RocksDB.open(options, location.toString());
+		}
 	}
 
 	interface LineFilter {
@@ -128,23 +148,16 @@ public class Utils {
 	}
 
 	static class TSVIterable implements Iterator<String[]>, Iterable<String[]>, Closeable {
-		private final LineFilter filter;
-		private final LineCleaner cleaner;
 		private final boolean skipHeader;
 
 		private final Iterator<File> files;
 		private final MutableString candidate = new MutableString();
 		private File currentFile;
-		private FastBufferedReader reader;
+		private FileReader reader;
+		private FastBufferedReader bufferedReader;
 
-		private final ProgressLogger progress;
-
-		public TSVIterable (File[] files, LineFilter filter, LineCleaner cleaner, boolean skipHeader, ProgressLogger progress) throws IOException {
-			this.filter = filter;
-			this.cleaner = cleaner;
+		public TSVIterable (File[] files, boolean skipHeader) throws IOException {
 			this.skipHeader = skipHeader;
-			this.progress = progress;
-
 			this.files = Arrays.stream(files).iterator();
 			this.nextFile();
 		}
@@ -155,16 +168,18 @@ public class Utils {
 			}
 
 			this.currentFile = this.files.next();
-			this.reader = new FastBufferedReader(new FileReader(this.currentFile));
+			this.reader = new FileReader(this.currentFile);
+			this.bufferedReader = new FastBufferedReader(this.reader);
 
 			if (this.skipHeader) {
-				this.reader.readLine(this.candidate);
+				this.bufferedReader.readLine(this.candidate);
 				this.candidate.delete(0, this.candidate.length());
 			}
 		}
 
 		public void close () throws IOException {
 			this.reader.close();
+			this.bufferedReader.close();
 			this.currentFile = null;
 		}
 
@@ -176,7 +191,7 @@ public class Utils {
 		@Override
 		public boolean hasNext() {
 			try {
-				if (!this.candidate.isEmpty() || this.reader.readLine(this.candidate) != null) {
+				if (!this.candidate.isEmpty() || this.bufferedReader.readLine(this.candidate) != null) {
 					return true;
 				}
 
@@ -205,11 +220,11 @@ public class Utils {
 	}
 
 	static Iterable<String[]> readTSVs(File tsv) throws IOException {
-		return readTSVs(new File[] { tsv }, null, null, true, null);
+		return readTSVs(new File[] { tsv }, null, null, true);
 	}
 
-	static Iterable<String[]> readTSVs(File[] files, LineFilter filter, LineCleaner cleaner, boolean skipHeader, ProgressLogger progress) throws IOException {
-		Iterable<String[]> iterable = new TSVIterable(files, filter, cleaner, skipHeader, progress);
+	static Iterable<String[]> readTSVs(File[] files, LineFilter filter, LineCleaner cleaner, boolean skipHeader) throws IOException {
+		Iterable<String[]> iterable = new TSVIterable(files, skipHeader);
 
 		if (filter != null) {
 			iterable = new FilteringIterable(iterable, filter);

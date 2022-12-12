@@ -2,7 +2,6 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.ints.Int2LongFunction;
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.rocksdb.*;
 import org.slf4j.Logger;
@@ -12,7 +11,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.NoSuchElementException;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -69,10 +67,10 @@ public class TransactionsDatabase {
             throw new NoSuchFileException("Download inputs and outputs first");
         }
 
-        RocksDB database = this.startDatabase(false, databaseDirectory);
+        RocksDB database = Utils.startDatabase(false, databaseDirectory);
         WriteBatch wb = new WriteBatch();
 
-        for (String[] line : Utils.readTSVs(sources, filter, cleaner, true, this.progress)) {
+        for (String[] line : Utils.readTSVs(sources, filter, cleaner, true)) {
             long addressId = this.addressMap.get(line[1].hashCode());
             long transactionId = this.transactionMap.get(line[0].hashCode());
 
@@ -87,25 +85,6 @@ public class TransactionsDatabase {
 
         database.write(new WriteOptions(), wb);
         database.close();
-    }
-
-    private RocksDB startDatabase(boolean readonly, Path location) throws RocksDBException {
-        RocksDB.loadLibrary();
-
-        try (Options options = new Options()
-                .setCreateIfMissing(true)
-                .setCreateMissingColumnFamilies(true)
-                .setMergeOperator(new StringAppendOperator())
-                .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
-                .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
-                .setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)) {
-
-            if (readonly) {
-                return RocksDB.openReadOnly(options, location.toString());
-            }
-
-            return RocksDB.open(options, location.toString());
-        }
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, RocksDBException {
