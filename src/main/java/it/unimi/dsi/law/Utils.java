@@ -55,7 +55,8 @@ public class Utils {
 				.setMergeOperator(new StringAppendOperator())
 				.setDbWriteBufferSize(WRITE_BUFFER_SIZE)
 				.setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
-				.setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)) {
+				.setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)
+				.setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE)) {
 
 			if (readonly) {
 				return RocksDB.openReadOnly(options, location.toString());

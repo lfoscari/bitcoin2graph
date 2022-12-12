@@ -19,11 +19,9 @@ public class Parameters {
 	public final static Path ids = graph.resolve("bitcoin-ids");
 
 	public final static Path inputsDirectory = resources.resolve("inputs");
-	public final static Path parsedInputsDirectory = resources.resolve("inputs").resolve("chunks");
 	public final static Path inputTransactionDatabaseDirectory = inputsDirectory.resolve("transactions");
 
 	public final static Path outputsDirectory = resources.resolve("outputs");
-	public final static Path parsedOutputsDirectory = resources.resolve("outputs").resolve("chunks");
 	public final static Path outputTransactionDatabaseDirectory = outputsDirectory.resolve("transactions");
 
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
