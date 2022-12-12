@@ -1,5 +1,7 @@
 package it.unimi.dsi.law;
 
+import org.rocksdb.util.SizeUnit;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -18,18 +20,15 @@ public class Parameters {
 
 	public final static Path inputsDirectory = resources.resolve("inputs");
 	public final static Path parsedInputsDirectory = resources.resolve("inputs").resolve("chunks");
-	public final static Path inputTransactionsDirectory = resources.resolve("inputs").resolve("transactions");
+	public final static Path inputTransactionDatabaseDirectory = inputsDirectory.resolve("transactions");
 
 	public final static Path outputsDirectory = resources.resolve("outputs");
 	public final static Path parsedOutputsDirectory = resources.resolve("outputs").resolve("chunks");
-	public final static Path outputTransactionsDirectory = resources.resolve("outputs").resolve("transactions");
-
-	public final static Path filtersDirectory = resources.resolve("filters");
+	public final static Path outputTransactionDatabaseDirectory = inputsDirectory.resolve("transactions");
 
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressesMapFile = resources.resolve("addresses.map");
-
-	public final static int MAX_TVS_LINES = 100;
+	public final static Path transactionsMapFile = resources.resolve("transactions.map");
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 
@@ -79,4 +78,9 @@ public class Parameters {
 		"litecoin",
 		"zcash"
 	); */
+
+	public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;
+	public final static long MAX_TOTAL_WAL_SIZE = SizeUnit.GB;
+	public final static int MAX_BACKGROUND_JOBS = 5;
+	public final static long MAX_BYTES_FOR_LEVEL_BASE = SizeUnit.GB;
 }

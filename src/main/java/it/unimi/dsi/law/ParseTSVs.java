@@ -27,6 +27,7 @@ import static it.unimi.dsi.law.Utils.*;
 public class ParseTSVs {
 	private final ProgressLogger progress;
 	private int chunkDigits;
+	private final int MAX_TVS_LINES = 100;
 
 	public ParseTSVs () {
 		this(null);
@@ -48,24 +49,24 @@ public class ParseTSVs {
 		{
 			File[] files = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 			if (files == null) throw new NoSuchFileException("No inputs found!");
-			this.chunkDigits = (int) (Math.log10(MAX_TVS_LINES * files.length) + 1);
+			this.chunkDigits = (int) (Math.log10(this.MAX_TVS_LINES * files.length) + 1);
 
-			this.progress.start("Parsing input files with " + MAX_TVS_LINES + " lines per chunk");
+			this.progress.start("Parsing input files with " + this.MAX_TVS_LINES + " lines per chunk");
 			this.parseTSV(files, parsedInputsDirectory,
 					(line) -> true,
-					(line) -> this.keepImportant(line, INPUTS_IMPORTANT));
+					(line) -> Utils.keepImportant(line, INPUTS_IMPORTANT));
 			this.progress.stop();
 		}
 
 		{
 			File[] files = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith("tsv"));
 			if (files == null) throw new NoSuchFileException("No outputs found!");
-			this.chunkDigits = (int) (Math.log10(MAX_TVS_LINES * files.length) + 1);
+			this.chunkDigits = (int) (Math.log10(this.MAX_TVS_LINES * files.length) + 1);
 
-			this.progress.start("Parsing output files with " + MAX_TVS_LINES + " lines per chunk");
+			this.progress.start("Parsing output files with " + this.MAX_TVS_LINES + " lines per chunk");
 			this.parseTSV(files, parsedOutputsDirectory,
 					(line) -> line[IS_FROM_COINBASE].equals("0"),
-					(line) -> this.keepImportant(line, OUTPUTS_IMPORTANT));
+					(line) -> Utils.keepImportant(line, OUTPUTS_IMPORTANT));
 			this.progress.done();
 		}
 	}
@@ -79,7 +80,7 @@ public class ParseTSVs {
 
 		while (!stop) {
 			try {
-				for (int i = 0; i < MAX_TVS_LINES; i++) {
+				for (int i = 0; i < this.MAX_TVS_LINES; i++) {
 					String[] transactionLine = transactionLines.next();
 					buffer.add(transactionLine);
 				}
@@ -101,17 +102,6 @@ public class ParseTSVs {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	public String[] keepImportant (String[] line, List<Integer> importantColumns) {
-		String[] filteredLine = new String[importantColumns.size()];
-
-		int j = 0;
-		for (int i : importantColumns) {
-			filteredLine[j++] = line[i];
-		}
-
-		return filteredLine;
 	}
 
 	public static void main (String[] args) throws IOException {

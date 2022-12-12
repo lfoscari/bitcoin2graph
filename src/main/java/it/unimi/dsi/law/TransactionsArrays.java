@@ -2,8 +2,14 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.LongArrays;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.logging.ProgressLogger;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +25,10 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsArrays {
     private final Object2LongFunction<CharSequence> addressMap;
+
+    private RocksDB db;
+    private Options options;
+
     private final ProgressLogger progress;
 
     public TransactionsArrays() throws IOException, ClassNotFoundException {
@@ -26,17 +36,9 @@ public class TransactionsArrays {
     }
 
     public TransactionsArrays(ProgressLogger progress) throws IOException, ClassNotFoundException {
-        if (parsedInputsDirectory.toFile().listFiles() == null) {
-            throw new NoSuchFileException("Parse inputs first with ParseTSVs");
-        } else if (parsedOutputsDirectory.toFile().listFiles() == null) {
-            throw new NoSuchFileException("Parse outputs first with ParseTSVs");
-        } else if (!addressesMapFile.toFile().exists()) {
-            throw new NoSuchFileException("Compute address map first with AddressMap");
-        }
-
         if (progress == null) {
             Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
-            progress = new ProgressLogger(logger, logInterval, logTimeUnit, "transactions");
+            progress = new ProgressLogger(logger, logInterval, logTimeUnit, "sources");
             progress.displayLocalSpeed = true;
         }
 
@@ -44,64 +46,74 @@ public class TransactionsArrays {
         this.addressMap = (Object2LongFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
     }
 
-    void compute() throws IOException, ClassNotFoundException {
+    void compute() throws IOException, RocksDBException {
         this.progress.start("Building input transactions arrays");
 
-        this.buildTransactionArrays(parsedInputsDirectory, inputTransactionsDirectory);
-        this.buildTransactionArrays(parsedOutputsDirectory, outputTransactionsDirectory);
+        {
+            LineFilter filter = (line) -> true;
+            LineCleaner cleaner = (line) -> Utils.keepImportant(line, INPUTS_IMPORTANT);
+            this.saveTransactions(inputsDirectory, inputTransactionDatabaseDirectory, filter, cleaner);
+        }
+
+        {
+            LineFilter filter = (line) -> line[BitcoinColumn.IS_FROM_COINBASE].equals("0");
+            LineCleaner cleaner = (line) -> Utils.keepImportant(line, OUTPUTS_IMPORTANT);
+            this.saveTransactions(outputsDirectory, outputTransactionDatabaseDirectory, filter, cleaner);
+        }
 
         this.progress.done();
     }
 
-    private void buildTransactionArrays(Path parsedDirectory, Path transactionsDirectory) throws IOException, ClassNotFoundException {
-        TSVDirectoryLineReader transactions = new TSVDirectoryLineReader(
-                parsedDirectory.toFile().listFiles(),
-                (line) -> true, (line) -> line, null
-        );
-        this.addTransactions(transactions, transactionsDirectory);
-    }
+    private void saveTransactions(Path sourcesDirectory, Path databaseDirectory, LineFilter filter, LineCleaner cleaner) throws IOException, RocksDBException {
+        File[] sources = sourcesDirectory.toFile().listFiles();
 
-    private void addTransactions(TSVDirectoryLineReader transactions, Path destinationDirectory) throws IOException, ClassNotFoundException {
-        destinationDirectory.toFile().mkdir();
+        if (sources == null) {
+            throw new NoSuchFileException("Download inputs and outputs first");
+        }
 
+        this.db = this.startDatabase(false, databaseDirectory);
+        WriteBatch wb = new WriteBatch();
+
+        TSVDirectoryLineReader sourcesReader = new TSVDirectoryLineReader(sources, filter, cleaner, true, this.progress);
         while (true) {
             try {
-                String[] line = transactions.next();
+                String[] line = sourcesReader.next();
                 String transaction = line[0], address = line[1];
 
-                long addressLong = this.addressMap.getLong(address);
-                File transactionFile = destinationDirectory.resolve(transaction).toFile();
+                long addressId = this.addressMap.getLong(address);
 
-                long[] la;
-                if (transactionFile.exists()) {
-                    la = (long[]) BinIO.loadObject(transactionFile);
 
-                    boolean skip = false;
-                    for (long a : la) {
-                        if (a == addressLong) {
-                            skip = true;
-                            break;
-                        }
-                    }
-
-                    if (skip) {
-                        continue;
-                    }
-
-                    la = LongArrays.ensureCapacity(la, la.length + 1);
-                    la[la.length - 1] = addressLong;
-                } else {
-                    la = new long[] { addressLong };
-                }
-                BinIO.storeObject(la, transactionFile);
-                this.progress.lightUpdate();
             } catch (NoSuchElementException e) {
                 break;
             }
         }
+
+        this.closeDatabase();
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+    private RocksDB startDatabase(boolean readonly, Path location) throws RocksDBException {
+        RocksDB.loadLibrary();
+
+        this.options = new Options()
+                .setCreateIfMissing(true)
+                .setCreateMissingColumnFamilies(true)
+                .setDbWriteBufferSize(WRITE_BUFFER_SIZE)
+                .setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
+                .setMaxBackgroundJobs(MAX_BACKGROUND_JOBS);
+
+        if (readonly) {
+            return RocksDB.openReadOnly(this.options, location.toString());
+        }
+
+        return RocksDB.open(this.options, location.toString());
+    }
+
+    public void closeDatabase() {
+        this.options.close();
+        this.db.close();
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException, RocksDBException {
         new TransactionsArrays().compute();
     }
 }

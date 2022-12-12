@@ -6,6 +6,9 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import it.unimi.dsi.logging.ProgressLogger;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 
 import javax.sound.sampled.Line;
 import java.io.*;
@@ -13,17 +16,18 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
 
-public class Utils {
-	static List<String[]> readTSV (File f, boolean skipHeader, LineFilter filter) throws IOException {
-		try (FileReader fr = new FileReader(f)) {
-			return readTSV(fr, skipHeader, filter);
-		}
-	}
+import static it.unimi.dsi.law.Parameters.*;
 
-	static List<String[]> readTSV (InputStream is,  boolean skipHeader, LineFilter filter) throws IOException {
-		try (InputStreamReader isr = new InputStreamReader(is)) {
-			return readTSV(isr, skipHeader, filter);
+public class Utils {
+	public static String[] keepImportant (String[] line, List<Integer> importantColumns) {
+		String[] filteredLine = new String[importantColumns.size()];
+
+		int j = 0;
+		for (int i : importantColumns) {
+			filteredLine[j++] = line[i];
 		}
+
+		return filteredLine;
 	}
 
 	interface LineFilter {
@@ -32,30 +36,6 @@ public class Utils {
 
 	interface LineCleaner {
 		String[] clean(String[] line);
-	}
-
-	static List<String[]> readTSV (Reader r, boolean skipHeader, LineFilter filter) throws IOException {
-		CSVParser tsvParser = new CSVParserBuilder().withSeparator('\t').build();
-		try (CSVReader tsvReader = new CSVReaderBuilder(r)
-				.withCSVParser(tsvParser)
-				.withSkipLines(skipHeader ? 1 : 0)
-				.build()) {
-
-			ArrayList<String[]> lines = new ArrayList<>();
-			while (true) {
-				String[] line = tsvReader.readNext();
-
-				if (line == null) {
-					break;
-				}
-
-				if (filter.accept(line)) {
-					lines.add(line);
-				}
-			}
-
-			return lines;
-		}
 	}
 
 	static class TSVDirectoryLineReader implements Iterator<String[]>, Iterable<String[]> {

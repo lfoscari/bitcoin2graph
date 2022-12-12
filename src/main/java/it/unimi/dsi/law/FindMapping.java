@@ -42,7 +42,7 @@ public class FindMapping implements Runnable {
 	}
 
 	public void findMapping () throws IOException, ClassNotFoundException, InterruptedException {
-		File[] transactionsInputs = inputTransactionsDirectory.toFile().listFiles();
+		File[] transactionsInputs = inputTransactionDatabaseDirectory.toFile().listFiles();
 
 		if (transactionsInputs == null) {
 			throw new FileNotFoundException("No inputs found!");
@@ -51,7 +51,7 @@ public class FindMapping implements Runnable {
 		for (File transactionInput : transactionsInputs) {
 			this.progress.lightUpdate();
 			String transaction = transactionInput.getName();
-			File transactionOutput = outputTransactionsDirectory.resolve(transaction).toFile();
+			File transactionOutput = outputTransactionDatabaseDirectory.resolve(transaction).toFile();
 
 			if (!transactionOutput.exists()) {
 				continue;
