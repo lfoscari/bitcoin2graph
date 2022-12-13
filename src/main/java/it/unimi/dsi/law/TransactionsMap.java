@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.List;
 
 import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.Parameters.BitcoinColumn.SPENDING_TRANSACTION_HASH;
 import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsMap {
@@ -33,7 +33,7 @@ public class TransactionsMap {
 
 		Iterable<String[]> transactions = Utils.readTSVs(
 			inputs, (line) -> true,
-			(line) -> new String[] { line[BitcoinColumn.SPENDING_TRANSACTION_HASH] },
+			(line) -> keepColumns(line, List.of(SPENDING_TRANSACTION_HASH)),
 			true);
 
 		for (String[] transactionLine : transactions) {

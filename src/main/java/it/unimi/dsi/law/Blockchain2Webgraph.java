@@ -27,7 +27,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		this.findMapping.start();
 	}
 
-	public static void main (String[] args) throws IOException, ClassNotFoundException, InterruptedException, RocksDBException {
+	public static void main (String[] args) throws IOException, InterruptedException, RocksDBException {
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
 		progress.displayLocalSpeed = true;
@@ -35,7 +35,6 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		graph.toFile().mkdir();
 
 		LinkedBlockingQueue<long[]> arcs = new LinkedBlockingQueue<>();
-		Object2LongFunction<String> addressLong = (Object2LongFunction<String>) BinIO.loadObject(addressesMapFile.toFile());
 
 		FindMapping fm = new FindMapping(arcs, progress);
 		Thread t = new Thread(fm);

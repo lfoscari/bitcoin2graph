@@ -59,7 +59,7 @@ public class Parameters {
 	// Select with columns to keep from the TSV and how many inputs and outputs to download
 	// from the inputsUrlsFilename and outputsUrlsFilename urls lists.
 
-	public static final List<Integer> INPUTS_IMPORTANT = List.of(SPENDING_TRANSACTION_HASH, RECIPIENT);
+	public static final List<Integer> INPUTS_IMPORTANT = List.of(RECIPIENT, SPENDING_TRANSACTION_HASH);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
 
 	// Logging

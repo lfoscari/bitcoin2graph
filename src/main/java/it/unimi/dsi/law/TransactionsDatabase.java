@@ -20,8 +20,6 @@ public class TransactionsDatabase {
     private final Int2LongFunction addressMap;
     private final Int2LongFunction transactionMap;
 
-    private final int WB_LIMIT = 10_000;
-
     private final ProgressLogger progress;
 
     public TransactionsDatabase() throws IOException, ClassNotFoundException {
@@ -44,23 +42,23 @@ public class TransactionsDatabase {
         {
             this.progress.start("Building input transactions database");
             LineFilter filter = (line) -> true;
-            LineCleaner cleaner = (line) -> Utils.keepImportant(line, INPUTS_IMPORTANT);
-            this.saveTransactions(inputsDirectory, inputTransactionDatabaseDirectory, filter, cleaner);
+            LineCleaner cleaner = (line) -> Utils.keepColumns(line, INPUTS_IMPORTANT);
+            this.saveTransactions(inputsDirectory, inputTransactionDatabaseDirectory, filter, cleaner, true);
             this.progress.stop();
         }
 
         {
             this.progress.start("Building output transactions database");
-            LineFilter filter = (line) -> line[IS_FROM_COINBASE].equals("0");
-            LineCleaner cleaner = (line) -> Utils.keepImportant(line, OUTPUTS_IMPORTANT);
-            this.saveTransactions(outputsDirectory, outputTransactionDatabaseDirectory, filter, cleaner);
+            LineFilter filter = (line) -> Utils.equalsAtColumn(line, "0", IS_FROM_COINBASE);
+            LineCleaner cleaner = (line) -> Utils.keepColumns(line, OUTPUTS_IMPORTANT);
+            this.saveTransactions(outputsDirectory, outputTransactionDatabaseDirectory, filter, cleaner, false);
             this.progress.stop();
         }
 
         this.progress.done();
     }
 
-    private void saveTransactions(Path sourcesDirectory, Path databaseDirectory, LineFilter filter, LineCleaner cleaner) throws IOException, RocksDBException {
+    private void saveTransactions(Path sourcesDirectory, Path databaseDirectory, LineFilter filter, LineCleaner cleaner, boolean isInput) throws IOException, RocksDBException {
         File[] sources = sourcesDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 
         if (sources == null) {
@@ -68,22 +66,16 @@ public class TransactionsDatabase {
         }
 
         RocksDB database = Utils.startDatabase(false, databaseDirectory);
-        WriteBatch wb = new WriteBatch();
 
         for (String[] line : Utils.readTSVs(sources, filter, cleaner, true)) {
-            long addressId = this.addressMap.get(line[1].hashCode());
-            long transactionId = this.transactionMap.get(line[0].hashCode());
+            long addressId = this.addressMap.get(line[isInput ? 0 : 1].hashCode());
+            long transactionId = this.transactionMap.get(line[isInput ? 1 : 0].hashCode());
 
-            wb.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
+            database.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
             this.progress.lightUpdate();
-
-            if (wb.getDataSize() >= this.WB_LIMIT) {
-                database.write(new WriteOptions(), wb);
-                wb = new WriteBatch();
-            }
         }
 
-        database.write(new WriteOptions(), wb);
+        database.syncWal();
         database.close();
     }
 
