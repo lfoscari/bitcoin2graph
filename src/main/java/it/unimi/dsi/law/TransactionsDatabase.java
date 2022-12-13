@@ -34,8 +34,8 @@ public class TransactionsDatabase {
         }
 
         this.progress = progress;
-        this.addressMap = (Int2LongFunction) BinIO.loadObject(addressesMapFile.toFile());
-        this.transactionMap = (Int2LongFunction) BinIO.loadObject(transactionsMapFile.toFile());
+        this.addressMap = (Int2LongFunction) Utils.loadFullObject(addressesMapFile.toFile());
+        this.transactionMap = (Int2LongFunction) Utils.loadFullObject(transactionsMapFile.toFile());
     }
 
     void compute() throws IOException, RocksDBException {
@@ -59,20 +59,26 @@ public class TransactionsDatabase {
     }
 
     private void saveTransactions(Path sourcesDirectory, Path databaseDirectory, LineFilter filter, LineCleaner cleaner, boolean isInput) throws IOException, RocksDBException {
-        File[] sources = sourcesDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
+        final File[] sources = sourcesDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 
         if (sources == null) {
             throw new NoSuchFileException("Download inputs and outputs first");
         }
 
-        RocksDB database = Utils.startDatabase(false, databaseDirectory);
+        final RocksDB database = Utils.startDatabase(false, databaseDirectory);
+        final WriteBatch wb = new WriteBatch();
 
         for (String[] line : Utils.readTSVs(sources, filter, cleaner, true)) {
             long addressId = this.addressMap.get(line[isInput ? 0 : 1].hashCode());
             long transactionId = this.transactionMap.get(line[isInput ? 1 : 0].hashCode());
 
-            database.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
+            wb.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
             this.progress.lightUpdate();
+
+            if (wb.getDataSize() > 10_000) {
+                database.write(new WriteOptions(), wb);
+                wb.clear();
+            }
         }
 
         database.syncWal();

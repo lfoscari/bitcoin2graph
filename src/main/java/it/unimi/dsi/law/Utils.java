@@ -1,8 +1,10 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
 import org.rocksdb.*;
+import org.rocksdb.util.SizeUnit;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -20,7 +22,7 @@ public class Utils {
 				(byte) ((data >> 24) & 0xff),
 				(byte) ((data >> 16) & 0xff),
 				(byte) ((data >> 8) & 0xff),
-				(byte) ((data >> 0) & 0xff),
+				(byte) (data & 0xff)
 		};
 	}
 
@@ -35,23 +37,40 @@ public class Utils {
 		return result;
 	}
 
+	public static Object loadFullObject(final File file) throws IOException, ClassNotFoundException {
+		try (FileInputStream is = new FileInputStream(file);
+			 ObjectInputStream ois = new ObjectInputStream(is)) {
+			return ois.readObject();
+		}
+	}
+
 	public static RocksDB startDatabase(boolean readonly, Path location) throws RocksDBException {
 		RocksDB.loadLibrary();
 
-		try (Options options = new Options()
+		Options options = new Options()
 				.setCreateIfMissing(true)
 				.setMergeOperator(new StringAppendOperator())
 				.setDbWriteBufferSize(WRITE_BUFFER_SIZE)
 				.setMaxTotalWalSize(MAX_TOTAL_WAL_SIZE)
 				.setMaxBackgroundJobs(MAX_BACKGROUND_JOBS)
-				.setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE)) {
+				.setMaxBytesForLevelBase(MAX_BYTES_FOR_LEVEL_BASE);
 
-			if (readonly) {
-				return RocksDB.openReadOnly(options, location.toString());
-			}
+		LRUCache cache = new LRUCache(128 * SizeUnit.MB);
+		BlockBasedTableConfig bbtc = new BlockBasedTableConfig()
+				.setBlockSize(21 * SizeUnit.GB)
+				.setBlockCache(cache);
 
-			return RocksDB.open(options, location.toString());
+		// HOW TO USE IT?
+
+		if (readonly) {
+			options = options.prepareForBulkLoad();
+			return RocksDB.openReadOnly(options, location.toString());
 		}
+
+		RocksDB database = RocksDB.open(options, location.toString());
+		options.close();
+
+		return database;
 	}
 
 	interface LineFilter {
