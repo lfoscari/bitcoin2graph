@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
+import it.unimi.dsi.webgraph.EFGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
@@ -45,7 +46,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
-		BVGraph.store(graph, basename.toString());
+		EFGraph.store(graph, basename.toString());
 		BinIO.storeObject(graph.ids, ids.toFile());
 
 		t.join();

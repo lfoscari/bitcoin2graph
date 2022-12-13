@@ -31,8 +31,7 @@ public class TransactionsMap {
 			throw new NoSuchFileException("Download inputs first");
 		}
 
-		Iterable<String[]> transactions = Utils.readTSVs(
-			inputs, (line) -> true,
+		Iterable<String[]> transactions = Utils.readTSVs(inputs, (line) -> true,
 			(line) -> keepColumns(line, List.of(SPENDING_TRANSACTION_HASH)),
 			true);
 

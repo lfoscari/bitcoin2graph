@@ -58,8 +58,14 @@ public class FindMapping implements Runnable {
 		try (RocksIterator inputIterator = this.inputs.newIterator()) {
 			for (inputIterator.seekToFirst(); inputIterator.isValid(); inputIterator.next()) {
 				byte[] transaction = inputIterator.key();
+
+				byte[] outputs = this.outputs.get(transaction);
+				if (outputs == null) {
+					continue;
+				}
+
 				long[] inputsAddresses = Utils.bytesToLongs(inputIterator.value());
-				long[] outputsAddresses = Utils.bytesToLongs(this.outputs.get(transaction));
+				long[] outputsAddresses = Utils.bytesToLongs(outputs);
 
 				for (long inputAddress : inputsAddresses) {
 					for (long outputAddress : outputsAddresses) {
