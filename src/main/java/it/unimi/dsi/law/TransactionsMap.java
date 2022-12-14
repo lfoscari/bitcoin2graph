@@ -18,6 +18,8 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsMap {
 	void compute() throws IOException {
+		// WHY USE THE HASHCODE?
+
 		Int2LongFunction transactionMap = new Int2LongOpenHashMap();
 		long count = 0;
 
@@ -32,8 +34,7 @@ public class TransactionsMap {
 		}
 
 		Iterable<String[]> transactions = Utils.readTSVs(inputs, (line) -> true,
-			(line) -> keepColumns(line, List.of(SPENDING_TRANSACTION_HASH)),
-			true);
+			(line) -> keepColumns(line, List.of(SPENDING_TRANSACTION_HASH)));
 
 		for (String[] transactionLine : transactions) {
 			int transaction = transactionLine[0].hashCode();

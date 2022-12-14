@@ -7,6 +7,7 @@ import org.rocksdb.*;
 import org.rocksdb.util.SizeUnit;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -35,6 +36,14 @@ public class Utils {
 			}
 		}
 		return result;
+	}
+
+	public static long hashCode(String s) {
+		long h = 0;
+		for (byte v : s.getBytes(Charset.defaultCharset())) {
+			h = 31 * h + (v & 0xff);
+		}
+		return h;
 	}
 
 	public static Object loadFullObject(final File file) throws IOException, ClassNotFoundException {
@@ -219,8 +228,6 @@ public class Utils {
 	}
 
 	static class TSVIterable implements Iterator<MutableString>, Iterable<MutableString>, Closeable {
-		private final boolean skipHeader;
-
 		private final Iterator<File> files;
 		private final MutableString candidate;
 		private boolean fresh = false;
@@ -229,8 +236,7 @@ public class Utils {
 		private FileReader reader;
 		private FastBufferedReader bufferedReader;
 
-		public TSVIterable (MutableString candidate, File[] files, boolean skipHeader) throws IOException {
-			this.skipHeader = skipHeader;
+		public TSVIterable (MutableString candidate, File[] files) throws IOException {
 			this.files = Arrays.stream(files).iterator();
 			this.candidate = candidate;
 			this.nextFile();
@@ -245,10 +251,8 @@ public class Utils {
 			this.reader = new FileReader(this.currentFile);
 			this.bufferedReader = new FastBufferedReader(this.reader);
 
-			if (this.skipHeader) {
-				this.bufferedReader.readLine(this.candidate);
-				this.candidate.delete(0, this.candidate.length());
-			}
+			// Skip header
+			this.bufferedReader.readLine(this.candidate);
 		}
 
 		public void close () throws IOException {
@@ -294,11 +298,11 @@ public class Utils {
 	}
 
 	static Iterable<String[]> readTSVs(File tsv) throws IOException {
-		return readTSVs(new File[] { tsv }, null, null, true);
+		return readTSVs(new File[] { tsv }, null, null);
 	}
 
-	static Iterable<String[]> readTSVs(File[] files, LineFilter filter, LineCleaner cleaner, boolean skipHeader) throws IOException {
-		Iterable<MutableString> iterable = new TSVIterable(new MutableString(), files, skipHeader);
+	static Iterable<String[]> readTSVs(File[] files, LineFilter filter, LineCleaner cleaner) throws IOException {
+		Iterable<MutableString> iterable = new TSVIterable(new MutableString(), files);
 
 		if (filter != null) {
 			iterable = new FilteringIterable(iterable, filter);

@@ -23,10 +23,6 @@
    Blockchain2Webgraph to save the results in the Webgraph format.
 
 TODO: keep track of the inputs and outputs already added to the graph.
-TODO: avoid writing a file for each transaction, but instead group multiple
-transactions together and use a bloom filter to find the right group.  Write a
-class which loads the right transaction group and stores the MRU.  Then you can
-parallelize.  To we really need to parse the TSV? If we only need to compute
-the transaction arrays seems useless.
-TODO: write a parametrised class with does everything, from right after the tsv
-download
+TODO: rewrite RocksDBWrapper to handle both inputs and outputs in
+different columns, then when searching for mappings iterate over both,
+and because the keys are sorted should be linear.

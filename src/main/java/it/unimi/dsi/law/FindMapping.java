@@ -1,17 +1,11 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.fastutil.Pair;
-import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -19,9 +13,8 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class FindMapping implements Runnable {
 	private final LinkedBlockingQueue<long[]> arcs;
-
-	private final RocksDB inputs;
-	private final RocksDB outputs;
+	private final RocksDBWrapper inputs;
+	private final RocksDBWrapper outputs;
 
 	private final ProgressLogger progress;
 
@@ -36,10 +29,8 @@ public class FindMapping implements Runnable {
 		}
 
 		this.arcs = arcs;
-
-		this.inputs = Utils.startDatabase(true, inputTransactionDatabaseDirectory);
-		this.outputs = Utils.startDatabase(true, outputTransactionDatabaseDirectory);
-
+		this.inputs = new RocksDBWrapper(true, inputTransactionDatabaseDirectory);
+		this.outputs = new RocksDBWrapper(true, outputTransactionDatabaseDirectory);
 		this.progress = progress;
 	}
 
@@ -55,8 +46,10 @@ public class FindMapping implements Runnable {
 	}
 
 	public void findMapping () throws IOException, ClassNotFoundException, InterruptedException {
-		try (RocksIterator inputIterator = this.inputs.newIterator()) {
+		try (RocksIterator inputIterator = this.inputs.iterator()) {
+			int i = 0;
 			for (inputIterator.seekToFirst(); inputIterator.isValid(); inputIterator.next()) {
+				i++;
 				byte[] transaction = inputIterator.key();
 
 				byte[] outputs = this.outputs.get(transaction);
@@ -77,9 +70,12 @@ public class FindMapping implements Runnable {
 					}
 				}
 			}
+			System.out.println(i);
+
 		} catch (RocksDBException e) {
 			throw new RuntimeException(e);
 		}
+
 	}
 
 	private void close () {

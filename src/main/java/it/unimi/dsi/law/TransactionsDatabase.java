@@ -11,14 +11,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsDatabase {
-    private final Int2LongFunction addressMap;
-    private final Int2LongFunction transactionMap;
+    // private final Int2LongFunction addressMap;
+    // private final Int2LongFunction transactionMap;
 
     private final ProgressLogger progress;
 
@@ -34,55 +36,43 @@ public class TransactionsDatabase {
         }
 
         this.progress = progress;
-        this.addressMap = (Int2LongFunction) Utils.loadFullObject(addressesMapFile.toFile());
-        this.transactionMap = (Int2LongFunction) Utils.loadFullObject(transactionsMapFile.toFile());
+        // this.addressMap = (Int2LongFunction) Utils.loadFullObject(addressesMapFile.toFile());
+        // this.transactionMap = (Int2LongFunction) Utils.loadFullObject(transactionsMapFile.toFile());
     }
 
     void compute() throws IOException, RocksDBException {
-        {
-            this.progress.start("Building input transactions database");
-            LineFilter filter = (line) -> true;
+        this.progress.start("Building input transactions database");
+        try (RocksDBWrapper database = new RocksDBWrapper(false, inputTransactionDatabaseDirectory)) {
             LineCleaner cleaner = (line) -> Utils.keepColumns(line, INPUTS_IMPORTANT);
-            this.saveTransactions(inputsDirectory, inputTransactionDatabaseDirectory, filter, cleaner, true);
-            this.progress.stop();
+            this.saveTransactions(inputsDirectory, database, null, cleaner, true);
         }
+        this.progress.stop();
 
-        {
-            this.progress.start("Building output transactions database");
+        this.progress.start("Building output transactions database");
+        try (RocksDBWrapper database = new RocksDBWrapper(false, outputTransactionDatabaseDirectory)) {
             LineFilter filter = (line) -> Utils.equalsAtColumn(line, "0", IS_FROM_COINBASE);
             LineCleaner cleaner = (line) -> Utils.keepColumns(line, OUTPUTS_IMPORTANT);
-            this.saveTransactions(outputsDirectory, outputTransactionDatabaseDirectory, filter, cleaner, false);
-            this.progress.stop();
+            this.saveTransactions(outputsDirectory, database, filter, cleaner, false);
         }
-
         this.progress.done();
     }
 
-    private void saveTransactions(Path sourcesDirectory, Path databaseDirectory, LineFilter filter, LineCleaner cleaner, boolean isInput) throws IOException, RocksDBException {
+    private void saveTransactions(Path sourcesDirectory, RocksDBWrapper database, LineFilter filter, LineCleaner cleaner, boolean isInput) throws IOException, RocksDBException {
         final File[] sources = sourcesDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 
         if (sources == null) {
             throw new NoSuchFileException("Download inputs and outputs first");
         }
 
-        final RocksDB database = Utils.startDatabase(false, databaseDirectory);
-        final WriteBatch wb = new WriteBatch();
+        for (String[] line : Utils.readTSVs(sources, filter, cleaner)) {
+            long addressId = Utils.hashCode(line[isInput ? 0 : 1]);
+            long transactionId = Utils.hashCode(line[isInput ? 1 : 0]);
 
-        for (String[] line : Utils.readTSVs(sources, filter, cleaner, true)) {
-            long addressId = this.addressMap.get(line[isInput ? 0 : 1].hashCode());
-            long transactionId = this.transactionMap.get(line[isInput ? 1 : 0].hashCode());
+            System.out.println(addressId + " - " + transactionId);
 
-            wb.merge(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
+            database.add(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
             this.progress.lightUpdate();
-
-            if (wb.getDataSize() > 10_000) {
-                database.write(new WriteOptions(), wb);
-                wb.clear();
-            }
         }
-
-        database.syncWal();
-        database.close();
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, RocksDBException {
