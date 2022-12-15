@@ -23,6 +23,3 @@
    Blockchain2Webgraph to save the results in the Webgraph format.
 
 TODO: keep track of the inputs and outputs already added to the graph.
-TODO: rewrite RocksDBWrapper to handle both inputs and outputs in
-different columns, then when searching for mappings iterate over both,
-and because the keys are sorted should be linear.

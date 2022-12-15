@@ -28,7 +28,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		this.findMapping.start();
 	}
 
-	public static void main (String[] args) throws IOException, InterruptedException, RocksDBException {
+	public static void main (String[] args) throws IOException, InterruptedException {
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
 		progress.displayLocalSpeed = true;

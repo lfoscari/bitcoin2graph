@@ -16,6 +16,8 @@ import java.util.List;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
+import static it.unimi.dsi.law.RocksDBWrapper.Column.INPUT;
+import static it.unimi.dsi.law.RocksDBWrapper.Column.OUTPUT;
 import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsDatabase {
@@ -41,20 +43,18 @@ public class TransactionsDatabase {
     }
 
     void compute() throws IOException, RocksDBException {
-        this.progress.start("Building input transactions database");
-        try (RocksDBWrapper database = new RocksDBWrapper(false, inputTransactionDatabaseDirectory)) {
+        try (RocksDBWrapper database = new RocksDBWrapper(false, transactionsDatabaseDirectory)) {
+            this.progress.start("Building input transactions database");
             LineCleaner cleaner = (line) -> Utils.keepColumns(line, INPUTS_IMPORTANT);
             this.saveTransactions(inputsDirectory, database, null, cleaner, true);
-        }
-        this.progress.stop();
+            this.progress.stop();
 
-        this.progress.start("Building output transactions database");
-        try (RocksDBWrapper database = new RocksDBWrapper(false, outputTransactionDatabaseDirectory)) {
+            this.progress.start("Building output transactions database");
             LineFilter filter = (line) -> Utils.equalsAtColumn(line, "0", IS_FROM_COINBASE);
-            LineCleaner cleaner = (line) -> Utils.keepColumns(line, OUTPUTS_IMPORTANT);
+            cleaner = (line) -> Utils.keepColumns(line, OUTPUTS_IMPORTANT);
             this.saveTransactions(outputsDirectory, database, filter, cleaner, false);
+            this.progress.done();
         }
-        this.progress.done();
     }
 
     private void saveTransactions(Path sourcesDirectory, RocksDBWrapper database, LineFilter filter, LineCleaner cleaner, boolean isInput) throws IOException, RocksDBException {
@@ -68,9 +68,9 @@ public class TransactionsDatabase {
             long addressId = Utils.hashCode(line[isInput ? 0 : 1]);
             long transactionId = Utils.hashCode(line[isInput ? 1 : 0]);
 
-            System.out.println(addressId + " - " + transactionId);
+            // System.out.println(addressId + " - " + transactionId);
 
-            database.add(Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
+            database.add(isInput ? INPUT : OUTPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
             this.progress.lightUpdate();
         }
     }
