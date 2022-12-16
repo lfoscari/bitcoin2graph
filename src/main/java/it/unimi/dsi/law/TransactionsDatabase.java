@@ -1,7 +1,5 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.fastutil.ints.Int2LongFunction;
-import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.rocksdb.*;
 import org.slf4j.Logger;
@@ -10,9 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -79,7 +74,7 @@ public class TransactionsDatabase {
         }
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, RocksDBException {
+    public static void main(String[] args) throws IOException, RocksDBException {
         new TransactionsDatabase().compute();
     }
 }
