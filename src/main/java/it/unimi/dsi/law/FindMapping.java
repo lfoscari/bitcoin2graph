@@ -20,7 +20,7 @@ public class FindMapping implements Runnable {
 	private final LinkedBlockingQueue<long[]> arcs;
 	private final ProgressLogger progress;
 
-	public FindMapping () throws RocksDBException {
+	public FindMapping () {
 		this(null, null);
 	}
 
@@ -73,7 +73,7 @@ public class FindMapping implements Runnable {
 					inputIterator.next();
 				}
 
-				if (Arrays.equals(inputIterator.key(), transaction)) {
+				if (Arrays.equals(inputIterator.key(), transaction)) { // redundant
 					this.addArcs(inputIterator.value(), outputIterator.value());
 				}
 			}
