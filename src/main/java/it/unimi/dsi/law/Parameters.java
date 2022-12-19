@@ -23,10 +23,6 @@ public class Parameters {
 
 	public final static Path transactionsDatabaseDirectory = resources.resolve("transaction");
 
-	public final static Path addressesFile = resources.resolve("addresses.tsv");
-	public final static Path addressesMapFile = resources.resolve("addresses.map");
-	public final static Path transactionsMapFile = resources.resolve("transactions.map");
-
 	// Bitcoin Blockchair schema for both inputs and outputs
 
 	public static class BitcoinColumn {
@@ -54,9 +50,7 @@ public class Parameters {
 				CDD = 20;
 	}
 
-	// Download
-	// Select with columns to keep from the TSV and how many inputs and outputs to download
-	// from the inputsUrlsFilename and outputsUrlsFilename urls lists.
+	// Useful columns from the tsvs
 
 	public static final List<Integer> INPUTS_IMPORTANT = List.of(RECIPIENT, SPENDING_TRANSACTION_HASH);
 	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
@@ -65,16 +59,6 @@ public class Parameters {
 
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
-
-	/* public final static List<String> CRYPTOCURRENCIES = List.of(
-		"bitcoin",
-		"bitcoin-cash",
-		"dash",
-		"dogecoin",
-		"ethereum",
-		"litecoin",
-		"zcash"
-	); */
 
 	public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;
 	public final static long MAX_TOTAL_WAL_SIZE = SizeUnit.GB;

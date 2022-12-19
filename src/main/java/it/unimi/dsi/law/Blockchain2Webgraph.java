@@ -1,56 +1,46 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.EFGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.RocksDBWrapper.Column.INPUT;
+import static it.unimi.dsi.law.RocksDBWrapper.Column.OUTPUT;
 
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
-	private final LinkedBlockingQueue<long[]> arcs;
-	private final Thread findMapping;
+	private final RocksDBWrapper database;
 
-	public Blockchain2Webgraph (final LinkedBlockingQueue<long[]> arcs, final Thread findMapping) {
-		this.arcs = arcs;
-		this.findMapping = findMapping;
-		this.findMapping.start();
-	}
+	private final ByteBuffer inputTransaction = ByteBuffer.allocate(4);
+	private final ByteBuffer outputTransaction = ByteBuffer.allocate(4);
 
-	public static void main (String[] args) throws IOException, InterruptedException {
-		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
-		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
-		progress.displayLocalSpeed = true;
+	private final RocksIterator inputIterator;
+	private final RocksIterator outputIterator;
 
-		graph.toFile().mkdir();
+	private final Queue<long[]> arcs = new LinkedList<>();
 
-		LinkedBlockingQueue<long[]> arcs = new LinkedBlockingQueue<>();
+	public Blockchain2Webgraph () throws RocksDBException {
+		this.database = new RocksDBWrapper(true, transactionsDatabaseDirectory);
 
-		FindMapping fm = new FindMapping(arcs, progress);
-		Thread t = new Thread(fm);
-		Blockchain2Webgraph bw = new Blockchain2Webgraph(arcs, t);
+		this.inputIterator = this.database.iterator(INPUT);
+		this.outputIterator = this.database.iterator(OUTPUT);
 
-		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
-		tempDir.deleteOnExit();
-
-		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(),
-				false, false, 100_000, tempDir, progress);
-
-		EFGraph.store(graph, basename.toString());
-		BinIO.storeObject(graph.ids, ids.toFile());
-
-		t.join();
+		this.inputIterator.seekToFirst();
+		this.outputIterator.seekToFirst();
 	}
 
 	@Override
@@ -60,21 +50,65 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 	@Override
 	public boolean hasNext () {
-		while (this.findMapping.isAlive()) {
-			if (!this.arcs.isEmpty()) {
-				return true;
+		if (!this.arcs.isEmpty()) {
+			return true;
+		}
+
+		for (; this.outputIterator.isValid(); this.outputIterator.next()) {
+			this.outputIterator.key(this.outputTransaction);
+
+			for (; this.inputIterator.isValid(); this.inputIterator.next()) {
+				this.inputIterator.key(this.inputTransaction);
+
+				int cmp = Arrays.compareUnsigned(this.outputTransaction.array(), this.inputTransaction.array());
+
+				if (cmp == 0) {
+					this.addArcs(this.inputIterator.value(), this.outputIterator.value());
+					this.outputIterator.next();
+					return true;
+				} else if (cmp < 0) {
+					break;
+				}
 			}
 		}
 
-		return !this.arcs.isEmpty();
+		this.close();
+		return false;
 	}
 
 	@Override
 	public long[] next () {
-		try {
-			return this.arcs.take();
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
+		return this.arcs.remove();
+	}
+
+	private void close () {
+		this.inputIterator.close();
+		this.outputIterator.close();
+		this.database.close();
+	}
+
+	private void addArcs (byte[] inputsAddresses, byte[] outputsAddresses) {
+		for (long inputAddress : Utils.bytesToLongs(inputsAddresses)) {
+			for (long outputAddress : Utils.bytesToLongs(outputsAddresses)) {
+				this.arcs.add(new long[] { inputAddress, outputAddress });
+			}
 		}
+	}
+
+	public static void main (String[] args) throws IOException, InterruptedException, RocksDBException {
+		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
+		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
+		progress.displayLocalSpeed = true;
+
+		graph.toFile().mkdir();
+
+		Blockchain2Webgraph bw = new Blockchain2Webgraph();
+		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
+		tempDir.deleteOnExit();
+
+		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 1_000_000, tempDir, progress);
+
+		EFGraph.store(graph, basename.toString());
+		BinIO.storeObject(graph.ids, ids.toFile());
 	}
 }
