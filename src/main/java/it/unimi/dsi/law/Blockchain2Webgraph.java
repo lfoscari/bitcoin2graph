@@ -32,8 +32,14 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final RocksIterator outputIterator;
 
 	private final Queue<long[]> arcs = new LinkedList<>();
+	private final ProgressLogger progress;
 
 	public Blockchain2Webgraph () throws RocksDBException {
+		Logger logger = LoggerFactory.getLogger(this.getClass());
+
+		this.progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
+		this.progress.displayLocalSpeed = true;
+
 		this.database = new RocksDBWrapper(true, transactionsDatabaseDirectory);
 
 		this.inputIterator = this.database.iterator(INPUT);
@@ -78,6 +84,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 	@Override
 	public long[] next () {
+		this.progress.lightUpdate();
 		return this.arcs.remove();
 	}
 
