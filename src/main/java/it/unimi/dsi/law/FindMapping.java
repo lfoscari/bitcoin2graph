@@ -48,59 +48,28 @@ public class FindMapping implements Runnable {
 		try (RocksIterator inputIterator = database.iterator(INPUT);
 			RocksIterator outputIterator = database.iterator(OUTPUT)) {
 
-			/* List<byte[]> outputs = new ArrayList<>();
-			for (outputIterator.seekToFirst(); outputIterator.isValid(); outputIterator.next()) {
-				outputs.add(outputIterator.key());
-			}
+			ByteBuffer inputTransaction = ByteBuffer.allocate(20);
+			ByteBuffer outputTransaction = ByteBuffer.allocate(20);
 
-			List<byte[]> inputs = new ArrayList<>();
-			for (inputIterator.seekToFirst(); inputIterator.isValid(); inputIterator.next()) {
-				inputs.add(inputIterator.key());
-			}
-
-			for (int i = 0; i < Integer.min(outputs.size(), inputs.size()); i++) {
-				System.out.println(Arrays.toString(inputs.get(i)) + "\t\t\t" + Arrays.toString(outputs.get(i)));
-			} */
-
-			// Iterate before over the outputs because there are less
 			inputIterator.seekToFirst();
+			inputIterator.key(inputTransaction);
 
 			for (outputIterator.seekToFirst(); outputIterator.isValid(); outputIterator.next()) {
-				// Can reuse a byte buffer in 'key'
-				byte[] transaction = outputIterator.key();
-
-				while (Arrays.compareUnsigned(transaction, inputIterator.key()) > 0) {
-					inputIterator.next();
-				}
-
-				if (Arrays.equals(inputIterator.key(), transaction)) { // redundant
-					this.addArcs(inputIterator.value(), outputIterator.value());
-				}
-			}
-
-			/* outputIterator.seekToFirst();
-			inputIterator.seekToFirst();
-
-			ByteBuffer outputTransaction = ByteBuffer.allocate(Long.BYTES);
-			ByteBuffer inputTransaction = ByteBuffer.allocate(Long.BYTES);
-
-			for (; outputIterator.isValid(); outputIterator.next()) {
 				outputIterator.key(outputTransaction);
 
 				for (; inputIterator.isValid(); inputIterator.next()) {
 					inputIterator.key(inputTransaction);
-					int order = Arrays.compareUnsigned(outputTransaction.array(), inputTransaction.array());
 
-					if (order > 0) {
-						break;
-					}
+					int cmp = Arrays.compareUnsigned(outputTransaction.array(), inputTransaction.array());
 
-					if (order == 0) {
+					if (cmp == 0) {
 						this.addArcs(inputIterator.value(), outputIterator.value());
+						break;
+					} else if (cmp < 0) {
 						break;
 					}
 				}
-			} */
+			}
 		}
 	}
 
