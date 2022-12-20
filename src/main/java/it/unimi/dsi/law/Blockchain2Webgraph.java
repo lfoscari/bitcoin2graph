@@ -70,6 +70,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 					this.outputIterator.next();
 					return true;
 				} else if (cmp < 0) {
+					// Transaction is missing
 					break;
 				}
 			}
@@ -92,14 +93,15 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	}
 
 	private void addArcs (byte[] inputsAddresses, byte[] outputsAddresses) {
-		for (long inputAddress : Utils.bytesToLongs(inputsAddresses)) {
-			for (long outputAddress : Utils.bytesToLongs(outputsAddresses)) {
+		long[] outputAddressesLong = Utils.bytesToLongs(outputsAddresses);
+		for (long inputAddress: Utils.bytesToLongs(inputsAddresses)) {
+			for (long outputAddress: outputAddressesLong) {
 				this.arcs.add(new long[] { inputAddress, outputAddress });
 			}
 		}
 	}
 
-	public static void main (String[] args) throws IOException, InterruptedException, RocksDBException {
+	public static void main (String[] args) throws IOException, RocksDBException {
 		Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, "arcs");
 		progress.displayLocalSpeed = true;
@@ -110,7 +112,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
 
-		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 1_000_000, tempDir, progress);
+		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
 		EFGraph.store(graph, basename.toString());
 		BinIO.storeObject(graph.ids, ids.toFile());
