@@ -25,8 +25,8 @@ import static it.unimi.dsi.law.RocksDBWrapper.Column.OUTPUT;
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final RocksDBWrapper database;
 
-	private final ByteBuffer inputTransaction = ByteBuffer.allocate(4);
-	private final ByteBuffer outputTransaction = ByteBuffer.allocate(4);
+	private final ByteBuffer inputTransaction = ByteBuffer.allocate(Long.BYTES);
+	private final ByteBuffer outputTransaction = ByteBuffer.allocate(Long.BYTES);
 
 	private final RocksIterator inputIterator;
 	private final RocksIterator outputIterator;
@@ -109,7 +109,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		graph.toFile().mkdir();
 
 		Blockchain2Webgraph bw = new Blockchain2Webgraph(progress);
-		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
+		File tempDir = Files.createTempDirectory(resources, "bg_temp").toFile();
 		tempDir.deleteOnExit();
 
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);

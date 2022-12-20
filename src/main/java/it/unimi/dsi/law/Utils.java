@@ -1,43 +1,93 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
 
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 public class Utils {
-	public static byte[] longToBytes(long data) {
-		return new byte[] {
-				(byte) ((data >> 56) & 0xff),
-				(byte) ((data >> 48) & 0xff),
-				(byte) ((data >> 40) & 0xff),
-				(byte) ((data >> 32) & 0xff),
-				(byte) ((data >> 24) & 0xff),
-				(byte) ((data >> 16) & 0xff),
-				(byte) ((data >> 8) & 0xff),
-				(byte) (data & 0xff)
-		};
+	public static byte[] intToBytes(final int data) {
+		ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
+		bb.putInt(data);
+		return bb.array();
 	}
 
-	public static long[] bytesToLongs(byte[] data) {
+	public static long[] bytesToLongs(final byte[] data) {
+		ByteBuffer bb = ByteBuffer.wrap(data);
+
 		int size = data.length / Long.BYTES;
 		long[] result = new long[size];
-		for (int i = 0; i < size; i += 1) {
-			for (int j = i * Long.BYTES; j < (i + 1) * Long.BYTES; j++) {
-				result[i] = (result[i] << 8) + (data[j] & 255);
-			}
+
+		for (int i = 0; i < size; i++) {
+			result[i] = bb.getInt();
 		}
+
 		return result;
 	}
 
-	public static long hashCode(String s) {
-		long h = 0;
-		for (byte v : s.getBytes(Charset.defaultCharset())) {
-			h = 31 * h + (v & 0xff);
+	public static int[] distinct(final int[] data) {
+		int max = data.length;
+		int i = 0;
+		while (i < max) {
+			boolean unique = true;
+
+			for (int j = i + 1; j < max; j++) {
+				if (data[i] == data[j]) {
+					IntArrays.swap(data, j, max - 1);
+					unique = false;
+					break;
+				}
+			}
+
+			if (unique) {
+				i++;
+			} else {
+				max--;
+			}
 		}
-		return h;
+
+		return IntArrays.trim(data, max);
+	}
+
+	public static int[] bytesToInts(final byte[] data) {
+		ByteBuffer bb = ByteBuffer.wrap(data);
+
+		int size = data.length / Integer.BYTES;
+		int[] result = new int[size];
+
+		for (int i = 0; i < size; i++) {
+			result[i] = bb.getInt();
+		}
+
+		return result;
+	}
+
+	public static int[] intersect(final int[] a, final int[] b) {
+		int max = a.length;
+		int i = 0;
+
+		while (i < max) {
+			boolean exists = false;
+			for (int l : b) {
+				if (a[i] == l) {
+					exists = true;
+					break;
+				}
+			}
+
+			if (!exists) {
+				IntArrays.swap(a, i, max - 1);
+				max--;
+			} else {
+				i++;
+			}
+		}
+
+		return IntArrays.trim(a, max);
 	}
 
 	interface LineFilter {

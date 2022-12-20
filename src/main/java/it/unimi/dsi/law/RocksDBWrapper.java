@@ -51,18 +51,18 @@ public class RocksDBWrapper implements Closeable {
 		}
 	}
 
-	public void add (Column column, byte[] transaction, byte[] address) throws RocksDBException {
+	public void add (Column column, byte[] key, byte[] value) throws RocksDBException {
 		ColumnFamilyHandle handle = this.columnFamilyHandleList.get(column.index);
-		this.writeBatch.merge(handle, transaction, address);
+		this.writeBatch.merge(handle, key, value);
 
 		if (this.writeBatch.getDataSize() > this.WB_LIMIT) {
 			this.commit();
 		}
 	}
 
-	public byte[] get (Column column, byte[] transaction) throws RocksDBException {
+	public byte[] get (Column column, byte[] key) throws RocksDBException {
 		ColumnFamilyHandle handle = this.columnFamilyHandleList.get(column.index);
-		return this.database.get(handle, transaction);
+		return this.database.get(handle, key);
 	}
 
 	public RocksIterator iterator (Column column) {
@@ -76,10 +76,6 @@ public class RocksDBWrapper implements Closeable {
 	}
 
 	public void close () {
-		for (final ColumnFamilyHandle columnFamilyHandle : this.columnFamilyHandleList) {
-			columnFamilyHandle.close();
-		}
-
 		if (!this.readonly) {
 			try {
 				this.commit();
@@ -88,6 +84,10 @@ public class RocksDBWrapper implements Closeable {
 				throw new RuntimeException(e);
 			}
 		}
+
+        for (final ColumnFamilyHandle columnFamilyHandle : this.columnFamilyHandleList) {
+            columnFamilyHandle.close();
+        }
 
 		this.database.close();
 		this.options.close();

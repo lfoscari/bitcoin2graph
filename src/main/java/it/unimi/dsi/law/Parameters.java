@@ -21,7 +21,12 @@ public class Parameters {
 	public final static Path inputsDirectory = resources.resolve("inputs");
 	public final static Path outputsDirectory = resources.resolve("outputs");
 
+	public final static Path transactionMapLocation = resources.resolve("transactions.map");
+	public final static Path addressFile = resources.resolve("addresses.tsv");
+	public final static Path addressMapLocation = resources.resolve("addresses.map");
+
 	public final static Path transactionsDatabaseDirectory = resources.resolve("transaction");
+	public final static Path addressDatabaseDirectory = resources.resolve("addresses");
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 
