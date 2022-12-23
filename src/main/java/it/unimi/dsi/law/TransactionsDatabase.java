@@ -1,6 +1,5 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.Util;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.rocksdb.*;
@@ -10,8 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.util.Iterator;
-import java.util.List;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -46,17 +43,12 @@ public class TransactionsDatabase {
 					throw new NoSuchFileException("No inputs found in " + inputsDirectory);
 				}
 
-				MutableString tsvLine = new MutableString();
-				Iterator<MutableString> tsvLines = Utils.readTSVs(sources, tsvLine, null);
-
-				while (tsvLines.hasNext()) {
+				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), null)) {
 					long addressId = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
 					long transactionId = Utils.hashCode(Utils.column(tsvLine, SPENDING_TRANSACTION_HASH));
 
 					database.add(INPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
 					this.progress.lightUpdate();
-
-					tsvLines.next();
 				}
 			}
 
@@ -64,23 +56,18 @@ public class TransactionsDatabase {
 			this.progress.start("Building output transactions database");
 
 			{
-				LineFilter filter = (line) -> Utils.equalsAtColumn(line, "0", IS_FROM_COINBASE);
+				LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 				File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 				if (sources == null) {
 					throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 				}
 
-				MutableString tsvLine = new MutableString();
-				Iterator<MutableString> tsvLines = Utils.readTSVs(sources, tsvLine, filter);
-
-				while (tsvLines.hasNext()) {
+				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), filter)) {
 					long addressId = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
 					long transactionId = Utils.hashCode(Utils.column(tsvLine, TRANSACTION_HASH));
 
 					database.add(OUTPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
 					this.progress.lightUpdate();
-
-					tsvLines.next();
 				}
 			}
 
