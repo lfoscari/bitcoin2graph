@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.EFGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 import org.rocksdb.RocksDBException;
@@ -113,7 +114,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
-		EFGraph.store(graph, basename.toString());
+		BVGraph.store(graph, basename.toString());
 		BinIO.storeObject(graph.ids, ids.toFile());
 	}
 }
