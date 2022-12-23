@@ -44,15 +44,23 @@ public class Utils {
 		boolean accept(MutableString str);
 	}
 
-	interface LineCleaner {
-		MutableString clean(MutableString str);
+	/**
+	 * Get specified column as a String (keeps the same backing array)
+	 */
+	public static String column(MutableString line, int col) {
+		int start = 0;
+		while (col-- > 0) {
+			start = line.indexOf('\t', start) + 1;
+		}
+
+		return line.subSequence(start, line.indexOf('\t', start)).toString();
 	}
 
 	/**
 	 * From a tab-separated mutable string delete everything but the given columns,
 	 * which must the sorted.
 	 */
-	public static MutableString keepColumns (MutableString line, List<Integer> sortedColumns) {
+	public static void keepColumns (MutableString line, List<Integer> sortedColumns) {
 		int previousColumn = 0;
 		int baseCursor = -1;
 
@@ -77,78 +85,24 @@ public class Utils {
 		}
 
 		line.delete(baseCursor, line.length());
-		return line;
 	}
 
 	/**
 	 * Compares the given string with the value in the given column in a tab-separated mutable string.
 	 */
-	public static boolean equalsAtColumn(MutableString line, String comparison, int column) {
-		int start = 0;
-		while (column-- > 0) {
-			start = line.indexOf('\t', start) + 1;
-		}
-
-		return line.subSequence(start, line.indexOf('\t', start)).equals(comparison);
+	public static boolean equalsAtColumn(MutableString line, String comparison, int col) {
+		return column(line, col).equals(comparison);
 	}
 
-	static class CleaningIterable implements Iterator<MutableString>, Iterable<MutableString> {
-		private final Iterator<MutableString> iterator;
-		private final LineCleaner cleaner;
-
-		public CleaningIterable(Iterable<MutableString> iterable, LineCleaner cleaner) {
-			this.iterator = iterable.iterator();
-			this.cleaner = cleaner;
-		}
-
-		@Override
-		public boolean hasNext () {
-			return this.iterator.hasNext();
-		}
-
-		@Override
-		public MutableString next () {
-			return this.cleaner.clean(this.iterator.next());
-		}
-
-		@Override
-		public Iterator<MutableString> iterator () {
-			return this;
-		}
-	}
-
-	static class SplittingIterable implements Iterator<String[]>, Iterable<String[]> {
-		private final Iterator<MutableString> iterator;
-
-		public SplittingIterable(Iterable<MutableString> iterable) {
-			this.iterator = iterable.iterator();
-		}
-
-		@Override
-		public boolean hasNext () {
-			return this.iterator.hasNext();
-		}
-
-		@Override
-		public String[] next () {
-			return this.iterator.next().toString().split("\t");
-		}
-
-		@Override
-		public Iterator<String[]> iterator () {
-			return this;
-		}
-	}
-
-	static class FilteringIterable implements Iterator<MutableString>, Iterable<MutableString> {
+	static class FilteringIterator implements Iterator<MutableString> {
 		private final Iterator<MutableString> iterator;
 		private final LineFilter filter;
 
 		MutableString current;
 		boolean hasCurrent;
 
-		public FilteringIterable(Iterable<MutableString> iterable, LineFilter filter) {
-			this.iterator = iterable.iterator();
+		public FilteringIterator(Iterator<MutableString> iterator, LineFilter filter) {
+			this.iterator = iterator;
 			this.filter = filter;
 		}
 
@@ -178,14 +132,9 @@ public class Utils {
 			this.hasCurrent = false;
 			return this.current;
 		}
-
-		@Override
-		public Iterator<MutableString> iterator () {
-			return this;
-		}
 	}
 
-	static class TSVIterable implements Iterator<MutableString>, Iterable<MutableString>, Closeable {
+	static class TSVIterator implements Iterator<MutableString> {
 		private final Iterator<File> files;
 		private final MutableString candidate;
 		private boolean fresh = false;
@@ -194,7 +143,7 @@ public class Utils {
 		private FileReader reader;
 		private FastBufferedReader bufferedReader;
 
-		public TSVIterable (MutableString candidate, File[] files) throws IOException {
+		public TSVIterator (MutableString candidate, File[] files) throws IOException {
 			this.files = Arrays.stream(files).iterator();
 			this.candidate = candidate;
 			this.nextFile();
@@ -211,6 +160,7 @@ public class Utils {
 
 			// Skip header
 			this.bufferedReader.readLine(this.candidate);
+			this.fresh = false;
 		}
 
 		public void close () throws IOException {
@@ -220,25 +170,21 @@ public class Utils {
 		}
 
 		@Override
-		public Iterator<MutableString> iterator() {
-			return this;
-		}
-
-		@Override
 		public boolean hasNext() {
 			try {
-				if (this.fresh || this.bufferedReader.readLine(this.candidate) != null) {
-					this.fresh = true;
-					return true;
-				}
+				while (true) {
+					if (this.fresh || this.bufferedReader.readLine(this.candidate) != null) {
+						this.fresh = true;
+						return true;
+					}
 
-				if (!this.files.hasNext()) {
-					this.close();
-					return false;
-				}
+					if (!this.files.hasNext()) {
+						this.close();
+						return false;
+					}
 
-				this.nextFile();
-				return true;
+					this.nextFile();
+				}
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -255,21 +201,17 @@ public class Utils {
 		}
 	}
 
-	static Iterable<String[]> readTSVs(File tsv) throws IOException {
-		return readTSVs(new File[] { tsv }, null, null);
+	static Iterator<MutableString> readTSVs(File tsv, MutableString s) throws IOException {
+		return readTSVs(new File[] { tsv }, s, null);
 	}
 
-	static Iterable<String[]> readTSVs(File[] files, LineFilter filter, LineCleaner cleaner) throws IOException {
-		Iterable<MutableString> iterable = new TSVIterable(new MutableString(), files);
+	static Iterator<MutableString> readTSVs(File[] files, MutableString s, LineFilter filter) throws IOException {
+		Iterator<MutableString> iterator = new TSVIterator(s, files);
 
 		if (filter != null) {
-			iterable = new FilteringIterable(iterable, filter);
+			iterator = new FilteringIterator(iterator, filter);
 		}
 
-		if (cleaner != null) {
-			iterable = new CleaningIterable(iterable, cleaner);
-		}
-
-		return new SplittingIterable(iterable);
+		return iterator;
 	}
 }

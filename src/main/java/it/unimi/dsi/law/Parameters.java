@@ -50,11 +50,6 @@ public class Parameters {
 				CDD = 20;
 	}
 
-	// Useful columns from the tsvs
-
-	public static final List<Integer> INPUTS_IMPORTANT = List.of(RECIPIENT, SPENDING_TRANSACTION_HASH);
-	public static final List<Integer> OUTPUTS_IMPORTANT = List.of(TRANSACTION_HASH, RECIPIENT);
-
 	// Logging
 
 	public final static long logInterval = 10;

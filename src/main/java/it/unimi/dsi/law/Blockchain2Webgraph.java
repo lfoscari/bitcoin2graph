@@ -25,8 +25,8 @@ import static it.unimi.dsi.law.RocksDBWrapper.Column.OUTPUT;
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final RocksDBWrapper database;
 
-	private final ByteBuffer inputTransaction = ByteBuffer.allocate(4);
-	private final ByteBuffer outputTransaction = ByteBuffer.allocate(4);
+	private final ByteBuffer inputTransaction = ByteBuffer.allocate(Long.BYTES);
+	private final ByteBuffer outputTransaction = ByteBuffer.allocate(Long.BYTES);
 
 	private final RocksIterator inputIterator;
 	private final RocksIterator outputIterator;
@@ -64,7 +64,6 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 				this.inputIterator.key(this.inputTransaction);
 
 				int cmp = Arrays.compareUnsigned(this.outputTransaction.array(), this.inputTransaction.array());
-
 				if (cmp == 0) {
 					this.addArcs(this.inputIterator.value(), this.outputIterator.value());
 					this.outputIterator.next();
