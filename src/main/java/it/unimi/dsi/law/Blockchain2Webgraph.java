@@ -60,6 +60,8 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		for (; this.outputIterator.isValid(); this.outputIterator.next()) {
 			this.outputIterator.key(this.outputTransaction);
 
+			// iterator seek?
+
 			for (; this.inputIterator.isValid(); this.inputIterator.next()) {
 				this.inputIterator.key(this.inputTransaction);
 
@@ -111,7 +113,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
 
-		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 10_000, tempDir, progress);
+		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
 		EFGraph.store(graph, basename.toString());
 		BinIO.storeObject(graph.ids, ids.toFile());
