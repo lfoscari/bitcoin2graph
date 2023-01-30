@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -25,8 +24,8 @@ import static it.unimi.dsi.law.RocksDBWrapper.Column.OUTPUT;
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final RocksDBWrapper database;
 
-	private final ByteBuffer inputTransaction = ByteBuffer.allocate(Long.BYTES);
-	private final ByteBuffer outputTransaction = ByteBuffer.allocate(Long.BYTES);
+	private final ByteBuffer inputTransaction = ByteBuffer.allocateDirect(Long.BYTES);
+	private final ByteBuffer outputTransaction = ByteBuffer.allocateDirect(Long.BYTES);
 
 	private final RocksIterator inputIterator;
 	private final RocksIterator outputIterator;
@@ -57,24 +56,27 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 			return true;
 		}
 
-		for (; this.outputIterator.isValid(); this.outputIterator.next()) {
+		while (this.outputIterator.isValid()) {
 			this.outputIterator.key(this.outputTransaction);
+			this.inputIterator.seek(this.outputTransaction);
 
-			// iterator seek?
-
-			for (; this.inputIterator.isValid(); this.inputIterator.next()) {
-				this.inputIterator.key(this.inputTransaction);
-
-				int cmp = Arrays.compareUnsigned(this.outputTransaction.array(), this.inputTransaction.array());
-				if (cmp == 0) {
-					this.addArcs(this.inputIterator.value(), this.outputIterator.value());
-					this.outputIterator.next();
-					return true;
-				} else if (cmp < 0) {
-					// Transaction is missing
-					break;
-				}
+			if (!this.inputIterator.isValid()) {
+				return false;
 			}
+
+			this.inputIterator.key(this.inputTransaction);
+
+			this.inputTransaction.clear();
+			this.outputTransaction.clear();
+
+			if (this.inputTransaction.equals(this.outputTransaction)) {
+				this.addArcs(this.inputIterator.value(), this.outputIterator.value());
+				this.outputIterator.next();
+				return true;
+			}
+
+
+			this.outputIterator.next();
 		}
 
 		this.close();
