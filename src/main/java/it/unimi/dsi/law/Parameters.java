@@ -16,7 +16,7 @@ public class Parameters {
 	public final static Path graph = resources.resolve("graph");
 
 	public final static Path basename = graph.resolve("bitcoin");
-	public final static Path ids = graph.resolve("bitcoin-ids");
+	public final static Path ids = graph.resolve("bitcoin.ids");
 
 	public final static Path inputsDirectory = resources.resolve("inputs");
 	public final static Path outputsDirectory = resources.resolve("outputs");
