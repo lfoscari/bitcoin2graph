@@ -70,7 +70,7 @@ public class RocksDBWrapper implements Closeable {
 		return this.database.newIterator(handle);
 	}
 
-	private void commit () throws RocksDBException {
+	public void commit () throws RocksDBException {
 		this.database.write(new WriteOptions(), this.writeBatch);
 		this.writeBatch.clear();
 	}

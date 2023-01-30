@@ -32,8 +32,8 @@
     <dependencies>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>webgraph</artifactId>
-            <version>3.6.10</version>
+            <artifactId>webgraph-big</artifactId>
+            <version>3.7.0</version>
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>

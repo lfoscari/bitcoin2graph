@@ -37,7 +37,7 @@ public class Utils {
 		for (byte v : s.getBytes(Charset.defaultCharset())) {
 			h = 31 * h + (v & 0xff);
 		}
-		return h;
+		return h > 0 ? h : -1 * h;
 	}
 
 	interface LineFilter {
