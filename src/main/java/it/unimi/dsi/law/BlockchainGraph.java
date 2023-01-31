@@ -68,8 +68,6 @@ public class BlockchainGraph extends ImmutableSequentialGraph {
                         throw new NoSuchElementException();
                     }
 
-                    this.addressesIterator.next();
-
                     if (!this.addressesIterator.isValid()) {
                         throw new NoSuchElementException();
                     }
@@ -79,6 +77,8 @@ public class BlockchainGraph extends ImmutableSequentialGraph {
 
                     this.outputAddresses = Utils.bytesToLongs(this.addressesIterator.value());
                     this.addressCount++;
+
+                    this.addressesIterator.next();
 
                     return this.currentAddress.getLong();
                 }
@@ -99,6 +99,14 @@ public class BlockchainGraph extends ImmutableSequentialGraph {
                     for (int i = 0; i < this.outputAddresses.length; i++) {
                         BigArrays.set(this.successorsArray, i, this.outputAddresses[i]);
                     }
+
+                    for (long[] ll: this.successorsArray) {
+                        for (long l: ll) {
+                            System.out.print(l + " ");
+                        }
+                        System.out.println();
+                    }
+                    System.out.println();
 
                     return this.successorsArray;
                 }

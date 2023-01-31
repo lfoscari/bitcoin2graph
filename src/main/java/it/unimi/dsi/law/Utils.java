@@ -22,11 +22,16 @@ public class Utils {
 	}
 
 	public static long[] bytesToLongs(byte[] data) {
+		if (((data.length << 3) >> 3) != data.length) {
+			throw new RuntimeException(data.length + " is not divisible by " + Long.BYTES);
+		}
+
 		int size = data.length / Long.BYTES;
 		long[] result = new long[size];
 		for (int i = 0; i < size; i += 1) {
 			for (int j = i * Long.BYTES; j < (i + 1) * Long.BYTES; j++) {
-				result[i] = (result[i] << 8) + (data[j] & 255);
+				result[i] <<= 8;
+				result[i] = Math.addExact(result[i], (data[j] & 0xff));
 			}
 		}
 		return result;
@@ -37,7 +42,7 @@ public class Utils {
 		for (byte v : s.getBytes(Charset.defaultCharset())) {
 			h = 31 * h + (v & 0xff);
 		}
-		return h > 0 ? h : -1 * h;
+		return h;
 	}
 
 	interface LineFilter {

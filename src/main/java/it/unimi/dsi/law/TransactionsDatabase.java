@@ -1,7 +1,9 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,7 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsDatabase {
 	private final ProgressLogger progress;
+	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
 
 	public TransactionsDatabase () {
 		this(null);
@@ -31,6 +34,12 @@ public class TransactionsDatabase {
 		}
 
 		this.progress = progress;
+
+		try {
+			this.addressMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
+		} catch (IOException | ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	void compute () throws IOException, RocksDBException {
@@ -45,7 +54,9 @@ public class TransactionsDatabase {
 				}
 
 				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), filter)) {
-					long addressId = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
+					long addressId = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
+
+					// Transaction map?!
 					long transactionId = Utils.hashCode(Utils.column(tsvLine, TRANSACTION_HASH));
 
 					database.add(OUTPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
@@ -64,10 +75,10 @@ public class TransactionsDatabase {
 				}
 
 				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), null)) {
-					long inputAddress = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
+					long inputAddress = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
 
 					long spendingTransaction = Utils.hashCode(Utils.column(tsvLine, SPENDING_TRANSACTION_HASH));
-					byte[] outputAddresses = database.get(OUTPUT,  Utils.longToBytes(spendingTransaction));
+					byte[] outputAddresses = database.get(OUTPUT, Utils.longToBytes(spendingTransaction));
 
 					if (outputAddresses == null) {
 						// No common arcs

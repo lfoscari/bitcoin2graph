@@ -76,10 +76,6 @@ public class RocksDBWrapper implements Closeable {
 	}
 
 	public void close () {
-		for (final ColumnFamilyHandle columnFamilyHandle : this.columnFamilyHandleList) {
-			columnFamilyHandle.close();
-		}
-
 		if (!this.readonly) {
 			try {
 				this.commit();
@@ -87,6 +83,10 @@ public class RocksDBWrapper implements Closeable {
 			} catch (RocksDBException e) {
 				throw new RuntimeException(e);
 			}
+		}
+
+		for (final ColumnFamilyHandle columnFamilyHandle : this.columnFamilyHandleList) {
+			columnFamilyHandle.close();
 		}
 
 		this.database.close();
