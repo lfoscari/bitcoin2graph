@@ -13,11 +13,13 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
 
+import static it.unimi.dsi.law.Parameters.transactionsDirectory;
+
 public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        Utils.LineCleaner cleaner = (s) -> Utils.column(s, 1);
-        Utils.LineFilter filter = (s) -> Utils.column(s, 7).equals("0");
-        Iterator<MutableString> it = Utils.readTSVs(Parameters.transactionsDirectory.toFile().listFiles(), new MutableString(), filter, cleaner);
+        Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
+        Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
+        Iterator<MutableString> it = Utils.readTSVs(transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv")), new MutableString(), filter, cleaner);
         GOVMinimalPerfectHashFunction<MutableString> transactionMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
 
         it.forEachRemaining((t) -> {
@@ -30,11 +32,12 @@ public class TMP {
         EFGraph bitcoinGraph = EFGraph.load(Parameters.basename.toString());
         long[] ids = BinIO.loadLongs(Parameters.ids.toFile());
 
-        int node = 234;
+        int node = 56;
+        long id = ids[node];
         int[] successors = bitcoinGraph.successorArray(node);
 
-        System.out.println(ids[node] + " (" +  findAddress(ids[node]) + ") -> [" + bitcoinGraph.outdegree(234) + "]");
-        for(int i = 0; i < bitcoinGraph.outdegree(234); i++) {
+        System.out.println(id + " (" +  findAddress(id) + ") -> [" + bitcoinGraph.outdegree(node) + "]");
+        for(int i = 0; i < bitcoinGraph.outdegree(node); i++) {
             System.out.println("\t" + ids[successors[i]] + " (" +  findAddress(ids[successors[i]]) + ")");
         }
     }

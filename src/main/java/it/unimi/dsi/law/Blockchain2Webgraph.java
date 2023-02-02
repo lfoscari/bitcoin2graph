@@ -32,7 +32,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		this.addressMap = addressMap;
 		this.transactionMap = transactionMap;
 
-		Utils.LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
+		Utils.LineFilter filter = (line) -> Utils.columnEquals(line, IS_FROM_COINBASE, "0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
 			throw new NoSuchFileException("No outputs found in " + outputsDirectory);

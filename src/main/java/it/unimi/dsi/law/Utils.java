@@ -58,14 +58,6 @@ public class Utils {
 		return progress;
 	}
 
-	interface LineFilter {
-		boolean accept(MutableString str);
-	}
-
-	interface LineCleaner {
-		MutableString clean(MutableString str);
-	}
-
 	public static MutableString column(MutableString line, int col) {
 		int start = 0, inc;
 		while (col-- > 0) {
@@ -86,6 +78,33 @@ public class Utils {
 		line.delete(0, start);
 
 		return line;
+	}
+
+	public static boolean columnEquals(MutableString line, int col, String other) {
+		int start = 0, inc;
+		while (col-- > 0) {
+			if ((inc = line.indexOf('\t', start)) > 0) {
+				start = inc + 1;
+			} else {
+				return false;
+			}
+		}
+
+		int end = line.indexOf('\t', start);
+
+		if (end == -1) {
+			end = line.length();
+		}
+
+		return line.subSequence(start, end).equals(other);
+	}
+
+	interface LineFilter {
+		boolean accept(MutableString str);
+	}
+
+	interface LineCleaner {
+		MutableString clean(MutableString str);
 	}
 
 	static class CleaningIterator implements Iterator<MutableString> {

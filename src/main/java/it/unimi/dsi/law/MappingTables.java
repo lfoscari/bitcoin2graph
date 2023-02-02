@@ -52,8 +52,8 @@ public class MappingTables {
             }
         }
 
-        Utils.LineCleaner cleaner = (s) -> Utils.column(s, 1);
-        Utils.LineFilter filter = (s) -> Utils.column(s, 7).equals("0");
+        Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
+        Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
         File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
         if (sources == null) {
             throw new NoSuchFileException("No transactions found in " + transactionsDirectory);

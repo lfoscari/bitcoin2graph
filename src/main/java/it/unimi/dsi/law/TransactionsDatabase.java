@@ -43,22 +43,6 @@ public class TransactionsDatabase {
 		this.progress.done(); */
 	}
 
-	private void computeOutputs() throws IOException {
-		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
-		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
-		if (sources == null) {
-			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
-		}
-
-		Utils.readTSVs(sources, new MutableString(), filter, null).forEachRemaining((s) -> {
-			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
-
-			this.add(this.transactionOutputs, transactionId, addressId);
-			this.progress.lightUpdate();
-		});
-	}
-
 	private void computeInputs() throws IOException {
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -70,6 +54,22 @@ public class TransactionsDatabase {
 			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
 			this.add(this.transactionInputs, transactionId, addressId);
+			this.progress.lightUpdate();
+		});
+	}
+
+	private void computeOutputs() throws IOException {
+		LineFilter filter = (line) -> Utils.columnEquals(line, IS_FROM_COINBASE, "0");
+		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
+		if (sources == null) {
+			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
+		}
+
+		Utils.readTSVs(sources, new MutableString(), filter, null).forEachRemaining((s) -> {
+			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
+			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
+
+			this.add(this.transactionOutputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
 	}
