@@ -1,12 +1,7 @@
 package it.unimi.dsi.law;
 
-import org.rocksdb.util.SizeUnit;
-
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 
 public class Parameters {
 
@@ -15,8 +10,11 @@ public class Parameters {
 	public final static Path resources = Path.of("src/main/resources");
 	public final static Path graph = resources.resolve("graph");
 
-	public final static Path addresses = resources.resolve("addresses.tsv");
+	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressesMap = resources.resolve("addresses.map");
+
+	public final static Path transactionsDirectory = resources.resolve("transactions");
+	public final static Path transactionsMap = resources.resolve("transactions.map");
 
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin.ids");
@@ -58,8 +56,8 @@ public class Parameters {
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
 
-	public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;
+	/* public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;
 	public final static long MAX_TOTAL_WAL_SIZE = SizeUnit.GB;
 	public final static int MAX_BACKGROUND_JOBS = 5;
-	public final static long MAX_BYTES_FOR_LEVEL_BASE = SizeUnit.GB;
+	public final static long MAX_BYTES_FOR_LEVEL_BASE = SizeUnit.GB; */
 }

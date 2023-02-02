@@ -6,6 +6,8 @@ import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -47,57 +49,58 @@ public class Utils {
 		return h;
 	}
 
-	public static GOVMinimalPerfectHashFunction<MutableString> buildAddressMap(ProgressLogger progress) throws IOException {
-		if (addressesMap.toFile().exists()) {
-			if (progress != null) {
-				progress.logger.info("Loading address map from memory");
-			}
-			try {
-				return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			}
-		}
+	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {
+		Logger logger = LoggerFactory.getLogger(cls);
+		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, itemsName);
+		progress.displayLocalSpeed = true;
+		progress.displayFreeMemory = true;
 
-		if (progress != null) {
-			progress.start("Computing address map");
-		}
-
-		MutableString address = new MutableString();
-		Iterable<MutableString> addressesIterator = Utils.readTSVs(addresses.toFile(), address, null);
-
-		File tempDir = Files.createTempDirectory(resources, "amap_temp").toFile();
-		tempDir.deleteOnExit();
-
-		GOVMinimalPerfectHashFunction.Builder<MutableString> b = new GOVMinimalPerfectHashFunction.Builder<>();
-		b.keys(addressesIterator);
-		b.tempDir(tempDir);
-		b.transform(TransformationStrategies.rawIso());
-
-		GOVMinimalPerfectHashFunction<MutableString> map = b.build();
-		BinIO.storeObject(map, addressesMap.toFile());
-
-		if (progress != null) {
-			progress.done();
-		}
-
-		return map;
+		return progress;
 	}
 
 	interface LineFilter {
 		boolean accept(MutableString str);
 	}
 
-	/**
-	 * Get specified column as a String (keeps the same backing array)
-	 */
-	public static String column(MutableString line, int col) {
+	interface LineCleaner {
+		MutableString clean(MutableString str);
+	}
+
+	public static MutableString column(MutableString line, int col) {
 		int start = 0;
 		while (col-- > 0) {
 			start = line.indexOf('\t', start) + 1;
 		}
 
-		return line.subSequence(start, line.indexOf('\t', start)).toString();
+		line.delete(line.indexOf('\t', start), line.length());
+		line.delete(0, start);
+
+		return line;
+	}
+
+	static class CleaningIterator implements Iterator<MutableString>, Iterable<MutableString> {
+		private final Iterator<MutableString> iterator;
+		private final LineCleaner cleaner;
+
+		public CleaningIterator(Iterable<MutableString> iterable, LineCleaner cleaner) {
+			this.iterator = iterable.iterator();
+			this.cleaner = cleaner;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return this.iterator.hasNext();
+		}
+
+		@Override
+		public MutableString next() {
+			return this.cleaner.clean(this.iterator.next());
+		}
+
+		@Override
+		public Iterator<MutableString> iterator () {
+			return this;
+		}
 	}
 
 	static class FilteringIterator implements Iterator<MutableString>, Iterable<MutableString> {
@@ -217,15 +220,19 @@ public class Utils {
 		}
 	}
 
-	static Iterable<MutableString> readTSVs(File tsv, MutableString ms, LineFilter filter) throws IOException {
-		return readTSVs(new File[] { tsv }, ms, filter);
+	static Iterable<MutableString> readTSVs(File tsv, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
+		return readTSVs(new File[] { tsv }, ms, filter, cleaner);
 	}
 
-	static Iterable<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter) throws IOException {
+	static Iterable<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
 		Iterable<MutableString> iterator = new TSVIterator(ms, files);
 
 		if (filter != null) {
 			iterator = new FilteringIterator(iterator, filter);
+		}
+
+		if (cleaner != null) {
+			iterator = new CleaningIterator(iterator, cleaner);
 		}
 
 		return iterator;
