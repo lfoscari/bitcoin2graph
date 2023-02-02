@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.util.Iterator;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.addressesMap;
@@ -31,7 +32,7 @@ public class MappingTables {
             }
         }
 
-        Iterable<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString(), null, null);
+        Iterator<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString(), null, null);
 
         this.progress.start("Computing transactions map");
         GOVMinimalPerfectHashFunction<MutableString> map = this.buildMap(addressesIt);
@@ -57,7 +58,7 @@ public class MappingTables {
         if (sources == null) {
             throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
         }
-        Iterable<MutableString> transactionsIt = Utils.readTSVs(sources, new MutableString(), filter, cleaner);
+        Iterator<MutableString> transactionsIt = Utils.readTSVs(sources, new MutableString(), filter, cleaner);
 
         this.progress.start("Computing transactions map");
         GOVMinimalPerfectHashFunction<MutableString> map = this.buildMap(transactionsIt);
@@ -67,12 +68,12 @@ public class MappingTables {
         return map;
     }
 
-    public GOVMinimalPerfectHashFunction<MutableString> buildMap (Iterable<MutableString> it) throws IOException {
+    public GOVMinimalPerfectHashFunction<MutableString> buildMap (Iterator<MutableString> it) throws IOException {
         File tempDir = Files.createTempDirectory(resources, "map_temp").toFile();
         tempDir.deleteOnExit();
 
         GOVMinimalPerfectHashFunction.Builder<MutableString> b = new GOVMinimalPerfectHashFunction.Builder<>();
-        b.keys(it);
+        b.keys(() -> it);
         b.tempDir(tempDir);
         b.transform(TransformationStrategies.rawIso());
         b.signed(1024);

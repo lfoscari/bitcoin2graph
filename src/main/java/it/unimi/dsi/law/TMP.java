@@ -17,10 +17,11 @@ public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Utils.LineCleaner cleaner = (s) -> Utils.column(s, 1);
         Utils.LineFilter filter = (s) -> Utils.column(s, 7).equals("0");
-        Iterable<MutableString> it = Utils.readTSVs(Parameters.transactionsDirectory.toFile().listFiles(), new MutableString(), filter, cleaner);
+        Iterator<MutableString> it = Utils.readTSVs(Parameters.transactionsDirectory.toFile().listFiles(), new MutableString(), filter, cleaner);
         GOVMinimalPerfectHashFunction<MutableString> transactionMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
 
-        it.forEach((t) -> {
+        it.forEachRemaining((t) -> {
+            System.out.println(t + " => " + transactionMap.getLong(t));
             if (transactionMap.getLong(t) == transactionMap.defaultReturnValue()) {
                 throw new RuntimeException();
             }
@@ -39,10 +40,11 @@ public class TMP {
     }
 
     static MutableString findAddress(long id) throws IOException, ClassNotFoundException {
-        Iterable<MutableString> it = Utils.readTSVs(Parameters.addressesFile.toFile(), new MutableString(), null, null);
+        Iterator<MutableString> it = Utils.readTSVs(Parameters.addressesFile.toFile(), new MutableString(), null, null);
         GOVMinimalPerfectHashFunction<MutableString> addressMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.addressesMap.toFile());
 
-        for (MutableString addr : it) {
+        while (it.hasNext()) {
+            MutableString addr = it.next();
             if (addressMap.getLong(addr) == id) {
                 return addr;
             }

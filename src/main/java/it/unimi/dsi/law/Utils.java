@@ -67,23 +67,33 @@ public class Utils {
 	}
 
 	public static MutableString column(MutableString line, int col) {
-		int start = 0;
+		int start = 0, inc;
 		while (col-- > 0) {
-			start = line.indexOf('\t', start) + 1;
+			if ((inc = line.indexOf('\t', start)) > 0) {
+				start = inc + 1;
+			} else {
+				return line.length(0);
+			}
 		}
 
-		line.delete(line.indexOf('\t', start), line.length());
+		int end = line.indexOf('\t', start);
+
+		if (end == -1) {
+			end = line.length();
+		}
+
+		line.delete(end, line.length());
 		line.delete(0, start);
 
 		return line;
 	}
 
-	static class CleaningIterator implements Iterator<MutableString>, Iterable<MutableString> {
+	static class CleaningIterator implements Iterator<MutableString> {
 		private final Iterator<MutableString> iterator;
 		private final LineCleaner cleaner;
 
-		public CleaningIterator(Iterable<MutableString> iterable, LineCleaner cleaner) {
-			this.iterator = iterable.iterator();
+		public CleaningIterator(Iterator<MutableString> iterator, LineCleaner cleaner) {
+			this.iterator = iterator;
 			this.cleaner = cleaner;
 		}
 
@@ -96,22 +106,17 @@ public class Utils {
 		public MutableString next() {
 			return this.cleaner.clean(this.iterator.next());
 		}
-
-		@Override
-		public Iterator<MutableString> iterator () {
-			return this;
-		}
 	}
 
-	static class FilteringIterator implements Iterator<MutableString>, Iterable<MutableString> {
+	static class FilteringIterator implements Iterator<MutableString> {
 		private final Iterator<MutableString> iterator;
 		private final LineFilter filter;
 
 		MutableString current;
 		boolean hasCurrent;
 
-		public FilteringIterator(Iterable<MutableString> iterable, LineFilter filter) {
-			this.iterator = iterable.iterator();
+		public FilteringIterator(Iterator<MutableString> iterator, LineFilter filter) {
+			this.iterator = iterator;
 			this.filter = filter;
 		}
 
@@ -141,14 +146,9 @@ public class Utils {
 			this.hasCurrent = false;
 			return this.current;
 		}
-
-		@Override
-		public Iterator<MutableString> iterator () {
-			return this;
-		}
 	}
 
-	static class TSVIterator implements Iterator<MutableString>, Iterable<MutableString> {
+	static class TSVIterator implements Iterator<MutableString> {
 		private final Iterator<File> files;
 		private final MutableString candidate;
 		private boolean fresh = false;
@@ -213,19 +213,14 @@ public class Utils {
 			this.fresh = false;
 			return this.candidate;
 		}
-
-		@Override
-		public Iterator<MutableString> iterator () {
-			return this;
-		}
 	}
 
-	static Iterable<MutableString> readTSVs(File tsv, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
+	static Iterator<MutableString> readTSVs(File tsv, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
 		return readTSVs(new File[] { tsv }, ms, filter, cleaner);
 	}
 
-	static Iterable<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
-		Iterable<MutableString> iterator = new TSVIterator(ms, files);
+	static Iterator<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
+		Iterator<MutableString> iterator = new TSVIterator(ms, files);
 
 		if (filter != null) {
 			iterator = new FilteringIterator(iterator, filter);

@@ -10,6 +10,7 @@ import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.util.Iterator;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -49,13 +50,13 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 		}
 
-		for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), filter, null)) {
-			long addressId = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.column(tsvLine, TRANSACTION_HASH));
+		Utils.readTSVs(sources, new MutableString(), filter, null).forEachRemaining((s) -> {
+			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
+			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
 
 			this.add(this.transactionOutputs, transactionId, addressId);
 			this.progress.lightUpdate();
-		}
+		});
 	}
 
 	private void computeInputs() throws IOException {
@@ -64,13 +65,13 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No inputs found in " + inputsDirectory);
 		}
 
-		for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), null, null)) {
-			long addressId = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.column(tsvLine, SPENDING_TRANSACTION_HASH));
+		Utils.readTSVs(sources, new MutableString(), null, null).forEachRemaining((s) -> {
+			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
+			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
 			this.add(this.transactionInputs, transactionId, addressId);
 			this.progress.lightUpdate();
-		}
+		});
 	}
 
 	public void add(Long2ObjectOpenHashMap<LongList> table, long transaction, long address) {
@@ -97,5 +98,6 @@ public class TransactionsDatabase {
 			return this.transactionOutputs.get(transaction);
 		}
 
-		return null;	}
+		return null;
+	}
 }
