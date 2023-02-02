@@ -1,11 +1,18 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.bits.TransformationStrategies;
+import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
+import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.*;
+
+import static it.unimi.dsi.law.Parameters.*;
 
 public class Utils {
 	public static byte[] longToBytes(long data) {
@@ -38,6 +45,43 @@ public class Utils {
 			h = 31 * h + (v & 0xff);
 		}
 		return h;
+	}
+
+	public static GOVMinimalPerfectHashFunction<MutableString> buildAddressMap(ProgressLogger progress) throws IOException {
+		if (addressesMap.toFile().exists()) {
+			if (progress != null) {
+				progress.logger.info("Loading address map from memory");
+			}
+			try {
+				return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		if (progress != null) {
+			progress.start("Computing address map");
+		}
+
+		MutableString address = new MutableString();
+		Iterable<MutableString> addressesIterator = Utils.readTSVs(addresses.toFile(), address, null);
+
+		File tempDir = Files.createTempDirectory(resources, "amap_temp").toFile();
+		tempDir.deleteOnExit();
+
+		GOVMinimalPerfectHashFunction.Builder<MutableString> b = new GOVMinimalPerfectHashFunction.Builder<>();
+		b.keys(addressesIterator);
+		b.tempDir(tempDir);
+		b.transform(TransformationStrategies.rawIso());
+
+		GOVMinimalPerfectHashFunction<MutableString> map = b.build();
+		BinIO.storeObject(map, addressesMap.toFile());
+
+		if (progress != null) {
+			progress.done();
+		}
+
+		return map;
 	}
 
 	interface LineFilter {

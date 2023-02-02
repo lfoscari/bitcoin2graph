@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,12 +19,13 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsDatabase {
 	private final ProgressLogger progress;
+	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
 
-	public TransactionsDatabase () {
+	public TransactionsDatabase () throws IOException {
 		this(null);
 	}
 
-	public TransactionsDatabase (ProgressLogger progress) {
+	public TransactionsDatabase (ProgressLogger progress) throws IOException {
 		if (progress == null) {
 			Logger logger = LoggerFactory.getLogger(Blockchain2Webgraph.class);
 			progress = new ProgressLogger(logger, logInterval, logTimeUnit, "sources");
@@ -31,6 +33,7 @@ public class TransactionsDatabase {
 		}
 
 		this.progress = progress;
+		this.addressMap = Utils.buildAddressMap(progress);
 	}
 
 	void compute () throws IOException, RocksDBException {
@@ -44,7 +47,7 @@ public class TransactionsDatabase {
 				}
 
 				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), null)) {
-					long addressId = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
+					long addressId = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
 					long transactionId = Utils.hashCode(Utils.column(tsvLine, SPENDING_TRANSACTION_HASH));
 
 					database.add(INPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));
@@ -63,7 +66,7 @@ public class TransactionsDatabase {
 				}
 
 				for (MutableString tsvLine : Utils.readTSVs(sources, new MutableString(), filter)) {
-					long addressId = Utils.hashCode(Utils.column(tsvLine, RECIPIENT));
+					long addressId = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
 					long transactionId = Utils.hashCode(Utils.column(tsvLine, TRANSACTION_HASH));
 
 					database.add(OUTPUT, Utils.longToBytes(transactionId), Utils.longToBytes(addressId));

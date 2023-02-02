@@ -15,6 +15,9 @@ public class Parameters {
 	public final static Path resources = Path.of("src/main/resources");
 	public final static Path graph = resources.resolve("graph");
 
+	public final static Path addresses = resources.resolve("addresses.tsv");
+	public final static Path addressesMap = resources.resolve("addresses.map");
+
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin.ids");
 
