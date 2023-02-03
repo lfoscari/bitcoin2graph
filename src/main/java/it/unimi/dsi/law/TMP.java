@@ -17,7 +17,7 @@ import static it.unimi.dsi.law.Parameters.transactionsDirectory;
 
 public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
+        /* Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
         Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
         Iterator<MutableString> it = Utils.readTSVs(transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv")), new MutableString(), filter, cleaner);
         GOVMinimalPerfectHashFunction<MutableString> transactionMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
@@ -27,12 +27,12 @@ public class TMP {
             if (transactionMap.getLong(t) == transactionMap.defaultReturnValue()) {
                 throw new RuntimeException();
             }
-        });
+        }); */
 
         EFGraph bitcoinGraph = EFGraph.load(Parameters.basename.toString());
         long[] ids = BinIO.loadLongs(Parameters.ids.toFile());
 
-        int node = 56;
+        int node = 156;
         long id = ids[node];
         int[] successors = bitcoinGraph.successorArray(node);
 

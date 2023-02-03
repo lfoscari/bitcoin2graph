@@ -34,7 +34,7 @@ public class MappingTables {
 
         Iterator<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString(), null, null);
 
-        this.progress.start("Computing transactions map");
+        this.progress.start("Computing addresses map");
         GOVMinimalPerfectHashFunction<MutableString> map = this.buildMap(addressesIt);
         BinIO.storeObject(map, addressesMap.toFile());
         this.progress.done();
@@ -76,11 +76,11 @@ public class MappingTables {
         b.keys(() -> it);
         b.tempDir(tempDir);
         b.transform(TransformationStrategies.rawIso());
-        b.signed(1024);
         return b.build();
     }
 
     public static void main(String[] args) throws IOException {
         new MappingTables(null).buildTransactionsMap();
+        new MappingTables(null).buildAddressesMap();
     }
 }
