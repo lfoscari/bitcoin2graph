@@ -19,8 +19,8 @@ import static it.unimi.dsi.law.Parameters.addressesMap;
 public class MappingTables {
     public static GOVMinimalPerfectHashFunction<MutableString> buildAddressesMap() throws IOException {
         if (addressesMap.toFile().exists()) {
-            LoggerFactory.getLogger(MappingTables.class).info("Loading addresses mappings from memory");
             try {
+                LoggerFactory.getLogger(MappingTables.class).info("Loading addresses mappings from memory");
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
