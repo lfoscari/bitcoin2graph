@@ -33,28 +33,32 @@ public class TransactionsDatabase {
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
 
-		try {
-			this.transactionInputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionInputsFile.toFile());
-			this.progress.logger.info("Loaded transaction inputs from memory");
-		} catch (IOException e) {
+		if (transactionInputsFile.toFile().exists()) {
+			try {
+				this.progress.logger.info("Loading transaction inputs from memory");
+				this.transactionInputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionInputsFile.toFile());
+			} catch (IOException | ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			}
+		} else {
 			this.progress.start("Computing transaction inputs table");
 			this.computeInputs();
 			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
 			this.progress.done();
-		} catch (ClassNotFoundException e) {
-			throw new RuntimeException(e);
 		}
 
-		try {
-			this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
-			this.progress.logger.info("Loaded transaction outputs table from memory");
-		} catch (IOException e) {
+		if (transactionInputsFile.toFile().exists()) {
+			try {
+				this.progress.logger.info("Loading transaction outputs table from memory");
+				this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
+			} catch (IOException | ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			}
+		} else {
 			this.progress.start("Computing transaction outputs table");
 			this.computeOutputs();
 			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
 			this.progress.done();
-		} catch (ClassNotFoundException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
