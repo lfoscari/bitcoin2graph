@@ -21,23 +21,22 @@ import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final TransactionsDatabase transactionsDatabase;
-	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
 	private final GOVMinimalPerfectHashFunction<MutableString> transactionMap;
 	private final Queue<long[]> arcs = new LinkedList<>();
-	private final Iterator<MutableString> outputs;
+	private final Iterator<MutableString> transactions;
 	private final ProgressLogger progress;
 
-	public Blockchain2Webgraph (TransactionsDatabase transactionsDatabase, GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap, ProgressLogger progress) throws IOException {
+	public Blockchain2Webgraph (TransactionsDatabase transactionsDatabase, GOVMinimalPerfectHashFunction<MutableString> transactionMap, ProgressLogger progress) throws IOException {
 		this.transactionsDatabase = transactionsDatabase;
-		this.addressMap = addressMap;
 		this.transactionMap = transactionMap;
 
-		Utils.LineFilter filter = (line) -> Utils.columnEquals(line, IS_FROM_COINBASE, "0");
-		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
+		Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
+		Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
+		File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
-			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
+			throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
 		}
-		this.outputs = Utils.readTSVs(sources, new MutableString(), filter, null);
+		this.transactions = Utils.readTSVs(sources, new MutableString(), filter, cleaner);
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs") : progress;
 	}
 
@@ -52,18 +51,20 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 			return true;
 		}
 
-		while (this.outputs.hasNext()) {
-			MutableString tsvLine = this.outputs.next();
+		while (this.transactions.hasNext()) {
+			long transactionId = this.transactionMap.getLong(this.transactions.next());
 
-			long transactionId = this.transactionMap.getLong(Utils.column(tsvLine, TRANSACTION_HASH));
 			LongList inputAddresses = this.transactionsDatabase.getInputAddresses(transactionId);
-			if (inputAddresses == null || inputAddresses.size() == 0) {
+			LongList outputAddresses = this.transactionsDatabase.getOutputAddresses(transactionId);
+
+			if (inputAddresses == null || outputAddresses == null) {
 				continue;
 			}
 
-			long outputAddress = this.addressMap.getLong(Utils.column(tsvLine, RECIPIENT));
 			for (long inputAddress : inputAddresses) {
-				this.arcs.add(new long[] {inputAddress, outputAddress});
+				for (long outputAddress : outputAddresses) {
+					this.arcs.add(new long[] { inputAddress, outputAddress });
+				}
 			}
 
 			return true;
@@ -79,18 +80,16 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	}
 
 	public static void main (String[] args) throws IOException {
-		ProgressLogger progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "items");
-		MappingTables mt = new MappingTables(progress);
-		GOVMinimalPerfectHashFunction<MutableString> addressMap = mt.buildAddressesMap();
-		GOVMinimalPerfectHashFunction<MutableString> transactionMap = mt.buildTransactionsMap();
+		GOVMinimalPerfectHashFunction<MutableString> addressMap = MappingTables.buildAddressesMap();
+		GOVMinimalPerfectHashFunction<MutableString> transactionMap = MappingTables.buildTransactionsMap();
 
 		TransactionsDatabase transactions = new TransactionsDatabase(addressMap, transactionMap);
 		transactions.compute();
 
-		progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs");
+		ProgressLogger progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs");
 		graph.toFile().mkdir();
 
-		Blockchain2Webgraph bw = new Blockchain2Webgraph(transactions, addressMap, transactionMap, progress);
+		Blockchain2Webgraph bw = new Blockchain2Webgraph(transactions, transactionMap, progress);
 		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
 

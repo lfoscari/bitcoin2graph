@@ -38,9 +38,9 @@ public class TransactionsDatabase {
 		this.computeInputs();
 		this.progress.stop();
 
-		/* this.progress.start("Building output transactions database");
+		this.progress.start("Building output transactions database");
 		this.computeOutputs();
-		this.progress.done(); */
+		this.progress.done();
 	}
 
 	private void computeInputs() throws IOException {

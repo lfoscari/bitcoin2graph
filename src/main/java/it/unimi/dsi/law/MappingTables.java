@@ -16,15 +16,8 @@ import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.addressesMap;
 
 public class MappingTables {
-    private final ProgressLogger progress;
-
-    public MappingTables (ProgressLogger progress) {
-        this.progress = progress == null ? Utils.getProgressLogger(MappingTables.class, "items") : progress;
-    }
-
-    public GOVMinimalPerfectHashFunction<MutableString> buildAddressesMap () throws IOException {
+    public static GOVMinimalPerfectHashFunction<MutableString> buildAddressesMap() throws IOException {
         if (addressesMap.toFile().exists()) {
-            this.progress.logger.info("Loading address map from memory");
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
             } catch (ClassNotFoundException e) {
@@ -34,17 +27,14 @@ public class MappingTables {
 
         Iterator<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString(), null, null);
 
-        this.progress.start("Computing addresses map");
-        GOVMinimalPerfectHashFunction<MutableString> map = this.buildMap(addressesIt);
+        GOVMinimalPerfectHashFunction<MutableString> map = buildMap(addressesIt);
         BinIO.storeObject(map, addressesMap.toFile());
-        this.progress.done();
 
         return map;
     }
 
-    public GOVMinimalPerfectHashFunction<MutableString> buildTransactionsMap () throws IOException {
+    public static GOVMinimalPerfectHashFunction<MutableString> buildTransactionsMap() throws IOException {
         if (transactionsMap.toFile().exists()) {
-            this.progress.logger.info("Loading transactions map from memory");
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(transactionsMap.toFile());
             } catch (ClassNotFoundException e) {
@@ -60,27 +50,25 @@ public class MappingTables {
         }
         Iterator<MutableString> transactionsIt = Utils.readTSVs(sources, new MutableString(), filter, cleaner);
 
-        this.progress.start("Computing transactions map");
-        GOVMinimalPerfectHashFunction<MutableString> map = this.buildMap(transactionsIt);
+        GOVMinimalPerfectHashFunction<MutableString> map = buildMap(transactionsIt);
         BinIO.storeObject(map, transactionsMap.toFile());
-        this.progress.done();
 
         return map;
     }
 
-    public GOVMinimalPerfectHashFunction<MutableString> buildMap (Iterator<MutableString> it) throws IOException {
-        File tempDir = Files.createTempDirectory(resources, "map_temp").toFile();
+    public static GOVMinimalPerfectHashFunction<MutableString> buildMap(Iterator<MutableString> it) throws IOException {
+        File tempDir = Files.createTempDirectory(resources, "map_temp_" + it.hashCode()).toFile();
         tempDir.deleteOnExit();
 
         GOVMinimalPerfectHashFunction.Builder<MutableString> b = new GOVMinimalPerfectHashFunction.Builder<>();
         b.keys(() -> it);
         b.tempDir(tempDir);
-        b.transform(TransformationStrategies.rawIso());
+        b.transform(TransformationStrategies.iso());
         return b.build();
     }
 
     public static void main(String[] args) throws IOException {
-        new MappingTables(null).buildTransactionsMap();
-        new MappingTables(null).buildAddressesMap();
+        MappingTables.buildTransactionsMap();
+        MappingTables.buildAddressesMap();
     }
 }

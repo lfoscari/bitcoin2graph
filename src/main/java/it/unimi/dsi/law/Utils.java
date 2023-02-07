@@ -1,54 +1,17 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.bits.TransformationStrategies;
-import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.io.FastBufferedReader;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.util.*;
 
 import static it.unimi.dsi.law.Parameters.*;
 
 public class Utils {
-	public static byte[] longToBytes(long data) {
-		return new byte[] {
-				(byte) ((data >> 56) & 0xff),
-				(byte) ((data >> 48) & 0xff),
-				(byte) ((data >> 40) & 0xff),
-				(byte) ((data >> 32) & 0xff),
-				(byte) ((data >> 24) & 0xff),
-				(byte) ((data >> 16) & 0xff),
-				(byte) ((data >> 8) & 0xff),
-				(byte) (data & 0xff)
-		};
-	}
-
-	public static long[] bytesToLongs(byte[] data) {
-		int size = data.length / Long.BYTES;
-		long[] result = new long[size];
-		for (int i = 0; i < size; i += 1) {
-			for (int j = i * Long.BYTES; j < (i + 1) * Long.BYTES; j++) {
-				result[i] = (result[i] << 8) + (data[j] & 255);
-			}
-		}
-		return result;
-	}
-
-	public static long hashCode(String s) {
-		long h = 0;
-		for (byte v : s.getBytes(Charset.defaultCharset())) {
-			h = 31 * h + (v & 0xff);
-		}
-		return h;
-	}
-
 	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {
 		Logger logger = LoggerFactory.getLogger(cls);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, itemsName);
@@ -64,7 +27,7 @@ public class Utils {
 			if ((inc = line.indexOf('\t', start)) > 0) {
 				start = inc + 1;
 			} else {
-				return line.length(0);
+				throw new RuntimeException("Column number too high");
 			}
 		}
 
@@ -74,10 +37,8 @@ public class Utils {
 			end = line.length();
 		}
 
-		line.delete(end, line.length());
-		line.delete(0, start);
-
-		return line;
+		// allocates!
+		return line.substring(start, end);
 	}
 
 	public static boolean columnEquals(MutableString line, int col, String other) {
