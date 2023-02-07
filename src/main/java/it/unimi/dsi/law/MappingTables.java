@@ -18,9 +18,8 @@ import static it.unimi.dsi.law.Parameters.addressesMap;
 
 public class MappingTables {
     public static GOVMinimalPerfectHashFunction<MutableString> buildAddressesMap() throws IOException {
-        LoggerFactory.getLogger(MappingTables.class).info("Mapping addresses");
-
         if (addressesMap.toFile().exists()) {
+            LoggerFactory.getLogger(MappingTables.class).info("Loading addresses mappings from memory");
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
             } catch (ClassNotFoundException e) {
@@ -28,6 +27,7 @@ public class MappingTables {
             }
         }
 
+        LoggerFactory.getLogger(MappingTables.class).info("Computing addresses mappings");
         Iterator<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString(), null, null);
 
         GOVMinimalPerfectHashFunction<MutableString> map = buildMap(addressesIt);
@@ -37,9 +37,8 @@ public class MappingTables {
     }
 
     public static GOVMinimalPerfectHashFunction<MutableString> buildTransactionsMap() throws IOException {
-        LoggerFactory.getLogger(MappingTables.class).info("Mapping transactions");
-
         if (transactionsMap.toFile().exists()) {
+            LoggerFactory.getLogger(MappingTables.class).info("Loading transactions mappings from memory");
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(transactionsMap.toFile());
             } catch (ClassNotFoundException e) {
@@ -47,6 +46,7 @@ public class MappingTables {
             }
         }
 
+        LoggerFactory.getLogger(MappingTables.class).info("Computing transactions mappings");
         Utils.LineCleaner cleaner = (line) -> Utils.column(line, 1);
         Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
         File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
