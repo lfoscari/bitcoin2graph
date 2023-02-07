@@ -8,21 +8,23 @@ public class Parameters {
 	// Paths
 
 	public final static Path resources = Path.of("src/main/resources");
+	public final static Path artifacts = resources.resolve("artifacts");
 	public final static Path graph = resources.resolve("graph");
 
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
-	public final static Path addressesMap = resources.resolve("addresses.map");
+	public final static Path addressesMap = artifacts.resolve("addresses.map");
 
 	public final static Path transactionsDirectory = resources.resolve("transactions");
-	public final static Path transactionsMap = resources.resolve("transactions.map");
+	public final static Path transactionsMap = artifacts.resolve("transactions.map");
 
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin.ids");
 
 	public final static Path inputsDirectory = resources.resolve("inputs");
-	public final static Path outputsDirectory = resources.resolve("outputs");
+	public final static Path transactionInputsFile = artifacts.resolve("transactions.inputs.table");
 
-	public final static Path transactionsDatabaseDirectory = resources.resolve("transaction");
+	public final static Path outputsDirectory = resources.resolve("outputs");
+	public final static Path transactionOutputsFile = artifacts.resolve("transactions.outputs.table");
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 

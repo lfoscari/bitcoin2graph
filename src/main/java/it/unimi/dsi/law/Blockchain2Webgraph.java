@@ -80,15 +80,15 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	}
 
 	public static void main (String[] args) throws IOException {
+		graph.toFile().mkdir();
+		artifacts.toFile().mkdir();
+
 		GOVMinimalPerfectHashFunction<MutableString> addressMap = MappingTables.buildAddressesMap();
 		GOVMinimalPerfectHashFunction<MutableString> transactionMap = MappingTables.buildTransactionsMap();
 
 		TransactionsDatabase transactions = new TransactionsDatabase(addressMap, transactionMap);
-		transactions.compute();
 
 		ProgressLogger progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs");
-		graph.toFile().mkdir();
-
 		Blockchain2Webgraph bw = new Blockchain2Webgraph(transactions, transactionMap, progress);
 		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();

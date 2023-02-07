@@ -1,5 +1,6 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -20,30 +21,40 @@ public class TransactionsDatabase {
 	private final ProgressLogger progress;
 	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
 	private final GOVMinimalPerfectHashFunction<MutableString> transactionMap;
-	Long2ObjectOpenHashMap<LongList> transactionInputs = new Long2ObjectOpenHashMap<>();
-	Long2ObjectOpenHashMap<LongList> transactionOutputs = new Long2ObjectOpenHashMap<>();
+	Long2ObjectOpenHashMap<LongList> transactionInputs;
+	Long2ObjectOpenHashMap<LongList> transactionOutputs;
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap) {
+	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
 	}
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap, ProgressLogger progress) {
+	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap, ProgressLogger progress) throws IOException {
 		this.addressMap = addressMap;
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
-	}
 
-	void compute () throws IOException {
-		this.progress.start("Building input transactions database");
-		this.computeInputs();
-		this.progress.stop();
+		try {
+			this.transactionInputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionInputsFile.toFile());
+		} catch (IOException e) {
+			this.computeInputs();
+			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 
-		this.progress.start("Building output transactions database");
-		this.computeOutputs();
-		this.progress.done();
+		try {
+			this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
+		} catch (IOException e) {
+			this.computeOutputs();
+			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private void computeInputs() throws IOException {
+		this.transactionInputs = new Long2ObjectOpenHashMap<>();
+
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
 			throw new NoSuchFileException("No inputs found in " + inputsDirectory);
@@ -59,6 +70,8 @@ public class TransactionsDatabase {
 	}
 
 	private void computeOutputs() throws IOException {
+		this.transactionOutputs = new Long2ObjectOpenHashMap<>();
+
 		LineFilter filter = (line) -> Utils.columnEquals(line, IS_FROM_COINBASE, "0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {

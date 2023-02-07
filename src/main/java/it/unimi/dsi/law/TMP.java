@@ -77,10 +77,7 @@ public class TMP {
         long[] ids = BinIO.loadLongs(Parameters.ids.toFile());
 
         Random r = new Random();
-        int node;
-        do {
-            node = r.nextInt(ids.length);
-        } while(bitcoinGraph.outdegree(node) <= 1);
+        int node = r.nextInt(ids.length);
 
         long id = ids[node];
         int[] successors = bitcoinGraph.successorArray(node);
