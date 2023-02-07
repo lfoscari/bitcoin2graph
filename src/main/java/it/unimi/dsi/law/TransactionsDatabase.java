@@ -21,8 +21,8 @@ public class TransactionsDatabase {
 	private final ProgressLogger progress;
 	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
 	private final GOVMinimalPerfectHashFunction<MutableString> transactionMap;
-	Long2ObjectOpenHashMap<LongList> transactionInputs;
-	Long2ObjectOpenHashMap<LongList> transactionOutputs;
+	private Long2ObjectOpenHashMap<LongList> transactionInputs;
+	private Long2ObjectOpenHashMap<LongList> transactionOutputs;
 
 	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
@@ -35,18 +35,24 @@ public class TransactionsDatabase {
 
 		try {
 			this.transactionInputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionInputsFile.toFile());
+			this.progress.logger.info("Loaded transaction inputs from memory");
 		} catch (IOException e) {
+			this.progress.start("Computing transaction inputs table");
 			this.computeInputs();
 			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
+			this.progress.done();
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
 
 		try {
 			this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
+			this.progress.logger.info("Loaded transaction outputs table from memory");
 		} catch (IOException e) {
+			this.progress.start("Computing transaction outputs table");
 			this.computeOutputs();
 			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
+			this.progress.done();
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
