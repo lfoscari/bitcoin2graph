@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,6 +18,8 @@ import static it.unimi.dsi.law.Parameters.addressesMap;
 
 public class MappingTables {
     public static GOVMinimalPerfectHashFunction<MutableString> buildAddressesMap() throws IOException {
+        LoggerFactory.getLogger(MappingTables.class).info("Mapping addresses");
+
         if (addressesMap.toFile().exists()) {
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
@@ -34,6 +37,8 @@ public class MappingTables {
     }
 
     public static GOVMinimalPerfectHashFunction<MutableString> buildTransactionsMap() throws IOException {
+        LoggerFactory.getLogger(MappingTables.class).info("Mapping transactions");
+
         if (transactionsMap.toFile().exists()) {
             try {
                 return (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(transactionsMap.toFile());
@@ -68,7 +73,7 @@ public class MappingTables {
     }
 
     public static void main(String[] args) throws IOException {
-        MappingTables.buildTransactionsMap();
         MappingTables.buildAddressesMap();
+        MappingTables.buildTransactionsMap();
     }
 }
