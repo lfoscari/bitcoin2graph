@@ -82,6 +82,8 @@ public class TransactionsDatabase {
 			this.add(this.transactionInputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
+
+		this.transactionInputs.trim();
 	}
 
 	private void computeOutputs() throws IOException {
@@ -104,6 +106,8 @@ public class TransactionsDatabase {
 			this.add(this.transactionOutputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
+
+		this.transactionOutputs.trim();
 	}
 
 	public void add(Long2ObjectOpenHashMap<LongOpenHashSet> table, long transaction, long address) {
