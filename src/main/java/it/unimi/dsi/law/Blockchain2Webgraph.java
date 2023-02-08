@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
@@ -54,8 +55,8 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 			CharSequence transaction = Utils.column(this.transactions.next(), 1);
 			long transactionId = this.transactionMap.getLong(transaction);
 
-			LongList inputAddresses = this.transactionsDatabase.getInputAddresses(transactionId);
-			LongList outputAddresses = this.transactionsDatabase.getOutputAddresses(transactionId);
+			LongOpenHashSet inputAddresses = this.transactionsDatabase.getInputAddresses(transactionId);
+			LongOpenHashSet outputAddresses = this.transactionsDatabase.getOutputAddresses(transactionId);
 
 			if (inputAddresses == null || outputAddresses == null) {
 				continue;

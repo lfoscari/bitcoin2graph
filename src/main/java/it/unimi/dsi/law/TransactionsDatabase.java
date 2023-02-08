@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
@@ -21,8 +22,8 @@ public class TransactionsDatabase {
 	private final ProgressLogger progress;
 	private final GOVMinimalPerfectHashFunction<CharSequence> addressMap;
 	private final GOVMinimalPerfectHashFunction<CharSequence> transactionMap;
-	private Long2ObjectOpenHashMap<LongList> transactionInputs;
-	private Long2ObjectOpenHashMap<LongList> transactionOutputs;
+	private Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs;
+	private Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs;
 
 	public TransactionsDatabase (GOVMinimalPerfectHashFunction<CharSequence> addressMap, GOVMinimalPerfectHashFunction<CharSequence> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
@@ -36,7 +37,7 @@ public class TransactionsDatabase {
 		if (transactionInputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction inputs from memory");
-				this.transactionInputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionInputsFile.toFile());
+				this.transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -50,7 +51,7 @@ public class TransactionsDatabase {
 		if (transactionOutputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction outputs table from memory");
-				this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
+				this.transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -97,10 +98,10 @@ public class TransactionsDatabase {
 		});
 	}
 
-	public void add(Long2ObjectOpenHashMap<LongList> table, long transaction, long address) {
+	public void add(Long2ObjectOpenHashMap<LongOpenHashSet> table, long transaction, long address) {
 		table.compute(transaction, (k, v) -> {
 			if (v == null) {
-				return LongArrayList.of(address);
+				return LongOpenHashSet.of(address);
 			}
 
 			v.add(address);
@@ -108,7 +109,7 @@ public class TransactionsDatabase {
 		});
 	}
 
-	public LongList getInputAddresses (long transaction) {
+	public LongOpenHashSet getInputAddresses (long transaction) {
 		if (this.transactionInputs.containsKey(transaction)) {
 			return this.transactionInputs.get(transaction);
 		}
@@ -116,7 +117,7 @@ public class TransactionsDatabase {
 		return null;
 	}
 
-	public LongList getOutputAddresses (long transaction) {
+	public LongOpenHashSet getOutputAddresses (long transaction) {
 		if (this.transactionOutputs.containsKey(transaction)) {
 			return this.transactionOutputs.get(transaction);
 		}
