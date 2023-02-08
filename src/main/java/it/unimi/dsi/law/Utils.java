@@ -15,13 +15,12 @@ public class Utils {
 	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {
 		Logger logger = LoggerFactory.getLogger(cls);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, itemsName);
-		progress.displayLocalSpeed = true;
 		progress.displayFreeMemory = true;
 
 		return progress;
 	}
 
-	public static MutableString column(MutableString line, int col) {
+	public static CharSequence column(MutableString line, int col) {
 		int start = 0, inc;
 		while (col-- > 0) {
 			if ((inc = line.indexOf('\t', start)) > 0) {
@@ -37,8 +36,7 @@ public class Utils {
 			end = line.length();
 		}
 
-		// allocates!
-		return line.substring(start, end);
+		return line.subSequence(start, end);
 	}
 
 	public static boolean columnEquals(MutableString line, int col, String other) {
@@ -64,11 +62,7 @@ public class Utils {
 		boolean accept(MutableString str);
 	}
 
-	interface LineCleaner {
-		MutableString clean(MutableString str);
-	}
-
-	static class CleaningIterator implements Iterator<MutableString> {
+	/* static class CleaningIterator implements Iterator<MutableString> {
 		private final Iterator<MutableString> iterator;
 		private final LineCleaner cleaner;
 
@@ -86,7 +80,7 @@ public class Utils {
 		public MutableString next() {
 			return this.cleaner.clean(this.iterator.next());
 		}
-	}
+	} */
 
 	static class FilteringIterator implements Iterator<MutableString> {
 		private final Iterator<MutableString> iterator;
@@ -195,19 +189,16 @@ public class Utils {
 		}
 	}
 
-	static Iterator<MutableString> readTSVs(File tsv, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
-		return readTSVs(new File[] { tsv }, ms, filter, cleaner);
+	static Iterator<MutableString> readTSVs(File tsv, MutableString ms) throws IOException {
+		return readTSVs(new File[] { tsv }, ms, null);
 	}
 
-	static Iterator<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter, LineCleaner cleaner) throws IOException {
+	static Iterator<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter) throws IOException {
 		Iterator<MutableString> iterator = new TSVIterator(ms, files);
 
 		if (filter != null) {
+			// Iterables.filter?
 			iterator = new FilteringIterator(iterator, filter);
-		}
-
-		if (cleaner != null) {
-			iterator = new CleaningIterator(iterator, cleaner);
 		}
 
 		return iterator;

@@ -1,27 +1,31 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.webgraph.EFGraph;
-import it.unimi.dsi.webgraph.ImmutableGraph;
-import it.unimi.dsi.webgraph.LazyIntIterator;
-import it.unimi.dsi.webgraph.NodeIterator;
-import org.apache.commons.lang3.mutable.Mutable;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
 
-import static it.unimi.dsi.law.Parameters.*;
-
 public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        GOVMinimalPerfectHashFunction<MutableString> transactionMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
-        GOVMinimalPerfectHashFunction<MutableString> addressMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.addressesMap.toFile());
+
+        MutableString s = new MutableString("0123456789");
+
+        CharSequence firstFive = s.subSequence(0, 5);
+        CharSequence lastFive = s.subSequence(5, s.length());
+
+        System.out.println(s);
+        System.out.println(lastFive);
+
+        System.exit(1);
+
+        GOVMinimalPerfectHashFunction<MutableString> transactionMap =
+                (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
+        GOVMinimalPerfectHashFunction<MutableString> addressMap =
+                (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.addressesMap.toFile());
 
 
         /*Iterator<MutableString> it = Utils.readTSVs(resources.resolve("test.tsv").toFile(), new MutableString(), null, null);
@@ -71,8 +75,6 @@ public class TMP {
             }
         }); */
 
-
-
         EFGraph bitcoinGraph = EFGraph.load(Parameters.basename.toString());
         long[] ids = BinIO.loadLongs(Parameters.ids.toFile());
 
@@ -93,7 +95,7 @@ public class TMP {
     }
 
     static MutableString findAddress(GOVMinimalPerfectHashFunction<MutableString> addressMap, long id) throws IOException {
-        Iterator<MutableString> it = Utils.readTSVs(Parameters.addressesFile.toFile(), new MutableString(), null, null);
+        Iterator<MutableString> it = Utils.readTSVs(Parameters.addressesFile.toFile(), new MutableString());
 
         while (it.hasNext()) {
             MutableString addr = it.next();
