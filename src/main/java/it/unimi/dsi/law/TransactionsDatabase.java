@@ -75,6 +75,10 @@ public class TransactionsDatabase {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
+			if (addressId == -1 || transactionId == -1) {
+				return;
+			}
+
 			this.add(this.transactionInputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
@@ -92,6 +96,10 @@ public class TransactionsDatabase {
 		Utils.readTSVs(sources, new MutableString(), filter).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
+
+			if (addressId == -1 || transactionId == -1) {
+				return;
+			}
 
 			this.add(this.transactionOutputs, transactionId, addressId);
 			this.progress.lightUpdate();
