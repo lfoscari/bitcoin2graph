@@ -2,8 +2,6 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -12,7 +10,6 @@ import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.util.Iterator;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -65,6 +62,7 @@ public class TransactionsDatabase {
 
 	private void computeInputs() throws IOException {
 		this.transactionInputs = new Long2ObjectOpenHashMap<>();
+		this.transactionInputs.defaultReturnValue(LongOpenHashSet.of());
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -82,6 +80,7 @@ public class TransactionsDatabase {
 
 	private void computeOutputs() throws IOException {
 		this.transactionOutputs = new Long2ObjectOpenHashMap<>();
+		this.transactionOutputs.defaultReturnValue(LongOpenHashSet.of());
 
 		LineFilter filter = (line) -> Utils.columnEquals(line, IS_FROM_COINBASE, "0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
@@ -100,10 +99,7 @@ public class TransactionsDatabase {
 
 	public void add(Long2ObjectOpenHashMap<LongOpenHashSet> table, long transaction, long address) {
 		table.compute(transaction, (k, v) -> {
-			if (v == null) {
-				return LongOpenHashSet.of(address);
-			}
-
+			assert v != null;
 			v.add(address);
 			return v;
 		});
