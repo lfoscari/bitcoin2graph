@@ -19,16 +19,16 @@ import static it.unimi.dsi.law.Utils.*;
 
 public class TransactionsDatabase {
 	private final ProgressLogger progress;
-	private final GOVMinimalPerfectHashFunction<MutableString> addressMap;
-	private final GOVMinimalPerfectHashFunction<MutableString> transactionMap;
+	private final GOVMinimalPerfectHashFunction<CharSequence> addressMap;
+	private final GOVMinimalPerfectHashFunction<CharSequence> transactionMap;
 	private Long2ObjectOpenHashMap<LongList> transactionInputs;
 	private Long2ObjectOpenHashMap<LongList> transactionOutputs;
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap) throws IOException {
+	public TransactionsDatabase (GOVMinimalPerfectHashFunction<CharSequence> addressMap, GOVMinimalPerfectHashFunction<CharSequence> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
 	}
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<MutableString> addressMap, GOVMinimalPerfectHashFunction<MutableString> transactionMap, ProgressLogger progress) throws IOException {
+	public TransactionsDatabase (GOVMinimalPerfectHashFunction<CharSequence> addressMap, GOVMinimalPerfectHashFunction<CharSequence> transactionMap, ProgressLogger progress) throws IOException {
 		this.addressMap = addressMap;
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
@@ -47,7 +47,7 @@ public class TransactionsDatabase {
 			this.progress.done();
 		}
 
-		if (transactionInputsFile.toFile().exists()) {
+		if (transactionOutputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction outputs table from memory");
 				this.transactionOutputs = (Long2ObjectOpenHashMap<LongList>) BinIO.loadObject(transactionOutputsFile.toFile());
@@ -70,7 +70,7 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No inputs found in " + inputsDirectory);
 		}
 
-		Utils.readTSVs(sources, new MutableString(), null, null).forEachRemaining((s) -> {
+		Utils.readTSVs(sources, new MutableString(), null).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
@@ -88,7 +88,7 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 		}
 
-		Utils.readTSVs(sources, new MutableString(), filter, null).forEachRemaining((s) -> {
+		Utils.readTSVs(sources, new MutableString(), filter).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
 
