@@ -1,12 +1,14 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.io.FastBufferedReader;
+import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
 
 import static it.unimi.dsi.law.Parameters.*;
@@ -170,11 +172,16 @@ public class Utils {
 		}
 	}
 
-	static Iterator<MutableString> readTSVs(File tsv, MutableString ms) throws IOException {
-		return readTSVs(new File[] { tsv }, ms, null);
+	static Iterator<MutableString> readTSVs(Path tsv) {
+		FileLinesMutableStringIterable iterable = new FileLinesMutableStringIterable(tsv.toString());
+		Iterator<MutableString> iterator = iterable.iterator();
+		iterator.next(); // skip header
+
+		return iterator;
 	}
 
 	static Iterator<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter) throws IOException {
+		// TODO: migrate to FileLinesMutableStringIterable, find a way to build an input stream from files in a directory and maybe use the compressor to avoid unzipping the inputs and outputs files.
 		Iterator<MutableString> iterator = new TSVIterator(ms, files);
 
 		if (filter != null) {
