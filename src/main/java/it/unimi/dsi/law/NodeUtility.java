@@ -9,6 +9,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -16,17 +17,18 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class NodeUtility {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        GOVMinimalPerfectHashFunction<MutableString> addressMap =
-                (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
-        Long2ObjectOpenHashMap<String> addressInverseMap =
-                (Long2ObjectOpenHashMap<String>) BinIO.loadObject(addressesInverseMap.toFile());
+        GOVMinimalPerfectHashFunction<MutableString> addressMap = (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(addressesMap.toFile());
+        Long2ObjectOpenHashMap<String> addressInverseMap = (Long2ObjectOpenHashMap<String>) BinIO.loadObject(addressesInverseMap.toFile());
 
         EFGraph bitcoinGraph = EFGraph.load(basename.toString());
         long[] addressIds = BinIO.loadLongs(ids.toFile());
 
-        Scanner sc = new Scanner(System.in);
         System.out.print("address> ");
-        String address = sc.nextLine();
+        String address = new Scanner(System.in).nextLine();
+
+        if (!addressMap.containsKey(address)) {
+            throw new NoSuchElementException("Address not found");
+        }
 
         long id = addressMap.getLong(address);
         int node = ArrayUtils.indexOf(addressIds, id);

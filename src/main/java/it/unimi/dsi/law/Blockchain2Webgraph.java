@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 
 import static it.unimi.dsi.law.Parameters.*;
@@ -76,6 +77,10 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 	@Override
 	public long[] next () {
+		if (!this.hasNext()) {
+			throw new NoSuchElementException();
+		}
+
 		this.progress.lightUpdate();
 		return this.arcs.remove();
 	}
