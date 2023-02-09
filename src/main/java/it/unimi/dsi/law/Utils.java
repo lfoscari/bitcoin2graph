@@ -39,25 +39,6 @@ public class Utils {
 		return line.subSequence(start, end);
 	}
 
-	public static boolean columnEquals(MutableString line, int col, String other) {
-		int start = 0, inc;
-		while (col-- > 0) {
-			if ((inc = line.indexOf('\t', start)) > 0) {
-				start = inc + 1;
-			} else {
-				return false;
-			}
-		}
-
-		int end = line.indexOf('\t', start);
-
-		if (end == -1) {
-			end = line.length();
-		}
-
-		return line.subSequence(start, end).equals(other);
-	}
-
 	interface LineFilter {
 		boolean accept(MutableString str);
 	}
