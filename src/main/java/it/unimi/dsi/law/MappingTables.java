@@ -30,12 +30,9 @@ public class MappingTables {
         LoggerFactory.getLogger(MappingTables.class).info("Computing addresses mappings");
         Iterator<MutableString> addressesIt = Utils.readTSVs(addressesFile.toFile(), new MutableString());
 
-        File tempDir = Files.createTempDirectory(resources, "map_temp_").toFile();
-        tempDir.deleteOnExit();
-
         // redundant
         Function<MutableString, CharSequence> extractAddress = line -> Utils.column(line, 0);
-        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(Iterables.transform(() -> addressesIt, extractAddress::apply), tempDir);
+        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(Iterables.transform(() -> addressesIt, extractAddress::apply));
 
         BinIO.storeObject(map, addressesMap.toFile());
         return map;
@@ -52,30 +49,30 @@ public class MappingTables {
         }
 
         LoggerFactory.getLogger(MappingTables.class).info("Computing transactions mappings");
-        Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
+        Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
         File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
         if (sources == null) {
             throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
         }
         Iterator<MutableString> transactionsIt = Utils.readTSVs(sources, new MutableString(), filter);
 
-        File tempDir = Files.createTempDirectory(resources, "map_temp_").toFile();
-        tempDir.deleteOnExit();
         Function<MutableString, CharSequence> extractTransactionHash = line -> Utils.column(line, 1);
 
-        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(Iterables.transform(() -> transactionsIt, extractTransactionHash::apply), tempDir);
+        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(Iterables.transform(() -> transactionsIt, extractTransactionHash::apply));
         BinIO.storeObject(map, transactionsMap.toFile());
         return map;
     }
 
-    private static GOVMinimalPerfectHashFunction<CharSequence> buildMap(Iterable<CharSequence> it, File tempDir) throws IOException {
+    private static GOVMinimalPerfectHashFunction<CharSequence> buildMap(Iterable<CharSequence> it) throws IOException {
+        File tempDir = Files.createTempDirectory(resources, "map_temp_").toFile();
+        tempDir.deleteOnExit();
+
         GOVMinimalPerfectHashFunction.Builder<CharSequence> b = new GOVMinimalPerfectHashFunction.Builder<>();
         b.keys(it);
         b.tempDir(tempDir);
         b.transform(TransformationStrategies.iso());
-        GOVMinimalPerfectHashFunction<CharSequence> map = b.build();
 
-        return map;
+        return b.build();
     }
 
     public static void main(String[] args) throws IOException {

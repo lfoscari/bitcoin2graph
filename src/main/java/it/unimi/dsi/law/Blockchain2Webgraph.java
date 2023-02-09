@@ -31,7 +31,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		this.transactionsDatabase = transactionsDatabase;
 		this.transactionMap = transactionMap;
 
-		Utils.LineFilter filter = (line) -> Utils.columnEquals(line, 7, "0");
+		Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
 		File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
 			throw new NoSuchFileException("No transactions found in " + transactionsDirectory);

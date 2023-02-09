@@ -1,6 +1,8 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.webgraph.EFGraph;
@@ -11,8 +13,19 @@ import java.util.Random;
 
 public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+        Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(Parameters.transactionInputsFile.toFile());
+        transactionInputs.trim();
+        BinIO.storeObject(transactionInputs, Parameters.transactionInputsFile.toFile());
 
-        MutableString s = new MutableString("0123456789");
+        System.gc();
+
+        Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(Parameters.transactionOutputsFile.toFile());
+        transactionOutputs.trim();
+        BinIO.storeObject(transactionOutputs, Parameters.transactionOutputsFile.toFile());
+
+        System.exit(1);
+
+        /* MutableString s = new MutableString("0123456789");
 
         CharSequence firstFive = s.subSequence(0, 5);
         CharSequence lastFive = s.subSequence(5, s.length());
@@ -20,7 +33,7 @@ public class TMP {
         System.out.println(s);
         System.out.println(lastFive);
 
-        System.exit(1);
+        System.exit(1);*/
 
         GOVMinimalPerfectHashFunction<MutableString> transactionMap =
                 (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
