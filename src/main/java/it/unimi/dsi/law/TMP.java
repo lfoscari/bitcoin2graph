@@ -3,16 +3,26 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.webgraph.EFGraph;
 
+import java.awt.print.PrinterAbortException;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
 
 public class TMP {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+
+        /* FileLinesMutableStringIterable it = new FileLinesMutableStringIterable(Parameters.addressesFile.toString());
+        for (MutableString s: it) {
+            System.out.println(s);
+        }
+
+        System.exit(1);
+
         Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(Parameters.transactionInputsFile.toFile());
         transactionInputs.trim();
         BinIO.storeObject(transactionInputs, Parameters.transactionInputsFile.toFile());
@@ -23,7 +33,7 @@ public class TMP {
         transactionOutputs.trim();
         BinIO.storeObject(transactionOutputs, Parameters.transactionOutputsFile.toFile());
 
-        System.exit(1);
+        System.exit(1); */
 
         /* MutableString s = new MutableString("0123456789");
 
@@ -34,11 +44,6 @@ public class TMP {
         System.out.println(lastFive);
 
         System.exit(1);*/
-
-        GOVMinimalPerfectHashFunction<MutableString> transactionMap =
-                (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.transactionsMap.toFile());
-        GOVMinimalPerfectHashFunction<MutableString> addressMap =
-                (GOVMinimalPerfectHashFunction<MutableString>) BinIO.loadObject(Parameters.addressesMap.toFile());
 
 
         /*Iterator<MutableString> it = Utils.readTSVs(resources.resolve("test.tsv").toFile(), new MutableString(), null, null);
@@ -87,36 +92,5 @@ public class TMP {
                 throw new RuntimeException();
             }
         }); */
-
-        EFGraph bitcoinGraph = EFGraph.load(Parameters.basename.toString());
-        long[] ids = BinIO.loadLongs(Parameters.ids.toFile());
-
-        Random r = new Random();
-        int node = r.nextInt(ids.length);
-
-        long id = ids[node];
-        int[] successors = bitcoinGraph.successorArray(node);
-
-        if (successors.length != bitcoinGraph.outdegree(node)) {
-            throw new RuntimeException();
-        }
-
-        System.out.println(id + " (" +  findAddress(addressMap, id) + ") -> [" + bitcoinGraph.outdegree(node) + "]");
-        for(int i = 0; i < bitcoinGraph.outdegree(node); i++) {
-            System.out.println("\t" + ids[successors[i]] + " (" +  findAddress(addressMap, ids[successors[i]]) + ")");
-        }
-    }
-
-    static MutableString findAddress(GOVMinimalPerfectHashFunction<MutableString> addressMap, long id) throws IOException {
-        Iterator<MutableString> it = Utils.readTSVs(Parameters.addressesFile.toFile(), new MutableString());
-
-        while (it.hasNext()) {
-            MutableString addr = it.next();
-            if (addressMap.getLong(addr) == id) {
-                return addr.copy();
-            }
-        }
-
-        return null;
     }
 }
