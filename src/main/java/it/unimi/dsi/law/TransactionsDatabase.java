@@ -64,7 +64,7 @@ public class TransactionsDatabase {
 	}
 
 	private void computeInputs() throws IOException {
-		this.transactionInputs = new Long2ObjectOpenHashMap<>();
+		this.transactionInputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -75,7 +75,7 @@ public class TransactionsDatabase {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
-			if (addressId == -1 || transactionId == -1) {
+			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
 				return;
 			}
 
@@ -87,7 +87,7 @@ public class TransactionsDatabase {
 	}
 
 	private void computeOutputs() throws IOException {
-		this.transactionOutputs = new Long2ObjectOpenHashMap<>();
+		this.transactionOutputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
 
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
