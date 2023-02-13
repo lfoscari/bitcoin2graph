@@ -11,6 +11,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -35,13 +36,15 @@ public class NodeUtility {
         EFGraph bitcoinGraph = EFGraph.load(basename.toString());
         long[] addressIds = BinIO.loadLongs(ids.toFile());
 
-        LoggerFactory.getLogger(NodeUtility.class).info("This only works with addresses contained in addresses.tsv, otherwise the results are unpredictable.");
         System.out.print("address> ");
         String address = new Scanner(System.in).nextLine();
-
         long id = addressMap.getLong(address);
-        int node = ArrayUtils.indexOf(addressIds, id);
 
+        if (!addressInverseMap.get(id).equals(address)) {
+            throw new NoSuchFileException("Address not found!");
+        }
+
+        int node = ArrayUtils.indexOf(addressIds, id);
         int[] successors = bitcoinGraph.successorArray(node);
 
         System.out.println(address + " (id: " + id + ", outdegree: " + bitcoinGraph.outdegree(node) + "):");
