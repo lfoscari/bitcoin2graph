@@ -71,7 +71,7 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No inputs found in " + inputsDirectory);
 		}
 
-		Utils.readTSVs(sources, new MutableString(), null).forEachRemaining((s) -> {
+		Utils.readTSVs(sources, null).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
 
@@ -95,7 +95,7 @@ public class TransactionsDatabase {
 			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 		}
 
-		Utils.readTSVs(sources, new MutableString(), filter).forEachRemaining((s) -> {
+		Utils.readTSVs(sources, filter).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
 

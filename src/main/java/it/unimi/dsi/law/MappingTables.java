@@ -33,9 +33,7 @@ public class MappingTables {
 
         LoggerFactory.getLogger(MappingTables.class).info("Computing addresses mappings");
 
-        Function<MutableString, CharSequence> extractAddress = line -> Utils.column(line, 0);
-        Iterable<CharSequence> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), extractAddress::apply);
-
+        Iterable<CharSequence> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
         return buildMap(addresses, addressesMap);
     }
 
@@ -58,9 +56,8 @@ public class MappingTables {
             throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
         }
 
-        Function<MutableString, CharSequence> extractTransactionHash = line -> Utils.column(line, 1);
-        Iterator<MutableString> iterator = Utils.readTSVs(sources, new MutableString(), filter);
-        Iterable<CharSequence> transactions = Iterables.transform(() -> iterator, extractTransactionHash::apply);
+        Iterator<MutableString> iterator = Utils.readTSVs(sources, filter);
+        Iterable<CharSequence> transactions = Iterables.transform(() -> iterator, line -> Utils.column(line, 1));
 
         return buildMap(transactions, transactionsMap);
     }

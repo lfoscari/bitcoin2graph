@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.lang.MutableString;
@@ -10,6 +11,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -24,8 +26,8 @@ public class NodeUtility {
 
         if (!addressesInverseMap.toFile().exists()) {
             LoggerFactory.getLogger(NodeUtility.class).info("Computing inverse address map, this might take a while...");
-            Function<MutableString, CharSequence> extractAddress = line -> Utils.column(line, 0);
-            buildInverseMap(addressMap, Utils.readTSVs(addressesFile), extractAddress, addressesInverseMap);
+            Iterator<CharSequence> addresses = Iterators.transform(Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
+            buildInverseMap(addressMap, addresses, addressesInverseMap);
             LoggerFactory.getLogger(NodeUtility.class).info("Done!");
         }
 
@@ -34,13 +36,15 @@ public class NodeUtility {
         EFGraph bitcoinGraph = EFGraph.load(basename.toString());
         long[] addressIds = BinIO.loadLongs(ids.toFile());
 
-        LoggerFactory.getLogger(NodeUtility.class).info("This only works with addresses contained in addresses.tsv, otherwise the results are unpredictable.");
         System.out.print("address> ");
         String address = new Scanner(System.in).nextLine();
-
         long id = addressMap.getLong(address);
-        int node = ArrayUtils.indexOf(addressIds, id);
 
+        if (!addressInverseMap.get(id).equals(address)) {
+            throw new NoSuchFileException("Address not found!");
+        }
+
+        int node = ArrayUtils.indexOf(addressIds, id);
         int[] successors = bitcoinGraph.successorArray(node);
 
         System.out.println(address + " (id: " + id + ", outdegree: " + bitcoinGraph.outdegree(node) + "):");
@@ -50,11 +54,9 @@ public class NodeUtility {
         }
     }
 
-    private static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<MutableString> iterator, Function<MutableString, CharSequence> transformation, Path addressesInverseMap) throws IOException {
+    private static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<CharSequence> iterator, Path addressesInverseMap) throws IOException {
         Long2ObjectOpenHashMap<String> inverse = new Long2ObjectOpenHashMap<>();
-        Iterables.transform(() -> iterator, transformation::apply)
-                .forEach((line) -> inverse.put(map.getLong(line), line.toString()));
-
+        iterator.forEachRemaining(line -> inverse.put(map.getLong(line), line.toString()));
         inverse.trim();
         BinIO.storeObject(inverse, addressesInverseMap.toFile());
     }
