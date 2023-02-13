@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.lang.MutableString;
@@ -24,8 +25,8 @@ public class NodeUtility {
 
         if (!addressesInverseMap.toFile().exists()) {
             LoggerFactory.getLogger(NodeUtility.class).info("Computing inverse address map, this might take a while...");
-            Function<MutableString, CharSequence> extractAddress = line -> Utils.column(line, 0);
-            buildInverseMap(addressMap, Utils.readTSVs(addressesFile), extractAddress, addressesInverseMap);
+            Iterator<CharSequence> addresses = Iterators.transform(Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
+            buildInverseMap(addressMap, addresses, addressesInverseMap);
             LoggerFactory.getLogger(NodeUtility.class).info("Done!");
         }
 
@@ -50,11 +51,9 @@ public class NodeUtility {
         }
     }
 
-    private static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<MutableString> iterator, Function<MutableString, CharSequence> transformation, Path addressesInverseMap) throws IOException {
+    private static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<CharSequence> iterator, Path addressesInverseMap) throws IOException {
         Long2ObjectOpenHashMap<String> inverse = new Long2ObjectOpenHashMap<>();
-        Iterables.transform(() -> iterator, transformation::apply)
-                .forEach((line) -> inverse.put(map.getLong(line), line.toString()));
-
+        iterator.forEachRemaining(line -> inverse.put(map.getLong(line), line.toString()));
         inverse.trim();
         BinIO.storeObject(inverse, addressesInverseMap.toFile());
     }

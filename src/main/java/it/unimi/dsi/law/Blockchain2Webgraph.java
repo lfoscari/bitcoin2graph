@@ -37,7 +37,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		if (sources == null) {
 			throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
 		}
-		this.transactions = Utils.readTSVs(sources, new MutableString(), filter);
+		this.transactions = Utils.readTSVs(sources, filter);
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs") : progress;
 	}
 

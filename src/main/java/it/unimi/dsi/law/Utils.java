@@ -1,7 +1,8 @@
 package it.unimi.dsi.law;
 
-import it.unimi.dsi.io.FastBufferedReader;
+import com.google.common.collect.Iterators;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
+import it.unimi.dsi.io.FileLinesMutableStringIterable.FileLinesIterator;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.slf4j.Logger;
@@ -45,120 +46,28 @@ public class Utils {
 		boolean accept(MutableString str);
 	}
 
-	/* static class CleaningIterator implements Iterator<MutableString> {
-		private final Iterator<MutableString> iterator;
-		private final LineCleaner cleaner;
-
-		public CleaningIterator(Iterator<MutableString> iterator, LineCleaner cleaner) {
-			this.iterator = iterator;
-			this.cleaner = cleaner;
-		}
-
-		@Override
-		public boolean hasNext() {
-			return this.iterator.hasNext();
-		}
-
-		@Override
-		public MutableString next() {
-			return this.cleaner.clean(this.iterator.next());
-		}
-	} */
-
-	static class FilteringIterator implements Iterator<MutableString> {
-		private final Iterator<MutableString> iterator;
-		private final LineFilter filter;
-
-		MutableString current;
-		boolean hasCurrent;
-
-		public FilteringIterator(Iterator<MutableString> iterator, LineFilter filter) {
-			this.iterator = iterator;
-			this.filter = filter;
-		}
-
-		@Override
-		public boolean hasNext () {
-			while(!this.hasCurrent) {
-				if(!this.iterator.hasNext()) {
-					return false;
-				}
-
-				this.current = this.iterator.next();
-
-				if(this.filter.accept(this.current)) {
-					this.hasCurrent = true;
-				}
-			}
-
-			return true;
-		}
-
-		@Override
-		public MutableString next () {
-			if (!this.hasNext()) {
-				throw new NoSuchElementException();
-			}
-
-			this.hasCurrent = false;
-			return this.current;
-		}
-	}
-
 	static class TSVIterator implements Iterator<MutableString> {
 		private final Iterator<File> files;
-		private final MutableString candidate;
-		private boolean fresh = false;
+		private FileLinesIterator iterator;
 
-		private File currentFile;
-		private FileReader reader;
-		private FastBufferedReader bufferedReader;
-
-		public TSVIterator (MutableString candidate, File[] files) throws IOException {
-			this.files = Arrays.stream(files).iterator();
-			this.candidate = candidate;
-			this.nextFile();
-		}
-
-		private void nextFile() throws IOException {
-			if (this.reader != null) {
-				this.reader.close();
+		public TSVIterator (File[] files) {
+			if (files.length == 0) {
+				throw new IllegalArgumentException("Files list must be non empty");
 			}
 
-			this.currentFile = this.files.next();
-			this.reader = new FileReader(this.currentFile);
-			this.bufferedReader = new FastBufferedReader(this.reader);
-
-			// Skip header
-			this.bufferedReader.readLine(this.candidate);
-			this.fresh = false;
+			this.files = Arrays.stream(files).iterator();
+			this.loadNextFile();
 		}
 
-		public void close () throws IOException {
-			this.reader.close();
-			this.bufferedReader.close();
-			this.currentFile = null;
+		private void loadNextFile() throws NoSuchElementException {
+			String filename = this.files.next().toString();
+			this.iterator = new FileLinesMutableStringIterable(filename).iterator();
+			this.iterator.next(); // skip header
 		}
 
 		@Override
 		public boolean hasNext() {
-			try {
-				while (true) {
-					if (this.fresh || this.bufferedReader.readLine(this.candidate) != null) {
-						this.fresh = true;
-						return true;
-					}
-
-					if (!this.files.hasNext()) {
-						this.close();
-						return false;
-					}
-
-					this.nextFile();
-				}
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
+			return this.iterator.hasNext() || this.files.hasNext();
 		}
 
 		@Override
@@ -167,26 +76,23 @@ public class Utils {
 				throw new NoSuchElementException();
 			}
 
-			this.fresh = false;
-			return this.candidate;
+			while (!this.iterator.hasNext()) {
+				this.loadNextFile();
+			}
+
+			return this.iterator.next();
 		}
 	}
 
 	static Iterator<MutableString> readTSVs(Path tsv) {
-		FileLinesMutableStringIterable iterable = new FileLinesMutableStringIterable(tsv.toString());
-		Iterator<MutableString> iterator = iterable.iterator();
-		iterator.next(); // skip header
-
-		return iterator;
+		return new TSVIterator(new File[] { tsv.toFile() });
 	}
 
-	static Iterator<MutableString> readTSVs(File[] files, MutableString ms, LineFilter filter) throws IOException {
-		// TODO: migrate to FileLinesMutableStringIterable, find a way to build an input stream from files in a directory and maybe use the compressor to avoid unzipping the inputs and outputs files.
-		Iterator<MutableString> iterator = new TSVIterator(ms, files);
+	static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
+		Iterator<MutableString> iterator = new TSVIterator(files);
 
 		if (filter != null) {
-			// Iterables.filter?
-			iterator = new FilteringIterator(iterator, filter);
+			iterator = Iterators.filter(iterator, filter::accept);
 		}
 
 		return iterator;
