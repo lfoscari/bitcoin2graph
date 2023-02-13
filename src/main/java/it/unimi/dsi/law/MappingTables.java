@@ -34,12 +34,9 @@ public class MappingTables {
         LoggerFactory.getLogger(MappingTables.class).info("Computing addresses mappings");
 
         Function<MutableString, CharSequence> extractAddress = line -> Utils.column(line, 0);
-        Iterable<CharSequence> addressesTransformed = Iterables.transform(() -> Utils.readTSVs(addressesFile), extractAddress::apply);
+        Iterable<CharSequence> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), extractAddress::apply);
 
-        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(addressesTransformed, addressesMap);
-        buildInverseMap(map, Utils.readTSVs(addressesFile), extractAddress, addressesInverseMap);
-
-        return map;
+        return buildMap(addresses, addressesMap);
     }
 
     public static GOVMinimalPerfectHashFunction<CharSequence> buildTransactionsMap() throws IOException {
@@ -62,35 +59,22 @@ public class MappingTables {
         }
 
         Function<MutableString, CharSequence> extractTransactionHash = line -> Utils.column(line, 1);
-        Iterator<MutableString> transactionsIt = Utils.readTSVs(sources, new MutableString(), filter);
-        Iterable<CharSequence> transactionsTransformed = Iterables.transform(() -> transactionsIt, extractTransactionHash::apply);
+        Iterator<MutableString> iterator = Utils.readTSVs(sources, new MutableString(), filter);
+        Iterable<CharSequence> transactions = Iterables.transform(() -> iterator, extractTransactionHash::apply);
 
-        GOVMinimalPerfectHashFunction<CharSequence> map = buildMap(transactionsTransformed, transactionsMap);
-        // Don't need the transaction map for now
-        // buildInverseMap(map, Utils.readTSVs(sources, new MutableString(), filter), extractTransactionHash, transactionsMapInverse);
-
-        return map;
+        return buildMap(transactions, transactionsMap);
     }
 
-    private static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<MutableString> iterator, Function<MutableString, CharSequence> transformation, Path addressesInverseMap) throws IOException {
-        Long2ObjectOpenHashMap<String> inverse = new Long2ObjectOpenHashMap<>();
-        Iterables.transform(() -> iterator, transformation::apply)
-                .forEach((line) -> inverse.put(map.getLong(line), line.toString()));
-
-        inverse.trim();
-        BinIO.storeObject(inverse, addressesInverseMap.toFile());
-    }
-
-    private static GOVMinimalPerfectHashFunction<CharSequence> buildMap(Iterable<CharSequence> transactionsTransformed, Path transactionsMap) throws IOException {
+    private static GOVMinimalPerfectHashFunction<CharSequence> buildMap(Iterable<CharSequence> keys, Path destination) throws IOException {
         File tempDir = Files.createTempDirectory(resources, "map_temp_").toFile();
         tempDir.deleteOnExit();
 
         GOVMinimalPerfectHashFunction.Builder<CharSequence> b = new GOVMinimalPerfectHashFunction.Builder<>();
-        b.keys(transactionsTransformed);
+        b.keys(keys);
         b.tempDir(tempDir);
         b.transform(TransformationStrategies.iso());
         GOVMinimalPerfectHashFunction<CharSequence> map = b.build();
-        BinIO.storeObject(map, transactionsMap.toFile());
+        BinIO.storeObject(map, destination.toFile());
 
         return map;
     }
