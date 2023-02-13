@@ -8,6 +8,7 @@ import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.webgraph.EFGraph;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -21,14 +22,18 @@ import java.util.function.Function;
 import static it.unimi.dsi.law.Parameters.*;
 
 public class NodeUtility {
+
+    public static final Logger logger = LoggerFactory.getLogger(NodeUtility.class);
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+        logger.info("Loading necessary data structures...");
         GOVMinimalPerfectHashFunction<CharSequence> addressMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMap.toFile());
 
         if (!addressesInverseMap.toFile().exists()) {
-            LoggerFactory.getLogger(NodeUtility.class).info("Computing inverse address map, this might take a while...");
+            logger.info("Computing inverse address map, this might take a while...");
             Iterator<CharSequence> addresses = Iterators.transform(Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
             buildInverseMap(addressMap, addresses, addressesInverseMap);
-            LoggerFactory.getLogger(NodeUtility.class).info("Done!");
+            logger.info("Done!");
         }
 
         Long2ObjectOpenHashMap<String> addressInverseMap = (Long2ObjectOpenHashMap<String>) BinIO.loadObject(addressesInverseMap.toFile());

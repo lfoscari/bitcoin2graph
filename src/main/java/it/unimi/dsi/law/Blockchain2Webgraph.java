@@ -52,6 +52,8 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 			return true;
 		}
 
+		// Maybe we can just use the transactionsId, iff the GOVMinimalPerfectHashFunction uses all and only the indices
+		// necessary to encode n entries. In that case we can simply loop 0 to n.
 		while (this.transactions.hasNext()) {
 			CharSequence transaction = Utils.column(this.transactions.next(), 1);
 			long transactionId = this.transactionMap.getLong(transaction);

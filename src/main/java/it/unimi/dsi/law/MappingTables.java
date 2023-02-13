@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -19,19 +20,21 @@ import java.util.function.Function;
 import static it.unimi.dsi.law.Parameters.*;
 
 public class MappingTables {
+    public static final Logger logger = LoggerFactory.getLogger(MappingTables.class);
+
     public static GOVMinimalPerfectHashFunction<CharSequence> buildAddressesMap() throws IOException {
         artifacts.toFile().mkdir();
 
         if (addressesMap.toFile().exists()) {
             try {
-                LoggerFactory.getLogger(MappingTables.class).info("Loading addresses mappings from memory");
+                logger.info("Loading addresses mappings from memory");
                 return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMap.toFile());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
 
-        LoggerFactory.getLogger(MappingTables.class).info("Computing addresses mappings");
+        logger.info("Computing addresses mappings");
 
         Iterable<CharSequence> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
         return buildMap(addresses, addressesMap);
@@ -41,7 +44,7 @@ public class MappingTables {
         artifacts.toFile().mkdir();
 
         if (transactionsMap.toFile().exists()) {
-            LoggerFactory.getLogger(MappingTables.class).info("Loading transactions mappings from memory");
+            logger.info("Loading transactions mappings from memory");
             try {
                 return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMap.toFile());
             } catch (ClassNotFoundException e) {
@@ -49,7 +52,7 @@ public class MappingTables {
             }
         }
 
-        LoggerFactory.getLogger(MappingTables.class).info("Computing transactions mappings");
+        logger.info("Computing transactions mappings");
         Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
         File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
         if (sources == null) {
