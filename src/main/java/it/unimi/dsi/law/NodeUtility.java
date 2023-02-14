@@ -46,7 +46,8 @@ public class NodeUtility {
             long id = addressMap.getLong(address);
 
             if (!addressInverseMap.get(id).equals(address)) {
-                throw new NoSuchFileException("Address not found!");
+                logger.error("Address not found!");
+                continue;
             }
 
             int node = ArrayUtils.indexOf(addressIds, id);
@@ -57,6 +58,7 @@ public class NodeUtility {
                 long successorId = addressIds[successors[i]];
                 System.out.println("\t" + addressInverseMap.get(successorId) + " (id: " + successorId + ")");
             }
+            System.out.println();
         }
     }
 
