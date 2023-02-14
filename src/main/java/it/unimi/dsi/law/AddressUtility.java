@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import static it.unimi.dsi.law.Parameters.*;
@@ -44,7 +45,13 @@ public class AddressUtility {
 
         while (true) {
             System.out.print("address> ");
-            String address = sc.nextLine();
+
+            String address;
+            try {
+                address = sc.nextLine();
+            } catch (NoSuchElementException e) {
+                return;
+            }
 
             long id;
 
