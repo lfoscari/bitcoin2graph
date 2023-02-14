@@ -20,7 +20,6 @@ import java.util.Scanner;
 import static it.unimi.dsi.law.Parameters.*;
 
 public class NodeUtility {
-
     public static final Logger logger = LoggerFactory.getLogger(NodeUtility.class);
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
