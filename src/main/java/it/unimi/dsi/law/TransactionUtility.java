@@ -22,6 +22,7 @@ public class TransactionUtility {
     public static final Logger logger = LoggerFactory.getLogger(TransactionUtility.class);
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+        logger.info("Loading necessary data structures...");
         GOVMinimalPerfectHashFunction<CharSequence> transactionsMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
 
         if (!transactionsInverseMapFile.toFile().exists()) {
@@ -71,12 +72,12 @@ public class TransactionUtility {
     }
 
     private static void computeTransactionInverseMap(GOVMinimalPerfectHashFunction<CharSequence> transactionMap) throws IOException {
-        logger.info("Computing inverse transaction map, this might take a while...");
         Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
         Iterator<CharSequence> transactions = Iterators.transform(Utils.readTSVs(transactionsDirectory.toFile().listFiles(), filter), line -> Utils.column(line, 1));
-        ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(AddressUtility.class));
+        ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(TransactionUtility.class), "transactions");
         progress.expectedUpdates = transactionMap.size64();
+        progress.start("Computing inverse transaction map");
         buildInverseMap(transactionMap, transactions, transactionsInverseMapFile, progress);
-        logger.info("Done!");
+        progress.done();
     }
 }

@@ -73,11 +73,11 @@ public class AddressUtility {
     }
 
     private static void computeAddressInverseMap(GOVMinimalPerfectHashFunction<CharSequence> addressMap) throws IOException {
-        logger.info("Computing inverse address map, this might take a while...");
         Iterator<CharSequence> addresses = Iterators.transform(Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
-        ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(AddressUtility.class));
+        ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(AddressUtility.class), "addresses");
         progress.expectedUpdates = addressMap.size64();
+        progress.start("Computing inverse address map");
         buildInverseMap(addressMap, addresses, addressesInverseMap, progress);
-        logger.info("Done!");
+        progress.done();
     }
 }
