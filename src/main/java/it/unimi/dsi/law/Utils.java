@@ -1,10 +1,14 @@
 package it.unimi.dsi.law;
 
 import com.google.common.collect.Iterators;
+import it.unimi.dsi.fastutil.BigArrays;
+import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.fastutil.objects.ObjectBigArrays;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable.FileLinesIterator;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +25,16 @@ public class Utils {
 		progress.displayFreeMemory = true;
 
 		return progress;
+	}
+
+	public static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<CharSequence> iterator, Path destination, ProgressLogger progress) throws IOException {
+		Object[][] inverse = ObjectBigArrays.newBigArray(map.size64());
+		while (iterator.hasNext()) {
+			CharSequence line = iterator.next();
+			BigArrays.set(inverse, map.getLong(line), line.toString());
+			progress.lightUpdate();
+		}
+		BinIO.storeObject(inverse, destination.toFile());
 	}
 
 	public static CharSequence column(MutableString line, int col) {

@@ -3,7 +3,6 @@ package it.unimi.dsi.law;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.bits.TransformationStrategies;
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.function.Function;
 
 import static it.unimi.dsi.law.Parameters.*;
 
@@ -43,10 +41,10 @@ public class MappingTables {
     public static GOVMinimalPerfectHashFunction<CharSequence> buildTransactionsMap() throws IOException {
         artifacts.toFile().mkdir();
 
-        if (transactionsMap.toFile().exists()) {
+        if (transactionsMapFile.toFile().exists()) {
             logger.info("Loading transactions mappings from memory");
             try {
-                return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMap.toFile());
+                return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -62,7 +60,7 @@ public class MappingTables {
         Iterator<MutableString> iterator = Utils.readTSVs(sources, filter);
         Iterable<CharSequence> transactions = Iterables.transform(() -> iterator, line -> Utils.column(line, 1));
 
-        return buildMap(transactions, transactionsMap);
+        return buildMap(transactions, transactionsMapFile);
     }
 
     private static GOVMinimalPerfectHashFunction<CharSequence> buildMap(Iterable<CharSequence> keys, Path destination) throws IOException {
