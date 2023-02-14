@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import static it.unimi.dsi.law.Parameters.*;
@@ -39,7 +40,13 @@ public class TransactionUtility {
 
         while (true) {
             System.out.print("transaction> ");
-            String transaction = sc.nextLine();
+
+            String transaction;
+            try {
+                transaction = sc.nextLine();
+            } catch (NoSuchElementException e) {
+                return;
+            }
 
             long transactionId;
 
