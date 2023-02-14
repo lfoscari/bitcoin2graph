@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Scanner;
 
@@ -52,6 +53,8 @@ public class NodeUtility {
 
             int node = ArrayUtils.indexOf(addressIds, id);
             int[] successors = bitcoinGraph.successorArray(node);
+
+            System.out.println(Arrays.toString(successors));
 
             System.out.println(address + " (id: " + id + ", outdegree: " + bitcoinGraph.outdegree(node) + "):");
             for (int i = 0; i < bitcoinGraph.outdegree(node); i++) {
