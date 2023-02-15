@@ -3,9 +3,6 @@ package it.unimi.dsi.law;
 import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.BigArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectBigArrays;
-import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
@@ -15,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -31,11 +26,11 @@ public class AddressUtility {
         logger.info("Loading necessary data structures...");
         GOVMinimalPerfectHashFunction<CharSequence> addressMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMap.toFile());
 
-        if (!addressesInverseMap.toFile().exists()) {
+        if (!addressesInverseMapFile.toFile().exists()) {
             computeAddressInverseMap(addressMap);
         }
 
-        Object[][] addressInverseMap = (Object[][]) BinIO.loadObject(addressesInverseMap.toFile());
+        Object[][] addressInverseMap = (Object[][]) BinIO.loadObject(addressesInverseMapFile.toFile());
 
         EFGraph bitcoinGraph = EFGraph.load(basename.toString());
         long[] addressIds = BinIO.loadLongs(ids.toFile());
@@ -84,7 +79,7 @@ public class AddressUtility {
         ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(AddressUtility.class), "addresses");
         progress.expectedUpdates = addressMap.size64();
         progress.start("Computing inverse address map");
-        buildInverseMap(addressMap, addresses, addressesInverseMap, progress);
+        buildInverseMap(addressMap, addresses, addressesInverseMapFile, progress);
         progress.done();
     }
 }

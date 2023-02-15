@@ -13,7 +13,7 @@ public class Parameters {
 
 	public final static Path addressesFile = resources.resolve("addresses.tsv");
 	public final static Path addressesMap = artifacts.resolve("addresses.map");
-	public final static Path addressesInverseMap = artifacts.resolve("addresses.inverse.map");
+	public final static Path addressesInverseMapFile = artifacts.resolve("addresses.inverse.map");
 
 	public final static Path transactionsDirectory = resources.resolve("transactions");
 	public final static Path transactionsMapFile = artifacts.resolve("transactions.map");

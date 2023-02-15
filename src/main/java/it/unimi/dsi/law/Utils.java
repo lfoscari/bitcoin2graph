@@ -28,7 +28,7 @@ public class Utils {
 	}
 
 	public static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<CharSequence> iterator, Path destination, ProgressLogger progress) throws IOException {
-		String[][] inverse = (String[][]) ObjectBigArrays.newBigArray(map.size64());
+		Object[][] inverse = (Object[][]) ObjectBigArrays.newBigArray(map.size64());
 		while (iterator.hasNext()) {
 			CharSequence line = iterator.next();
 			BigArrays.set(inverse, map.getLong(line), line.toString());
