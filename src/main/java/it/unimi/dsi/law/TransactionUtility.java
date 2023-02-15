@@ -30,7 +30,7 @@ public class TransactionUtility {
             computeTransactionInverseMap(transactionsMap);
         }
 
-        Object[][] transactionsInverseMap = (Object[][]) BinIO.loadObject(transactionsInverseMapFile.toFile());
+        String[][] transactionsInverseMap = (String[][]) BinIO.loadObject(transactionsInverseMapFile.toFile());
 
         Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
         Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
