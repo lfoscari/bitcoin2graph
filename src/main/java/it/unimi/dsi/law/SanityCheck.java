@@ -23,7 +23,7 @@ import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
 
 public class SanityCheck {
-	private static final int transactionAmount = 96;
+	private static final int transactionAmount = 1_000_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
 	static ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
 	static int errors = 0;
