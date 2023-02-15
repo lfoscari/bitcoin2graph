@@ -23,10 +23,10 @@ public class MappingTables {
     public static GOVMinimalPerfectHashFunction<CharSequence> buildAddressesMap() throws IOException {
         artifacts.toFile().mkdir();
 
-        if (addressesMap.toFile().exists()) {
+        if (addressesMapFile.toFile().exists()) {
             try {
                 logger.info("Loading addresses mappings from memory");
-                return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMap.toFile());
+                return (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -35,7 +35,7 @@ public class MappingTables {
         logger.info("Computing addresses mappings");
 
         Iterable<CharSequence> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), line -> Utils.column(line, 0));
-        return buildMap(addresses, addressesMap);
+        return buildMap(addresses, addressesMapFile);
     }
 
     public static GOVMinimalPerfectHashFunction<CharSequence> buildTransactionsMap() throws IOException {

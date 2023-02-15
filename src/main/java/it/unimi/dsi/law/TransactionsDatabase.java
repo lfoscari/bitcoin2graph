@@ -64,6 +64,7 @@ public class TransactionsDatabase {
 	}
 
 	private void computeInputs() throws IOException {
+		// TODO: switch to an long[][] sized according to transactionMap.size64()
 		this.transactionInputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
@@ -87,6 +88,7 @@ public class TransactionsDatabase {
 	}
 
 	private void computeOutputs() throws IOException {
+		// TODO: switch to an long[][] sized according to transactionMap.size64()
 		this.transactionOutputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
 
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
