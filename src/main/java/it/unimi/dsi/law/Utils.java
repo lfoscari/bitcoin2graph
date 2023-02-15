@@ -53,6 +53,7 @@ public class Utils {
 	static class TSVIterator implements Iterator<MutableString> {
 		private final Iterator<File> files;
 		private FileLinesIterator iterator;
+		private File currentFile;
 
 		public TSVIterator (File[] files) {
 			if (files.length == 0) {
@@ -64,8 +65,8 @@ public class Utils {
 		}
 
 		private void loadNextFile() throws NoSuchElementException {
-			String filename = this.files.next().toString();
-			this.iterator = new FileLinesMutableStringIterable(filename).iterator();
+			this.currentFile = this.files.next();
+			this.iterator = new FileLinesMutableStringIterable(this.currentFile.toString()).iterator();
 			this.iterator.next(); // skip header
 		}
 
@@ -86,10 +87,18 @@ public class Utils {
 
 			return this.iterator.next();
 		}
+
+		public File currentFile() {
+			return this.currentFile;
+		}
 	}
 
 	static Iterator<MutableString> readTSVs(Path tsv) {
 		return new TSVIterator(new File[] { tsv.toFile() });
+	}
+
+	static Iterator<MutableString> readTSVs(Path tsv, LineFilter filter) {
+		return readTSVs(new File[] { tsv.toFile() }, filter);
 	}
 
 	static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
