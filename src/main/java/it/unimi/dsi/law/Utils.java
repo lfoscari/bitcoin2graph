@@ -27,17 +27,6 @@ public class Utils {
 		return progress;
 	}
 
-	public static void buildInverseMap(GOVMinimalPerfectHashFunction<CharSequence> map, Iterator<CharSequence> iterator, Path destination, ProgressLogger progress) throws IOException {
-		Object[][] inverse = (Object[][]) ObjectBigArrays.newBigArray(map.size64());
-		while (iterator.hasNext()) {
-			CharSequence line = iterator.next();
-			BigArrays.set(inverse, map.getLong(line), line.toString());
-			progress.lightUpdate();
-		}
-		progress.stop("Saving results");
-		BinIO.storeObject(inverse, destination.toFile());
-	}
-
 	public static CharSequence column(MutableString line, int col) {
 		int start = 0, inc;
 		while (col-- > 0) {
