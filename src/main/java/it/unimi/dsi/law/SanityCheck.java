@@ -30,12 +30,16 @@ public class SanityCheck {
 		/* Pick {transactionAmount} transactions at random and check that those transactions contain the right inputs
 		 and outputs. */
 
+		progress.logger.info("Loading transactions map");
 		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap =
 				(GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
+		progress.logger.info("Loading addresses map");
 		GOVMinimalPerfectHashFunction<CharSequence> addressesMap =
 				(GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
+		progress.logger.info("Loading transactions inputs");
 		Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs =
 				(Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
+		progress.logger.info("Loading transactions outputs");
 		Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs =
 				(Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
 
