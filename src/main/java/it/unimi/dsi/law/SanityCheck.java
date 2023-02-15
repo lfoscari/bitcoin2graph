@@ -2,7 +2,6 @@ package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.*;
-import it.unimi.dsi.fastutil.longs.LongSortedSets.EmptySet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
@@ -15,8 +14,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.function.LongBinaryOperator;
-import java.util.stream.LongStream;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
@@ -25,14 +22,13 @@ import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
 public class SanityCheck {
 	private static final int transactionAmount = 1_000_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
-	static ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
-	static int errors = 0;
-	static int notFound = 0;
+	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class),
+			"transactions");
+	private static int errors = 0, notFound = 0;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		/* Pick {transactionAmount} transactions at random and check that those transactions contain the right inputs
-		 and outputs.
-		  */
+		 and outputs. */
 
 		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap =
 				(GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
