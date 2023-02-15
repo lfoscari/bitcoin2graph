@@ -37,11 +37,6 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>webgraph-big</artifactId>
-            <version>3.7.0</version>
-        </dependency>
-        <dependency>
-            <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
             <version>8.5.9</version>
         </dependency>

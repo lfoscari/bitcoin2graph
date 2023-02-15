@@ -28,6 +28,17 @@ public class Parameters {
 	public final static Path outputsDirectory = resources.resolve("outputs");
 	public final static Path transactionOutputsFile = artifacts.resolve("transactions.outputs.table");
 
+	public final static Path centralities = resources.resolve("centralities");
+	public final static Path neighbourhoodFunctionFile = centralities.resolve("neighbourhood");
+	public final static Path sumOfDistancesFile = centralities.resolve("sumofdistances");
+	public final static Path harmonicCentralityFile = centralities.resolve("harmoniccentrality");
+	public final static Path discountedGainCentralityFile = centralities.resolve("discountedcaincentrality");
+	public final static Path closenessCentralityFile = centralities.resolve("closenesscentrality");
+	public final static Path linCentralityFile = centralities.resolve("lincentrality");
+	public final static Path nieminenCentralityFile = centralities.resolve("nieminencentrality");
+	public final static Path reachableFile = centralities.resolve("reachable");
+
+
 	// Bitcoin Blockchair schema for both inputs and outputs
 
 	public static class BitcoinColumn {

@@ -52,15 +52,11 @@ public class TransactionUtility {
 
             LongOpenHashSet inputs = transactionInputs.get(transactionId);
             System.out.println("Inputs (" + inputs.size() + "):");
-            for (long addressId: inputs) {
-                System.out.println("\t" + BigArrays.get(addressInverseMap, addressId));
-            }
+            inputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
 
             LongOpenHashSet outputs = transactionOutputs.get(transactionId);
             System.out.println("Outputs (" + outputs.size() + "):");
-            for (long addressId: outputs) {
-                System.out.println("\t" + BigArrays.get(addressInverseMap, addressId));
-            }
+            outputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
         }
     }
 }
