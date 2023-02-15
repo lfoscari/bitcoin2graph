@@ -101,6 +101,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
 		tempDir.deleteOnExit();
 
+		// TODO: switch to an InputStream using addressMap as a mapping function
 		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
 
 		EFGraph.store(graph, basename.toString());

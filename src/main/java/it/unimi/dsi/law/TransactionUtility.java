@@ -25,12 +25,13 @@ public class TransactionUtility {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         logger.info("Loading necessary data structures...");
         GOVMinimalPerfectHashFunction<CharSequence> transactionsMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
+        Object[][] addressInverseMap = (Object[][]) BinIO.loadObject(addressesInverseMapFile.toFile());
 
         if (!transactionsInverseMapFile.toFile().exists()) {
             computeTransactionInverseMap(transactionsMap);
         }
 
-        String[][] transactionsInverseMap = (String[][]) BinIO.loadObject(transactionsInverseMapFile.toFile());
+        Object[][] transactionsInverseMap = (Object[][]) BinIO.loadObject(transactionsInverseMapFile.toFile());
 
         Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
         Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
@@ -62,18 +63,13 @@ public class TransactionUtility {
             LongOpenHashSet inputs = transactionInputs.get(transactionId);
             System.out.println("Inputs (" + inputs.size() + "):");
             for (long addressId: inputs) {
-                System.out.println("\t" + addressId);
+                System.out.println("\t" + BigArrays.get(addressInverseMap, addressId));
             }
 
             LongOpenHashSet outputs = transactionOutputs.get(transactionId);
             System.out.println("Outputs (" + outputs.size() + "):");
             for (long addressId: outputs) {
-                System.out.println("\t" + addressId);
-            }
-
-            System.out.print("\nAnother? [y/n] ");
-            if (!sc.nextLine().equals("y")) {
-                return;
+                System.out.println("\t" + BigArrays.get(addressInverseMap, addressId));
             }
         }
     }
