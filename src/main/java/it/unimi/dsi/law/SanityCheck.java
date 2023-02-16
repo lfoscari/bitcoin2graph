@@ -6,7 +6,6 @@ import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
-import it.unimi.dsi.webgraph.EFGraph;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
