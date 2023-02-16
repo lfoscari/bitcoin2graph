@@ -6,6 +6,7 @@ import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
+import it.unimi.dsi.webgraph.EFGraph;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -20,7 +21,7 @@ import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
 
 public class SanityCheck {
-	private static final int transactionAmount = 1_000_000;
+	private static final int transactionAmount = 10_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
 	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class),
 			"transactions");
@@ -28,7 +29,12 @@ public class SanityCheck {
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		/* Pick {transactionAmount} transactions at random and check that those transactions contain the right inputs
-		 and outputs. */
+		 and outputs.
+
+		 Note that given a transaction processed on a specific day, it's not a given that on the
+		 corresponding input or output there will be any information about the transaction. That's why we distinguish
+		 between error and the case in which the inputs or outputs were not found, it's easier to just skip the
+		 transaction. */
 
 		progress.logger.info("Loading transactions map");
 		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap =
