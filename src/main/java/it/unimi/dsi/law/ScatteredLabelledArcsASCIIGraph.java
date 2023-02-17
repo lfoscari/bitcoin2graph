@@ -26,12 +26,15 @@ import it.unimi.dsi.fastutil.ints.IntBigArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import it.unimi.dsi.fastutil.longs.LongBigArrays;
-import it.unimi.dsi.fastutil.objects.Object2IntFunction;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectFunction;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOV3Function;
-import it.unimi.dsi.webgraph.*;
+import it.unimi.dsi.webgraph.BVGraph;
+import it.unimi.dsi.webgraph.ImmutableSequentialGraph;
+import it.unimi.dsi.webgraph.NodeIterator;
+import it.unimi.dsi.webgraph.Transform;
 import it.unimi.dsi.webgraph.labelling.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -436,10 +439,11 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 
 		int j;
 		int[] source = new int[batchSize], target = new int[batchSize];
+		Label[] labels = new Label[batchSize];
 		final ObjectArrayList<File> batches = new ObjectArrayList<>();
 
 		if (pl != null) {
-			pl.itemsName = "arcs";
+			pl.itemsName = "labelled arcs";
 			pl.start("Creating sorted batches...");
 		}
 
@@ -547,6 +551,60 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 				if (DEBUG) System.err.println("Parsed target at line " + line + ": " + ts + " => " + t);
 			}
 
+			// Diciamo di avere una funzione da stringe in Label
+			final Object2ObjectFunction<? extends CharSequence, Label> labelFunction = new Object2ObjectArrayMap<>();
+
+			// Scan label
+
+			// usa la funzione se c'è, altrimenti costruisci una label con chiave vuota e valore stringa (?)
+
+			start = offset;
+			while (offset < lineLength && (array[offset] < 0 || array[offset] > ' ')) offset++;
+
+			Label l;
+
+			final String ls = new String(array, start, offset - start, charset);
+			final Label label = labelFunction.get(ls);
+			if (label == labelFunction.defaultReturnValue()) {
+				LOGGER.warn("Unknown label " + ls + " at line " + line);
+				continue;
+			}
+
+			l = label;
+			if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ts + " => " + t);
+
+			if (function == null) {
+				final long tl;
+				try {
+					tl = getLong(array, start, offset - start);
+				} catch (final RuntimeException e) {
+					// Discard up to the end of line
+					LOGGER.error("Error at line " + line + ": " + e.getMessage());
+					continue;
+				}
+
+				t = map.get(tl);
+				if (t == -1) map.put(tl, t = (int) map.size());
+
+				if (DEBUG) System.err.println("Parsed target at line " + line + ": " + tl + " => " + t);
+			} else {
+				final String ls = new String(array, start, offset - start, charset);
+				final Label label = labelFunction.get(ls);
+				if (label == labelFunction.defaultReturnValue()) {
+					LOGGER.warn("Unknown label " + ls + " at line " + line);
+					continue;
+				}
+
+				l = label;
+				if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ts + " => " + t);
+			}
+
+
+
+
+
+
+
 			// Skip whitespace after target.
 			while (offset < lineLength && array[offset] >= 0 && array[offset] <= ' ') offset++;
 
@@ -649,7 +707,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 	 * @param tempDir    a temporary directory for the batches, or <code>null</code> for {@link File#createTempFile(java.lang.String, java.lang.String)}'s choice.
 	 * @param pl         a progress logger, or <code>null</code>.
 	 */
-	public ScatteredLabelledArcsASCIIGraph(final Iterator<long[]> arcs, final boolean symmetrize,
+	public ScatteredLabelledArcsASCIIGraph(final Iterator<long[]> arcs, final Iterator<Label> labels, final boolean symmetrize,
 	                                       final boolean noLoops, final int batchSize, final File tempDir, final ProgressLogger pl) throws IOException {
 		ScatteredLabelledArcsASCIIGraph.Long2IntOpenHashBigMap map = new ScatteredLabelledArcsASCIIGraph.Long2IntOpenHashBigMap();
 
@@ -657,10 +715,11 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 
 		int j;
 		int[] source = new int[batchSize], target = new int[batchSize];
+		Label[] arcLabels = new Label[batchSize];
 		final ObjectArrayList<File> batches = new ObjectArrayList<>();
 
 		if (pl != null) {
-			pl.itemsName = "arcs";
+			pl.itemsName = "labelled arcs";
 			pl.start("Creating sorted batches...");
 		}
 
@@ -674,20 +733,26 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 			final long tl = arc[1];
 			int t = map.get(tl);
 			if (t == -1) map.put(tl, t = (int) map.size());
+			Label label = labels.next();
 
 			if (s != t || !noLoops) {
 				source[j] = s;
-				target[j++] = t;
+				target[j] = t;
+				arcLabels[j++] = label;
 
 				if (j == batchSize) {
+					// ordina source riflettendo la permutazione su target e arcLabels (?????)
 					pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 					j = 0;
 				}
 
 				if (symmetrize && s != t) {
 					source[j] = t;
-					target[j++] = s;
+					target[j] = s;
+					arcLabels[j++] = label;
+
 					if (j == batchSize) {
+						// ordina source riflettendo la permutazione su target e arcLabels (?????)
 						pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 						j = 0;
 					}
@@ -697,6 +762,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 			}
 		}
 
+		// ordina source riflettendo la permutazione su target e arcLabels (?????)
 		if (j != 0) pairs += Transform.processBatch(j, source, target, tempDir, batches);
 
 		if (pl != null) {
@@ -838,8 +904,8 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 	// può essere cancellato perchè è package-private, l'ho copiato per fare prima.
 	protected static void logBatches(final ObjectArrayList<File> batches, final long pairs, final ProgressLogger pl) {
 		long length = 0;
-		for(final File f : batches) length += f.length();
-		pl.logger().info("Created " + batches.size() + " batches using " + ((double)Byte.SIZE * length / pairs) + " bits/arc.");
+		for (final File f : batches) length += f.length();
+		pl.logger().info("Created " + batches.size() + " batches using " + ((double) Byte.SIZE * length / pairs) + " bits/arc.");
 	}
 }
 
