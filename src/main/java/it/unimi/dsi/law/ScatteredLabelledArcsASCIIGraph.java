@@ -30,11 +30,13 @@ import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectFunction;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.io.InputBitStream;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableSequentialGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
 import it.unimi.dsi.webgraph.Transform;
+import it.unimi.dsi.webgraph.labelling.BitStreamArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
@@ -551,42 +554,38 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 				if (DEBUG) System.err.println("Parsed target at line " + line + ": " + ts + " => " + t);
 			}
 
-			// Diciamo di avere una funzione da stringe in Label
-			final Object2ObjectFunction<? extends CharSequence, Label> labelFunction = new Object2ObjectArrayMap<>();
+			////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//
+			// Diciamo di avere una funzione da stringhe in Label
+			// Inganniamo l'IDE per un attimo, così trova gli errori per noi
+			final Object2ObjectFunction<? extends CharSequence, Label> labelFunction = new Random().nextBoolean() ?
+					null : new Object2ObjectArrayMap<>();
+			//
+			// Come per source e target se non viene fornita una mappa allora altrimenti creiamo una label con una
+			// chiave e come valore il long fornito, altrimenti leggiamo la stringa della label e la mappiamo.
+			// Possiamo anche pensare di leggere la stringa senza convertirla a long.
+			//
+			////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-			// Scan label
-
-			// usa la funzione se c'è, altrimenti costruisci una label con chiave vuota e valore stringa (?)
-
+			// Scan label.
 			start = offset;
 			while (offset < lineLength && (array[offset] < 0 || array[offset] > ' ')) offset++;
 
 			Label l;
 
-			final String ls = new String(array, start, offset - start, charset);
-			final Label label = labelFunction.get(ls);
-			if (label == labelFunction.defaultReturnValue()) {
-				LOGGER.warn("Unknown label " + ls + " at line " + line);
-				continue;
-			}
-
-			l = label;
-			if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ts + " => " + t);
-
-			if (function == null) {
-				final long tl;
+			if (labelFunction == null) {
+				final long ls;
 				try {
-					tl = getLong(array, start, offset - start);
+					ls = getLong(array, start, offset - start);
 				} catch (final RuntimeException e) {
 					// Discard up to the end of line
 					LOGGER.error("Error at line " + line + ": " + e.getMessage());
 					continue;
 				}
 
-				t = map.get(tl);
-				if (t == -1) map.put(tl, t = (int) map.size());
+				l = Label.EMPTY_LABEL_ARRAY[0];
 
-				if (DEBUG) System.err.println("Parsed target at line " + line + ": " + tl + " => " + t);
+				if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ls + " => " + l);
 			} else {
 				final String ls = new String(array, start, offset - start, charset);
 				final Label label = labelFunction.get(ls);
@@ -596,35 +595,36 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 				}
 
 				l = label;
-				if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ts + " => " + t);
+				if (DEBUG) System.err.println("Parsed label at line " + line + ": " + ls + " => " + l);
 			}
 
+			// Ora in l c'è la label corretta
 
 
-
-
-
-
-			// Skip whitespace after target.
+			// Skip whitespace after label.
 			while (offset < lineLength && array[offset] >= 0 && array[offset] <= ' ') offset++;
 
 			if (offset < lineLength) LOGGER.warn("Trailing characters ignored at line " + line);
 
-			if (DEBUG) System.err.println("Parsed arc at line " + line + ": " + s + " -> " + t);
+			if (DEBUG) System.err.println("Parsed labelled arc at line " + line + ": " + s + " -> " + t + " (" + l + ")");
 
 			if (s != t || !noLoops) {
 				source[j] = s;
-				target[j++] = t;
+				target[j] = t;
+				labels[j++] = l;
 
 				if (j == batchSize) {
+					// ordina source riflettendo la permutazione su target e labels (?????)
 					pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 					j = 0;
 				}
 
 				if (symmetrize && s != t) {
 					source[j] = t;
-					target[j++] = s;
+					target[j] = s;
+					labels[j++] = l;
 					if (j == batchSize) {
+						// ordina source riflettendo la permutazione su target e labels (?????)
 						pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 						j = 0;
 					}
@@ -634,6 +634,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 			}
 		}
 
+		// ordina source riflettendo la permutazione su target e labels (?????)
 		if (j != 0) pairs += Transform.processBatch(j, source, target, tempDir, batches);
 
 		if (pl != null) {
@@ -647,6 +648,10 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 		target = null;
 
 		map.compact();
+
+		// Non capisco esattamente come mai salvare le chiavi e i valori della mappa per poi ricaricarli?
+		// Riguarda il memory management? Chiedere!
+		// Per ora lascio così com'è, ma se è da fare farei un terzo file e usere BinIO.storeObject per salvare le label.
 
 		final File keyFile = File.createTempFile(ScatteredLabelledArcsASCIIGraph.class.getSimpleName(), "keys", tempDir);
 		keyFile.deleteOnExit();
@@ -674,6 +679,9 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 		key = null;
 		value = null;
 
+		// Esiste una variante di batchGraph che utilizza le label?
+		// Altrimenti posso decorare il batchGraph con un BitStreamArcLabelledImmutableGraph,
+		// ma non so se sia così semplice.
 		this.batchGraph = new Transform.BatchGraph(function == null ? numNodes : n, pairs, batches);
 	}
 
@@ -707,7 +715,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 	 * @param tempDir    a temporary directory for the batches, or <code>null</code> for {@link File#createTempFile(java.lang.String, java.lang.String)}'s choice.
 	 * @param pl         a progress logger, or <code>null</code>.
 	 */
-	public ScatteredLabelledArcsASCIIGraph(final Iterator<long[]> arcs, final Iterator<Label> labels, final boolean symmetrize,
+	public ScatteredLabelledArcsASCIIGraph(final Iterator<long[]> arcs, final Iterator<Label> arcLabels, final boolean symmetrize,
 	                                       final boolean noLoops, final int batchSize, final File tempDir, final ProgressLogger pl) throws IOException {
 		ScatteredLabelledArcsASCIIGraph.Long2IntOpenHashBigMap map = new ScatteredLabelledArcsASCIIGraph.Long2IntOpenHashBigMap();
 
@@ -715,7 +723,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 
 		int j;
 		int[] source = new int[batchSize], target = new int[batchSize];
-		Label[] arcLabels = new Label[batchSize];
+		Label[] label = new Label[batchSize];
 		final ObjectArrayList<File> batches = new ObjectArrayList<>();
 
 		if (pl != null) {
@@ -733,15 +741,15 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 			final long tl = arc[1];
 			int t = map.get(tl);
 			if (t == -1) map.put(tl, t = (int) map.size());
-			Label label = labels.next();
+			Label l = arcLabels.next();
 
 			if (s != t || !noLoops) {
 				source[j] = s;
 				target[j] = t;
-				arcLabels[j++] = label;
+				label[j++] = l;
 
 				if (j == batchSize) {
-					// ordina source riflettendo la permutazione su target e arcLabels (?????)
+					// ordina source riflettendo la permutazione su target e label (?????)
 					pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 					j = 0;
 				}
@@ -749,10 +757,10 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 				if (symmetrize && s != t) {
 					source[j] = t;
 					target[j] = s;
-					arcLabels[j++] = label;
+					label[j++] = l;
 
 					if (j == batchSize) {
-						// ordina source riflettendo la permutazione su target e arcLabels (?????)
+						// ordina source riflettendo la permutazione su target e label (?????)
 						pairs += Transform.processBatch(batchSize, source, target, tempDir, batches);
 						j = 0;
 					}
@@ -762,7 +770,7 @@ public class ScatteredLabelledArcsASCIIGraph extends ImmutableSequentialGraph {
 			}
 		}
 
-		// ordina source riflettendo la permutazione su target e arcLabels (?????)
+		// ordina source riflettendo la permutazione su target e label (?????)
 		if (j != 0) pairs += Transform.processBatch(j, source, target, tempDir, batches);
 
 		if (pl != null) {
