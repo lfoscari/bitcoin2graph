@@ -25,8 +25,7 @@ import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
 public class SanityCheck {
 	private static int transactionAmount = 10_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
-	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class),
-			30, TimeUnit.MINUTES, "transactions");
+	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
 	private static int missingInputsOutputs = 0, missingNodes = 0, notFound = 0;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -59,6 +58,7 @@ public class SanityCheck {
 		transactionAmount = Integer.min(transactionAmount, Math.toIntExact(transactionsMap.size64()) / 2);
 
 		progress.start("Picking " + transactionAmount + " random transactions");
+		progress.logInterval = TimeUnit.MINUTES.toMillis(1);
 		progress.expectedUpdates = transactionAmount;
 
 		File[] transactionsFiles = transactionsDirectory.toFile().listFiles();
@@ -102,6 +102,7 @@ public class SanityCheck {
 
 		progress.stop();
 		progress.start("Checking transaction inconsistencies");
+		progress.logInterval = TimeUnit.MINUTES.toMillis(30);
 		progress.expectedUpdates = transactionAmount;
 
 		for (int i = 0; i < transactionAmount; i++) {
@@ -164,11 +165,13 @@ public class SanityCheck {
 				int inputAddressNode = ArrayUtils.indexOf(nodeIds, inputAddress);
 
 				int[] successors = graph.successorArray(inputAddressNode);
-				successors = Arrays.copyOf(successors, graph.outdegree(inputAddressNode));
+				long[] addressSuccessors = new long[graph.outdegree(inputAddressNode)];
+				for (int k = 0; k < addressSuccessors.length; k++) {
+					addressSuccessors[k] = nodeIds[successors[k]];
+				}
 
 				for (long outputAddress: outputs) {
-					int outputAddressNode = ArrayUtils.indexOf(nodeIds, outputAddress);
-					if (!ArrayUtils.contains(successors, outputAddressNode)) {
+					if (!ArrayUtils.contains(addressSuccessors, outputAddress)) {
 						reportMissingNode(transaction, inputs, outputs, inputAddress, successors, outputAddress);
 						break;
 					}
