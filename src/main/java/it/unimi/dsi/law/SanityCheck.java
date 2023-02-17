@@ -6,6 +6,8 @@ import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
+import it.unimi.dsi.webgraph.EFGraph;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -14,21 +16,26 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
 import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
 
 public class SanityCheck {
-	private static final int transactionAmount = 1_000_000;
+	private static int transactionAmount = 10_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
-	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class),
-			"transactions");
-	private static int errors = 0, notFound = 0;
+	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
+	private static int missingInputsOutputs = 0, missingNodes = 0, notFound = 0;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		/* Pick {transactionAmount} transactions at random and check that those transactions contain the right inputs
-		 and outputs. */
+		 and outputs.
+
+		 Note that given a transaction processed on a specific day, it's not a given that on the
+		 corresponding input or output there will be any information about the transaction. That's why we distinguish
+		 between error and the case in which the inputs or outputs were not found, it's easier to just skip the
+		 transaction. */
 
 		progress.logger.info("Loading transactions map");
 		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap =
@@ -42,8 +49,16 @@ public class SanityCheck {
 		progress.logger.info("Loading transactions outputs");
 		Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs =
 				(Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
+		progress.logger.info("Loading graph");
+		EFGraph graph = EFGraph.load(basename.toString());
+		progress.logger.info("Loading graph ids");
+		long[] nodeIds = BinIO.loadLongs(ids.toString());
+
+		// cover different test sets
+		transactionAmount = Integer.min(transactionAmount, Math.toIntExact(transactionsMap.size64()) / 2);
 
 		progress.start("Picking " + transactionAmount + " random transactions");
+		progress.logInterval = TimeUnit.MINUTES.toMillis(1);
 		progress.expectedUpdates = transactionAmount;
 
 		File[] transactionsFiles = transactionsDirectory.toFile().listFiles();
@@ -87,6 +102,7 @@ public class SanityCheck {
 
 		progress.stop();
 		progress.start("Checking transaction inconsistencies");
+		progress.logInterval = TimeUnit.MINUTES.toMillis(30);
 		progress.expectedUpdates = transactionAmount;
 
 		for (int i = 0; i < transactionAmount; i++) {
@@ -122,7 +138,7 @@ public class SanityCheck {
 				long addressId = addressesMap.getLong(address);
 
 				if (!inputs.contains(addressId)) {
-					error("input", inputs, transactionId, transaction, name, associatedInput, address, addressId);
+					reportInconsistency("input", inputs, transactionId, transaction, name, associatedInput, address, addressId);
 				}
 			}
 
@@ -140,20 +156,46 @@ public class SanityCheck {
 				long addressId = addressesMap.getLong(address);
 
 				if (!outputs.contains(addressId)) {
-					error("output", outputs, transactionId, transaction, name, associatedOutput, address, addressId);
+					reportInconsistency("output", outputs, transactionId, transaction, name, associatedOutput, address, addressId);
 				}
 			}
 
+			// Check that each input has among its successors all the outputs in the graph
+			for (long inputAddress: inputs) {
+				int inputAddressNode = ArrayUtils.indexOf(nodeIds, inputAddress);
+
+				int[] successors = graph.successorArray(inputAddressNode);
+				long[] addressSuccessors = new long[graph.outdegree(inputAddressNode)];
+				for (int k = 0; k < addressSuccessors.length; k++) {
+					addressSuccessors[k] = nodeIds[successors[k]];
+				}
+
+				for (long outputAddress: outputs) {
+					if (!ArrayUtils.contains(addressSuccessors, outputAddress)) {
+						reportMissingNode(transaction, inputs, outputs, inputAddress, successors, outputAddress);
+						break;
+					}
+				}
+			}
 		}
 
-		progress.stop(transactionAmount + " transactions checked, " + errors + " inconsistencies were found " +
-				"and " + notFound + " files were not found");
+		progress.stop(transactionAmount + " transactions checked, " + missingInputsOutputs + " inconsistencies were found, " +
+				missingNodes + " addresses were incorrectly linked in the graph and " + notFound + " files were not found");
 		progress.done();
 	}
 
-	private static void error(String source, LongOpenHashSet addressSet, long transactionId, CharSequence transaction,
-	                          File transactionFile, Path associatedFile,
-	                          CharSequence address, long addressId) {
+	private static void reportMissingNode(CharSequence transaction, LongOpenHashSet inputs, LongOpenHashSet outputs, long inputAddress, int[] successors, long outputAddress) {
+		progress.logger.error(
+				"Output not found analysing transaction " + transaction +
+				"\nInputs: " + inputs + " (checking " + inputAddress + ")" +
+				"\nOutputs: " + outputs + " (checking " + outputAddress + ")" +
+				"\nSuccessors of the input node: " + Arrays.toString(successors));
+		missingNodes++;
+	}
+
+	private static void reportInconsistency(String source, LongOpenHashSet addressSet, long transactionId, CharSequence transaction,
+											File transactionFile, Path associatedFile,
+											CharSequence address, long addressId) {
 		progress.logger.error(
 				"inconsistency in " + source +
 				"\naddresses: " + addressSet +
@@ -162,6 +204,6 @@ public class SanityCheck {
 				"\ntransaction: " + transaction + " (" + transactionId + ")" +
 				"\nfile: " + associatedFile
 		);
-		errors++;
+		missingInputsOutputs++;
 	}
 }
