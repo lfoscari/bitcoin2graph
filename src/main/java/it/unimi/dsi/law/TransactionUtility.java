@@ -16,47 +16,47 @@ import java.util.Scanner;
 import static it.unimi.dsi.law.Parameters.*;
 
 public class TransactionUtility {
-    public static final Logger logger = LoggerFactory.getLogger(TransactionUtility.class);
+	public static final Logger logger = LoggerFactory.getLogger(TransactionUtility.class);
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        logger.info("Loading necessary data structures...");
-        GOVMinimalPerfectHashFunction<CharSequence> transactionsMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
-        Object[][] addressInverseMap = (Object[][]) BinIO.loadObject(addressesInverseMapFile.toFile());
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
+		logger.info("Loading necessary data structures...");
+		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap = (GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
+		Object[][] addressInverseMap = (Object[][]) BinIO.loadObject(addressesInverseMapFile.toFile());
 
-        Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
-        Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
+		Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
+		Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
 
-        Scanner sc = new Scanner(System.in);
-        XoRoShiRo128PlusRandom r = new XoRoShiRo128PlusRandom();
+		Scanner sc = new Scanner(System.in);
+		XoRoShiRo128PlusRandom r = new XoRoShiRo128PlusRandom();
 
-        while (true) {
-            System.out.print("transaction> ");
+		while (true) {
+			System.out.print("transaction> ");
 
-            String transaction;
-            try {
-                transaction = sc.nextLine();
-            } catch (NoSuchElementException e) {
-                return;
-            }
+			String transaction;
+			try {
+				transaction = sc.nextLine();
+			} catch (NoSuchElementException e) {
+				return;
+			}
 
-            long transactionId;
+			long transactionId;
 
-            if (transaction.equals("")) {
-                System.out.println("Picking a random transaction");
-                transactionId = r.nextLong(transactionsMap.size64());
-            } else {
-                transactionId = transactionsMap.getLong(transaction);
-            }
+			if (transaction.equals("")) {
+				System.out.println("Picking a random transaction");
+				transactionId = r.nextLong(transactionsMap.size64());
+			} else {
+				transactionId = transactionsMap.getLong(transaction);
+			}
 
-            System.out.println(transaction + " (id: " + transactionId + ")");
+			System.out.println(transaction + " (id: " + transactionId + ")");
 
-            LongOpenHashSet inputs = transactionInputs.get(transactionId);
-            System.out.println("Inputs (" + inputs.size() + "):");
-            inputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
+			LongOpenHashSet inputs = transactionInputs.get(transactionId);
+			System.out.println("Inputs (" + inputs.size() + "):");
+			inputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
 
-            LongOpenHashSet outputs = transactionOutputs.get(transactionId);
-            System.out.println("Outputs (" + outputs.size() + "):");
-            outputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
-        }
-    }
+			LongOpenHashSet outputs = transactionOutputs.get(transactionId);
+			System.out.println("Outputs (" + outputs.size() + "):");
+			outputs.forEach(id -> System.out.println("\t" + BigArrays.get(addressInverseMap, id)));
+		}
+	}
 }

@@ -1,12 +1,13 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.*;
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import it.unimi.dsi.sux4j.mph.GOV3Function;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
-import it.unimi.dsi.webgraph.EFGraph;
+import it.unimi.dsi.webgraph.BVGraph;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
@@ -18,14 +19,13 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
-import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Parameters.transactionOutputsFile;
+import static it.unimi.dsi.law.Parameters.*;
 
 public class SanityCheck {
-	private static int transactionAmount = 10_000;
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
 	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
+	private static int transactionAmount = 10_000;
 	private static int missingInputsOutputs = 0, missingNodes = 0, notFound = 0;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -38,24 +38,20 @@ public class SanityCheck {
 		 transaction. */
 
 		progress.logger.info("Loading transactions map");
-		GOVMinimalPerfectHashFunction<CharSequence> transactionsMap =
-				(GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(transactionsMapFile.toFile());
+		GOV3Function<byte[]> transactionsMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
 		progress.logger.info("Loading addresses map");
-		GOVMinimalPerfectHashFunction<CharSequence> addressesMap =
-				(GOVMinimalPerfectHashFunction<CharSequence>) BinIO.loadObject(addressesMapFile.toFile());
+		GOV3Function<byte[]> addressesMap = (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
 		progress.logger.info("Loading transactions inputs");
-		Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs =
-				(Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
+		Long2ObjectArrayMap<LongOpenHashSet> transactionInputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
 		progress.logger.info("Loading transactions outputs");
-		Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs =
-				(Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
+		Long2ObjectArrayMap<LongOpenHashSet> transactionOutputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
 		progress.logger.info("Loading graph");
-		EFGraph graph = EFGraph.load(basename.toString());
+		BVGraph graph = BVGraph.load(basename.toString());
 		progress.logger.info("Loading graph ids");
 		long[] nodeIds = BinIO.loadLongs(ids.toString());
 
 		// cover different test sets
-		transactionAmount = Integer.min(transactionAmount, Math.toIntExact(transactionsMap.size64()) / 2);
+		transactionAmount = Integer.min(transactionAmount, Math.toIntExact(transactionsMap.size64()));
 
 		progress.start("Picking " + transactionAmount + " random transactions");
 		progress.logInterval = TimeUnit.MINUTES.toMillis(1);
@@ -86,14 +82,14 @@ public class SanityCheck {
 			offsets[i] = positions[i] - positions[i - 1];
 		}
 
-		for(long skip: offsets) {
+		for (long skip : offsets) {
 			MutableString line = transactions.next();
-			while (--skip > 0|| !transactionFilter.accept(line)) {
+			while (--skip > 0 || !transactionFilter.accept(line)) {
 				line = transactions.next();
 			}
 
 			randomTransactions[index] = new MutableString(Utils.column(line, 1));
-			randomTransactionsId[index] = transactionsMap.getLong(randomTransactions[index]);
+			randomTransactionsId[index] = transactionsMap.getLong(Utils.columnBytes(line, 1));
 			randomTransactionsFile[index] = transactions.currentFile();
 			index++;
 
@@ -127,41 +123,22 @@ public class SanityCheck {
 			}
 
 			Iterator<MutableString> iterator = Utils.readTSVs(associatedInput);
-			while (iterator.hasNext()) {
-				MutableString line = iterator.next();
+			LongOpenHashSet inferredInputs = checkTransaction(transactionsMap, addressesMap, transactionId, iterator, SPENDING_TRANSACTION_HASH);
 
-				if (transactionsMap.getLong(Utils.column(line, SPENDING_TRANSACTION_HASH)) != transactionId) {
-					continue;
-				}
-
-				CharSequence address = Utils.column(line, RECIPIENT);
-				long addressId = addressesMap.getLong(address);
-
-				if (!inputs.contains(addressId)) {
-					reportInconsistency("input", inputs, transactionId, transaction, name, associatedInput, address, addressId);
-				}
+			if (!inputs.equals(inferredInputs)) {
+				reportInconsistency("input", inputs, inferredInputs, transactionId, transaction, name, associatedInput);
 			}
 
 			Utils.LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 			iterator = Utils.readTSVs(associatedOutput, filter);
+			LongOpenHashSet inferredOutputs = checkTransaction(transactionsMap, addressesMap, transactionId, iterator, TRANSACTION_HASH);
 
-			while (iterator.hasNext()) {
-				MutableString line = iterator.next();
-
-				if (transactionsMap.getLong(Utils.column(line, TRANSACTION_HASH)) != transactionId) {
-					continue;
-				}
-
-				CharSequence address = Utils.column(line, RECIPIENT);
-				long addressId = addressesMap.getLong(address);
-
-				if (!outputs.contains(addressId)) {
-					reportInconsistency("output", outputs, transactionId, transaction, name, associatedOutput, address, addressId);
-				}
+			if (!outputs.equals(inferredOutputs)) {
+				reportInconsistency("output", outputs, inferredOutputs, transactionId, transaction, name, associatedOutput);
 			}
 
 			// Check that each input has among its successors all the outputs in the graph
-			for (long inputAddress: inputs) {
+			for (long inputAddress : inputs) {
 				int inputAddressNode = ArrayUtils.indexOf(nodeIds, inputAddress);
 
 				int[] successors = graph.successorArray(inputAddressNode);
@@ -170,7 +147,7 @@ public class SanityCheck {
 					addressSuccessors[k] = nodeIds[successors[k]];
 				}
 
-				for (long outputAddress: outputs) {
+				for (long outputAddress : outputs) {
 					if (!ArrayUtils.contains(addressSuccessors, outputAddress)) {
 						reportMissingNode(transaction, inputs, outputs, inputAddress, successors, outputAddress);
 						break;
@@ -179,30 +156,48 @@ public class SanityCheck {
 			}
 		}
 
-		progress.stop(transactionAmount + " transactions checked, " + missingInputsOutputs + " inconsistencies were found, " +
-				missingNodes + " addresses were incorrectly linked in the graph and " + notFound + " files were not found");
+		progress.stop(
+				transactionAmount + " transactions checked, " +
+						missingInputsOutputs + " inconsistencies were found, " +
+						missingNodes + " addresses were incorrectly linked in the graph and " +
+						notFound + " files were not found"
+		);
 		progress.done();
+	}
+
+	private static LongOpenHashSet checkTransaction(GOV3Function<byte[]> transactionsMap, GOV3Function<byte[]> addressesMap, long transactionId, Iterator<MutableString> iterator, int transactionHash) {
+		LongOpenHashSet inferredAddresses = new LongOpenHashSet();
+		while (iterator.hasNext()) {
+			MutableString line = iterator.next();
+
+			if (transactionsMap.getLong(Utils.columnBytes(line, transactionHash)) != transactionId) {
+				continue;
+			}
+
+			byte[] address = Utils.columnBytes(line, RECIPIENT);
+			inferredAddresses.add(addressesMap.getLong(address));
+		}
+
+		return inferredAddresses;
 	}
 
 	private static void reportMissingNode(CharSequence transaction, LongOpenHashSet inputs, LongOpenHashSet outputs, long inputAddress, int[] successors, long outputAddress) {
 		progress.logger.error(
 				"Output not found analysing transaction " + transaction +
-				"\nInputs: " + inputs + " (checking " + inputAddress + ")" +
-				"\nOutputs: " + outputs + " (checking " + outputAddress + ")" +
-				"\nSuccessors of the input node: " + Arrays.toString(successors));
+						"\nInputs: " + inputs + " (checking " + inputAddress + ")" +
+						"\nOutputs: " + outputs + " (checking " + outputAddress + ")" +
+						"\nSuccessors of the input node: " + Arrays.toString(successors));
 		missingNodes++;
 	}
 
-	private static void reportInconsistency(String source, LongOpenHashSet addressSet, long transactionId, CharSequence transaction,
-											File transactionFile, Path associatedFile,
-											CharSequence address, long addressId) {
+	private static void reportInconsistency(String source, LongOpenHashSet addressSet, LongOpenHashSet inferredAddressSet, long transactionId, CharSequence transaction, File transactionFile, Path associatedFile) {
 		progress.logger.error(
 				"inconsistency in " + source +
-				"\naddresses: " + addressSet +
-				"\naddress: " + address + " (" + addressId + ")" +
-				"\ntransaction file: " + transactionFile +
-				"\ntransaction: " + transaction + " (" + transactionId + ")" +
-				"\nfile: " + associatedFile
+						"\naddresses: " + addressSet +
+						"\ninferred addresses: " + inferredAddressSet +
+						"\ntransaction file: " + transactionFile +
+						"\ntransaction: " + transaction + " (" + transactionId + ")" +
+						"\nfile: " + associatedFile
 		);
 		missingInputsOutputs++;
 	}

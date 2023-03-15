@@ -5,8 +5,6 @@ import java.util.concurrent.TimeUnit;
 
 public class Parameters {
 
-	// Paths
-
 	public final static Path resources = Path.of("src/main/resources");
 	public final static Path artifacts = resources.resolve("artifacts");
 	public final static Path graph = resources.resolve("graph");
@@ -17,7 +15,6 @@ public class Parameters {
 
 	public final static Path transactionsDirectory = resources.resolve("transactions");
 	public final static Path transactionsMapFile = artifacts.resolve("transactions.map");
-	public final static Path transactionsInverseMapFile = artifacts.resolve("transactions.inverse.map");
 
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin.ids");
@@ -27,17 +24,6 @@ public class Parameters {
 
 	public final static Path outputsDirectory = resources.resolve("outputs");
 	public final static Path transactionOutputsFile = artifacts.resolve("transactions.outputs.table");
-
-	public final static Path centralities = resources.resolve("centralities");
-	public final static Path neighbourhoodFunctionFile = centralities.resolve("neighbourhood");
-	public final static Path sumOfDistancesFile = centralities.resolve("sumofdistances");
-	public final static Path harmonicCentralityFile = centralities.resolve("harmoniccentrality");
-	public final static Path discountedGainCentralityFile = centralities.resolve("discountedcaincentrality");
-	public final static Path closenessCentralityFile = centralities.resolve("closenesscentrality");
-	public final static Path linCentralityFile = centralities.resolve("lincentrality");
-	public final static Path nieminenCentralityFile = centralities.resolve("nieminencentrality");
-	public final static Path reachableFile = centralities.resolve("reachable");
-
 
 	// Bitcoin Blockchair schema for both inputs and outputs
 
@@ -70,9 +56,5 @@ public class Parameters {
 
 	public final static long logInterval = 10;
 	public final static TimeUnit logTimeUnit = TimeUnit.SECONDS;
-
-	/* public final static long WRITE_BUFFER_SIZE = 64 * SizeUnit.MB;
-	public final static long MAX_TOTAL_WAL_SIZE = SizeUnit.GB;
-	public final static int MAX_BACKGROUND_JOBS = 5;
-	public final static long MAX_BYTES_FOR_LEVEL_BASE = SizeUnit.GB; */
+	public final static int batchSize = 500_000_000;
 }
