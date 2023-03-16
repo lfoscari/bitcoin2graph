@@ -16,6 +16,8 @@ import java.util.stream.StreamSupport;
 
 import static it.unimi.dsi.law.Parameters.*;
 
+/** Note: you can simply use <code>java it.unimi.dsi.sux4j.mph.GOV3Function -s 10 -b -T . address.map addresses.tsv</code>
+ * and will likely be faster */
 public class MappingTables {
 	public static final Logger logger = LoggerFactory.getLogger(MappingTables.class);
 
@@ -64,6 +66,7 @@ public class MappingTables {
 				.keys(keys)
 				.tempDir(tempDir)
 				.transform(TransformationStrategies.rawByteArray())
+				.signed(10)
 				.build();
 
 		map.defaultReturnValue(-1);
