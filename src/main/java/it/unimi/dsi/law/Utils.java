@@ -1,22 +1,21 @@
 package it.unimi.dsi.law;
 
 import com.google.common.collect.Iterators;
-import it.unimi.dsi.fastutil.BigArrays;
-import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.objects.ObjectBigArrays;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable.FileLinesIterator;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.Parameters.logInterval;
+import static it.unimi.dsi.law.Parameters.logTimeUnit;
 
 public class Utils {
 	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {
@@ -46,6 +45,43 @@ public class Utils {
 		return line.subSequence(start, end);
 	}
 
+	public static byte[] columnBytes(MutableString line, int col) {
+		int start = 0, inc;
+		while (col-- > 0) {
+			if ((inc = line.indexOf('\t', start)) > 0) {
+				start = inc + 1;
+			} else {
+				throw new RuntimeException("Column number too high");
+			}
+		}
+
+		int end = line.indexOf('\t', start);
+
+		if (end == -1) {
+			end = line.length();
+		}
+
+		return Arrays.copyOfRange(line.toString().getBytes(), start, end);
+	}
+
+	static Iterator<MutableString> readTSVs(Path tsv) {
+		return new TSVIterator(new File[]{tsv.toFile()});
+	}
+
+	static Iterator<MutableString> readTSVs(Path tsv, LineFilter filter) {
+		return readTSVs(new File[]{tsv.toFile()}, filter);
+	}
+
+	static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
+		Iterator<MutableString> iterator = new TSVIterator(files);
+
+		if (filter != null) {
+			iterator = Iterators.filter(iterator, filter::accept);
+		}
+
+		return iterator;
+	}
+
 	interface LineFilter {
 		boolean accept(MutableString str);
 	}
@@ -55,7 +91,7 @@ public class Utils {
 		private FileLinesIterator iterator;
 		private File currentFile;
 
-		public TSVIterator (File[] files) {
+		public TSVIterator(File[] files) {
 			if (files.length == 0) {
 				throw new IllegalArgumentException("Files list must be non empty");
 			}
@@ -91,23 +127,5 @@ public class Utils {
 		public File currentFile() {
 			return this.currentFile;
 		}
-	}
-
-	static Iterator<MutableString> readTSVs(Path tsv) {
-		return new TSVIterator(new File[] { tsv.toFile() });
-	}
-
-	static Iterator<MutableString> readTSVs(Path tsv, LineFilter filter) {
-		return readTSVs(new File[] { tsv.toFile() }, filter);
-	}
-
-	static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
-		Iterator<MutableString> iterator = new TSVIterator(files);
-
-		if (filter != null) {
-			iterator = Iterators.filter(iterator, filter::accept);
-		}
-
-		return iterator;
 	}
 }

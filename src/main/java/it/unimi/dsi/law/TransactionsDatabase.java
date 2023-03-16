@@ -1,35 +1,31 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import it.unimi.dsi.sux4j.mph.GOV3Function;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.util.Iterator;
 
-import static it.unimi.dsi.law.Parameters.*;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Utils.*;
+import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.Utils.LineFilter;
 
 public class TransactionsDatabase {
 	private final ProgressLogger progress;
-	private final GOVMinimalPerfectHashFunction<CharSequence> addressMap;
-	private final GOVMinimalPerfectHashFunction<CharSequence> transactionMap;
-	private Long2ObjectOpenHashMap<LongOpenHashSet> transactionInputs;
-	private Long2ObjectOpenHashMap<LongOpenHashSet> transactionOutputs;
+	private final GOV3Function<byte[]> addressMap;
+	private final GOV3Function<byte[]> transactionMap;
+	private Long2ObjectArrayMap<LongOpenHashSet> transactionInputs;
+	private Long2ObjectArrayMap<LongOpenHashSet> transactionOutputs;
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<CharSequence> addressMap, GOVMinimalPerfectHashFunction<CharSequence> transactionMap) throws IOException {
+	public TransactionsDatabase(GOV3Function<byte[]> addressMap, GOV3Function<byte[]> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
 	}
 
-	public TransactionsDatabase (GOVMinimalPerfectHashFunction<CharSequence> addressMap, GOVMinimalPerfectHashFunction<CharSequence> transactionMap, ProgressLogger progress) throws IOException {
+	public TransactionsDatabase(GOV3Function<byte[]> addressMap, GOV3Function<byte[]> transactionMap, ProgressLogger progress) throws IOException {
 		this.addressMap = addressMap;
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
@@ -37,7 +33,7 @@ public class TransactionsDatabase {
 		if (transactionInputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction inputs from memory");
-				this.transactionInputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
+				this.transactionInputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -51,7 +47,7 @@ public class TransactionsDatabase {
 		if (transactionOutputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction outputs table from memory");
-				this.transactionOutputs = (Long2ObjectOpenHashMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
+				this.transactionOutputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -64,8 +60,7 @@ public class TransactionsDatabase {
 	}
 
 	private void computeInputs() throws IOException {
-		// TODO: switch to an long[][] sized according to transactionMap.size64()
-		this.transactionInputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
+		this.transactionInputs = new Long2ObjectArrayMap<>(Math.toIntExact(this.transactionMap.size64()));
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -73,23 +68,20 @@ public class TransactionsDatabase {
 		}
 
 		Utils.readTSVs(sources, null).forEachRemaining((s) -> {
-			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.column(s, SPENDING_TRANSACTION_HASH));
+			long addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
+			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
-				return;
+				throw new RuntimeException("Unknown address or transaction");
 			}
 
 			this.add(this.transactionInputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
-
-		this.transactionInputs.trim();
 	}
 
 	private void computeOutputs() throws IOException {
-		// TODO: switch to an long[][] sized according to transactionMap.size64()
-		this.transactionOutputs = new Long2ObjectOpenHashMap<>(Math.toIntExact(this.transactionMap.size64()) + 1, 0.9999999f);
+		this.transactionOutputs = new Long2ObjectArrayMap<>(Math.toIntExact(this.transactionMap.size64()));
 
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
@@ -98,21 +90,19 @@ public class TransactionsDatabase {
 		}
 
 		Utils.readTSVs(sources, filter).forEachRemaining((s) -> {
-			long addressId = this.addressMap.getLong(Utils.column(s, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.column(s, TRANSACTION_HASH));
+			long addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
+			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
 
-			if (addressId == -1 || transactionId == -1) {
-				return;
+			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
+				throw new RuntimeException("Unknown address or transaction");
 			}
 
 			this.add(this.transactionOutputs, transactionId, addressId);
 			this.progress.lightUpdate();
 		});
-
-		this.transactionOutputs.trim();
 	}
 
-	public void add(Long2ObjectOpenHashMap<LongOpenHashSet> table, long transaction, long address) {
+	public void add(Long2ObjectArrayMap<LongOpenHashSet> table, long transaction, long address) {
 		table.compute(transaction, (k, v) -> {
 			if (v == null) {
 				return LongOpenHashSet.of(address);
@@ -123,7 +113,7 @@ public class TransactionsDatabase {
 		});
 	}
 
-	public LongOpenHashSet getInputAddresses (long transaction) {
+	public LongOpenHashSet getInputAddresses(long transaction) {
 		if (this.transactionInputs.containsKey(transaction)) {
 			return this.transactionInputs.get(transaction);
 		}
@@ -131,7 +121,7 @@ public class TransactionsDatabase {
 		return null;
 	}
 
-	public LongOpenHashSet getOutputAddresses (long transaction) {
+	public LongOpenHashSet getOutputAddresses(long transaction) {
 		if (this.transactionOutputs.containsKey(transaction)) {
 			return this.transactionOutputs.get(transaction);
 		}

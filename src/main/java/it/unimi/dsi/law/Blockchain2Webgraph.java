@@ -1,65 +1,72 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
+import it.unimi.dsi.sux4j.mph.GOV3Function;
+import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.EFGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
 import static it.unimi.dsi.law.Parameters.*;
-import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final TransactionsDatabase transactionsDatabase;
-	private final GOVMinimalPerfectHashFunction<CharSequence> transactionMap;
+	private final GOV3Function<byte[]> transactionMap;
 	private final Queue<long[]> arcs = new LinkedList<>();
-	private final Iterator<MutableString> transactions;
 	private final ProgressLogger progress;
+	private long transaction = 0;
 
-	public Blockchain2Webgraph (TransactionsDatabase transactionsDatabase, GOVMinimalPerfectHashFunction<CharSequence> transactionMap, ProgressLogger progress) throws IOException {
+	public Blockchain2Webgraph(TransactionsDatabase transactionsDatabase, GOV3Function<byte[]> transactionMap, ProgressLogger progress) {
 		this.transactionsDatabase = transactionsDatabase;
 		this.transactionMap = transactionMap;
-
-		Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
-		File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
-		if (sources == null) {
-			throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
-		}
-		this.transactions = Utils.readTSVs(sources, filter);
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs") : progress;
 	}
 
+	public static void main(String[] args) throws IOException {
+		graph.toFile().mkdir();
+		artifacts.toFile().mkdir();
+
+		GOV3Function<byte[]> addressMap = MappingTables.buildAddressesMap();
+		GOV3Function<byte[]> transactionMap = MappingTables.buildTransactionsMap();
+
+		TransactionsDatabase transactions = new TransactionsDatabase(addressMap, transactionMap);
+
+		ProgressLogger progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs");
+		Blockchain2Webgraph bw = new Blockchain2Webgraph(transactions, transactionMap, progress);
+		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
+		tempDir.deleteOnExit();
+
+		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, batchSize, tempDir, progress);
+
+		BVGraph.store(graph, basename.toString());
+		BinIO.storeLongs(graph.ids, ids.toFile());
+	}
+
 	@Override
-	public Iterator<long[]> iterator () {
+	public Iterator<long[]> iterator() {
 		return this;
 	}
 
 	@Override
-	public boolean hasNext () {
+	public boolean hasNext() {
 		if (!this.arcs.isEmpty()) {
 			return true;
 		}
 
-		// Maybe we can just use the transactionsId, iff the GOVMinimalPerfectHashFunction uses all and only the indices
-		// necessary to encode n entries. In that case we can simply loop 0 to n.
-		while (this.transactions.hasNext()) {
-			CharSequence transaction = Utils.column(this.transactions.next(), 1);
-			long transactionId = this.transactionMap.getLong(transaction);
+		while (this.transaction < this.transactionMap.size64()) {
+			LongOpenHashSet inputAddresses = this.transactionsDatabase.getInputAddresses(this.transaction);
+			LongOpenHashSet outputAddresses = this.transactionsDatabase.getOutputAddresses(this.transaction);
 
-			LongOpenHashSet inputAddresses = this.transactionsDatabase.getInputAddresses(transactionId);
-			LongOpenHashSet outputAddresses = this.transactionsDatabase.getOutputAddresses(transactionId);
+			this.transaction++;
 
 			if (inputAddresses == null || outputAddresses == null) {
 				continue;
@@ -67,7 +74,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 			for (long inputAddress : inputAddresses) {
 				for (long outputAddress : outputAddresses) {
-					this.arcs.add(new long[] { inputAddress, outputAddress });
+					this.arcs.add(new long[]{inputAddress, outputAddress});
 				}
 			}
 
@@ -78,33 +85,12 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	}
 
 	@Override
-	public long[] next () {
+	public long[] next() {
 		if (!this.hasNext()) {
 			throw new NoSuchElementException();
 		}
 
 		this.progress.lightUpdate();
 		return this.arcs.remove();
-	}
-
-	public static void main (String[] args) throws IOException {
-		graph.toFile().mkdir();
-		artifacts.toFile().mkdir();
-
-		GOVMinimalPerfectHashFunction<CharSequence> addressMap = MappingTables.buildAddressesMap();
-		GOVMinimalPerfectHashFunction<CharSequence> transactionMap = MappingTables.buildTransactionsMap();
-
-		TransactionsDatabase transactions = new TransactionsDatabase(addressMap, transactionMap);
-
-		ProgressLogger progress = Utils.getProgressLogger(Blockchain2Webgraph.class, "arcs");
-		Blockchain2Webgraph bw = new Blockchain2Webgraph(transactions, transactionMap, progress);
-		File tempDir = Files.createTempDirectory(resources, "bw_temp").toFile();
-		tempDir.deleteOnExit();
-
-		// TODO: switch to an InputStream using addressMap as a mapping function
-		ScatteredArcsASCIIGraph graph = new ScatteredArcsASCIIGraph(bw.iterator(), false, false, 100_000, tempDir, progress);
-
-		EFGraph.store(graph, basename.toString());
-		BinIO.storeLongs(graph.ids, ids.toFile());
 	}
 }
