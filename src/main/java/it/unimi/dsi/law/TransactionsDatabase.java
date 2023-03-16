@@ -38,10 +38,8 @@ public class TransactionsDatabase {
 				throw new RuntimeException(e);
 			}
 		} else {
-			this.progress.start("Computing transaction inputs table");
 			this.computeInputs();
 			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
-			this.progress.done();
 		}
 
 		if (transactionOutputsFile.toFile().exists()) {
@@ -52,18 +50,16 @@ public class TransactionsDatabase {
 				throw new RuntimeException(e);
 			}
 		} else {
-			this.progress.start("Computing transaction outputs table");
 			this.computeOutputs();
 			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
-			this.progress.done();
 		}
 	}
 
 	private void computeInputs() throws IOException {
 		this.transactionInputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
-		for (int i = 0; i < this.transactionInputs.length; i++) {
-			this.transactionInputs[i] = new LongOpenHashSet();
-		}
+		for (int i = 0; i < this.transactionInputs.length; i++) this.transactionInputs[i] = new LongOpenHashSet();
+
+		this.progress.start("Computing transaction inputs table");
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -75,36 +71,40 @@ public class TransactionsDatabase {
 			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
-				throw new RuntimeException("Unknown address or transaction");
+				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " or transaction " + Utils.column(s, SPENDING_TRANSACTION_HASH));
 			}
 
 			this.transactionInputs[(int) transactionId].add(addressId);
 			this.progress.lightUpdate();
 		});
+		this.progress.done();
 	}
 
 	private void computeOutputs() throws IOException {
 		this.transactionOutputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
-		for (int i = 0; i < this.transactionOutputs.length; i++) {
-			this.transactionOutputs[i] = new LongOpenHashSet();
-		}
+		for (int i = 0; i < this.transactionOutputs.length; i++) this.transactionOutputs[i] = new LongOpenHashSet();
+
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
 			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 		}
 
+		this.progress.start("Computing transaction outputs table");
+
 		Utils.readTSVs(sources, filter).forEachRemaining((s) -> {
 			long addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
 			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
-				throw new RuntimeException("Unknown address or transaction");
+				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " or transaction " + Utils.column(s, TRANSACTION_HASH));
 			}
 
 			this.transactionOutputs[(int) transactionId].add(addressId);
 			this.progress.lightUpdate();
 		});
+
+		this.progress.done();
 	}
 
 	public LongOpenHashSet getInputAddresses(long transaction) {
