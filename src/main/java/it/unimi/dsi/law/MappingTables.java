@@ -1,8 +1,8 @@
 package it.unimi.dsi.law;
 
-import com.google.common.collect.Iterables;
 import it.unimi.dsi.bits.TransformationStrategies;
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.sux4j.mph.GOV3Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +10,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static it.unimi.dsi.law.Parameters.*;
 
@@ -32,7 +33,8 @@ public class MappingTables {
 
 		logger.info("Computing addresses mappings");
 
-		Iterable<byte[]> addresses = Iterables.transform(() -> Utils.readTSVs(addressesFile), line -> Utils.columnBytes(line, 0));
+		Iterable<byte[]> addresses = StreamSupport.stream(new FileLinesMutableStringIterable(addressesFile.toString()).spliterator(), false)
+				.map(line -> line.toString().getBytes()).collect(Collectors.toList());
 		return buildMap(addresses, addressesMapFile);
 	}
 
@@ -49,13 +51,8 @@ public class MappingTables {
 		}
 
 		logger.info("Computing transactions mappings");
-		Utils.LineFilter filter = (line) -> Utils.column(line, 7).equals("0");
-		File[] sources = transactionsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
-		if (sources == null) {
-			throw new NoSuchFileException("No transactions found in " + transactionsDirectory);
-		}
-
-		Iterable<byte[]> transactions = Iterables.transform(() -> Utils.readTSVs(sources, filter), line -> Utils.columnBytes(line, 1));
+		Iterable<byte[]> transactions = StreamSupport.stream(new FileLinesMutableStringIterable(transactionsFile.toString()).spliterator(), false)
+				.map(line -> line.toString().getBytes()).collect(Collectors.toList());
 		return buildMap(transactions, transactionsMapFile);
 	}
 

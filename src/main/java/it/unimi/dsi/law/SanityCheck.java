@@ -37,6 +37,8 @@ public class SanityCheck {
 		 between error and the case in which the inputs or outputs were not found, it's easier to just skip the
 		 transaction. */
 
+		/*
+
 		progress.logger.info("Loading transactions map");
 		GOV3Function<byte[]> transactionsMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
 		progress.logger.info("Loading addresses map");
@@ -163,6 +165,7 @@ public class SanityCheck {
 						notFound + " files were not found"
 		);
 		progress.done();
+	 */
 	}
 
 	private static LongOpenHashSet checkTransaction(GOV3Function<byte[]> transactionsMap, GOV3Function<byte[]> addressesMap, long transactionId, Iterator<MutableString> iterator, int transactionHash) {
