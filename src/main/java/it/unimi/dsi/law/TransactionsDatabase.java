@@ -71,7 +71,7 @@ public class TransactionsDatabase {
 			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
-				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " or transaction " + Utils.column(s, SPENDING_TRANSACTION_HASH));
+				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, SPENDING_TRANSACTION_HASH) + " (" + transactionId + ")");
 			}
 
 			this.transactionInputs[(int) transactionId].add(addressId);
@@ -97,7 +97,7 @@ public class TransactionsDatabase {
 			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
-				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " or transaction " + Utils.column(s, TRANSACTION_HASH));
+				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, TRANSACTION_HASH) + " (" + transactionId + ")");
 			}
 
 			this.transactionOutputs[(int) transactionId].add(addressId);
