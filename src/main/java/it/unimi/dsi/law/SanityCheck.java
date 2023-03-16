@@ -24,11 +24,34 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class SanityCheck {
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
-	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class), "transactions");
+	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class));
 	private static int transactionAmount = 10_000;
 	private static int missingInputsOutputs = 0, missingNodes = 0, notFound = 0;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
+		progress.logger.info("Loading addresses map");
+		GOV3Function<byte[]> addressesMap = (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
+		progress.logger.info("Loading transactions map");
+		GOV3Function<byte[]> transactionsMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
+
+		progress.start("Checking address map completeness (default return value: " + addressesMap.defaultReturnValue() + ")");
+		progress.itemsName = "addresses";
+		Utils.readTSVs(addressesFile).forEachRemaining((a) -> {
+			if (addressesMap.getLong(a.toString().getBytes()) == addressesMap.defaultReturnValue())
+				throw new RuntimeException("Invalid address " + a);
+			progress.lightUpdate();
+		});
+		progress.done();
+
+		progress.start("Checking transaction map completeness (default return value: " + transactionsMap.defaultReturnValue() + ")");
+		progress.itemsName = "transactions";
+		Utils.readTSVs(transactionsFile).forEachRemaining((t) -> {
+			if(transactionsMap.getLong(t.toString().getBytes()) == transactionsMap.defaultReturnValue())
+				throw new RuntimeException("Invalid transaction " + t);
+			progress.lightUpdate();
+		});
+		progress.done();
+
 		/* Pick {transactionAmount} transactions at random and check that those transactions contain the right inputs
 		 and outputs.
 
@@ -37,12 +60,6 @@ public class SanityCheck {
 		 between error and the case in which the inputs or outputs were not found, it's easier to just skip the
 		 transaction. */
 
-		/*
-
-		progress.logger.info("Loading transactions map");
-		GOV3Function<byte[]> transactionsMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
-		progress.logger.info("Loading addresses map");
-		GOV3Function<byte[]> addressesMap = (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
 		progress.logger.info("Loading transactions inputs");
 		Long2ObjectArrayMap<LongOpenHashSet> transactionInputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
 		progress.logger.info("Loading transactions outputs");
@@ -165,7 +182,6 @@ public class SanityCheck {
 						notFound + " files were not found"
 		);
 		progress.done();
-	 */
 	}
 
 	private static LongOpenHashSet checkTransaction(GOV3Function<byte[]> transactionsMap, GOV3Function<byte[]> addressesMap, long transactionId, Iterator<MutableString> iterator, int transactionHash) {

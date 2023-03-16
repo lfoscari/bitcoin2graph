@@ -9,12 +9,13 @@ public class Parameters {
 	public final static Path artifacts = resources.resolve("artifacts");
 	public final static Path graph = resources.resolve("graph");
 
-	public final static Path addressesFile = resources.resolve("addresses.tsv");
+	public final static Path addressesFile = artifacts.resolve("addresses.tsv");
 	public final static Path addressesMapFile = artifacts.resolve("addresses.map");
 	public final static Path addressesInverseMapFile = artifacts.resolve("addresses.inverse.map");
 
 	public final static Path transactionsFile = artifacts.resolve("transactions.tsv");
 	public final static Path transactionsMapFile = artifacts.resolve("transactions.map");
+	public final static Path transactionsDirectory = resources.resolve("transactions");
 
 	public final static Path basename = graph.resolve("bitcoin");
 	public final static Path ids = graph.resolve("bitcoin.ids");
