@@ -18,8 +18,8 @@ public class TransactionsDatabase {
 	private final ProgressLogger progress;
 	private final GOV3Function<byte[]> addressMap;
 	private final GOV3Function<byte[]> transactionMap;
-	private Long2ObjectArrayMap<LongOpenHashSet> transactionInputs;
-	private Long2ObjectArrayMap<LongOpenHashSet> transactionOutputs;
+	private LongOpenHashSet[] transactionInputs;
+	private LongOpenHashSet[] transactionOutputs;
 
 	public TransactionsDatabase(GOV3Function<byte[]> addressMap, GOV3Function<byte[]> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
@@ -33,7 +33,7 @@ public class TransactionsDatabase {
 		if (transactionInputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction inputs from memory");
-				this.transactionInputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionInputsFile.toFile());
+				this.transactionInputs = (LongOpenHashSet[]) BinIO.loadObject(transactionInputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -47,7 +47,7 @@ public class TransactionsDatabase {
 		if (transactionOutputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction outputs table from memory");
-				this.transactionOutputs = (Long2ObjectArrayMap<LongOpenHashSet>) BinIO.loadObject(transactionOutputsFile.toFile());
+				this.transactionOutputs = (LongOpenHashSet[]) BinIO.loadObject(transactionOutputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -60,7 +60,10 @@ public class TransactionsDatabase {
 	}
 
 	private void computeInputs() throws IOException {
-		this.transactionInputs = new Long2ObjectArrayMap<>(Math.toIntExact(this.transactionMap.size64()));
+		this.transactionInputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
+		for (int i = 0; i < this.transactionInputs.length; i++) {
+			this.transactionInputs[i] = new LongOpenHashSet();
+		}
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -75,14 +78,16 @@ public class TransactionsDatabase {
 				throw new RuntimeException("Unknown address or transaction");
 			}
 
-			this.add(this.transactionInputs, transactionId, addressId);
+			this.transactionInputs[(int) transactionId].add(addressId);
 			this.progress.lightUpdate();
 		});
 	}
 
 	private void computeOutputs() throws IOException {
-		this.transactionOutputs = new Long2ObjectArrayMap<>(Math.toIntExact(this.transactionMap.size64()));
-
+		this.transactionOutputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
+		for (int i = 0; i < this.transactionOutputs.length; i++) {
+			this.transactionOutputs[i] = new LongOpenHashSet();
+		}
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
 		if (sources == null) {
@@ -97,35 +102,16 @@ public class TransactionsDatabase {
 				throw new RuntimeException("Unknown address or transaction");
 			}
 
-			this.add(this.transactionOutputs, transactionId, addressId);
+			this.transactionOutputs[(int) transactionId].add(addressId);
 			this.progress.lightUpdate();
 		});
 	}
 
-	public void add(Long2ObjectArrayMap<LongOpenHashSet> table, long transaction, long address) {
-		table.compute(transaction, (k, v) -> {
-			if (v == null) {
-				return LongOpenHashSet.of(address);
-			}
-
-			v.add(address);
-			return v;
-		});
-	}
-
 	public LongOpenHashSet getInputAddresses(long transaction) {
-		if (this.transactionInputs.containsKey(transaction)) {
-			return this.transactionInputs.get(transaction);
-		}
-
-		return null;
+		return this.transactionInputs[(int) transaction];
 	}
 
 	public LongOpenHashSet getOutputAddresses(long transaction) {
-		if (this.transactionOutputs.containsKey(transaction)) {
-			return this.transactionOutputs.get(transaction);
-		}
-
-		return null;
+		return this.transactionOutputs[(int) transaction];
 	}
 }
