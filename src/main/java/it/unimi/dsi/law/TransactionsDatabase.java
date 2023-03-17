@@ -74,7 +74,7 @@ public class TransactionsDatabase {
 				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
 				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
 			} catch (RuntimeException e) {
-				progress.logger.error("Column number too high");
+				progress.logger.error("Column number too high for line\n\t" + s);
 				return;
 			}
 
@@ -106,7 +106,7 @@ public class TransactionsDatabase {
 				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
 				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
 			} catch (RuntimeException e) {
-				progress.logger.error("Column number too high");
+				progress.logger.error("Column number too high for line\n\t" + s);
 				return;
 			}
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
