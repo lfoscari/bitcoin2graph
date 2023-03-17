@@ -68,7 +68,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 
 			this.transaction++;
 
-			if (inputAddresses == null || outputAddresses == null) {
+			if (inputAddresses.size() == 0 || outputAddresses.size() == 0) {
 				continue;
 			}
 
