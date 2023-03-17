@@ -3,12 +3,14 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOV3Function;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.util.Iterator;
 
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.*;
@@ -67,8 +69,14 @@ public class TransactionsDatabase {
 		}
 
 		Utils.readTSVs(sources, null).forEachRemaining((s) -> {
-			long addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
+			long addressId, transactionId;
+			try {
+				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
+				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
+			} catch (RuntimeException e) {
+				progress.logger.error("Column number too high");
+				return;
+			}
 
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
 				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, SPENDING_TRANSACTION_HASH) + " (" + transactionId + ")");
@@ -93,9 +101,14 @@ public class TransactionsDatabase {
 		this.progress.start("Computing transaction outputs table");
 
 		Utils.readTSVs(sources, filter).forEachRemaining((s) -> {
-			long addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
-			long transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
-
+			long addressId, transactionId;
+			try {
+				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
+				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
+			} catch (RuntimeException e) {
+				progress.logger.error("Column number too high");
+				return;
+			}
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
 				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, TRANSACTION_HASH) + " (" + transactionId + ")");
 			}
