@@ -32,18 +32,6 @@ public class TransactionsDatabase {
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
 
-		if (transactionInputsFile.toFile().exists()) {
-			try {
-				this.progress.logger.info("Loading transaction inputs from memory");
-				this.transactionInputs = (LongOpenHashSet[]) BinIO.loadObject(transactionInputsFile.toFile());
-			} catch (IOException | ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			}
-		} else {
-			this.computeInputs();
-			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
-		}
-
 		if (transactionOutputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction outputs table from memory");
@@ -54,6 +42,18 @@ public class TransactionsDatabase {
 		} else {
 			this.computeOutputs();
 			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
+		}
+
+		if (transactionInputsFile.toFile().exists()) {
+			try {
+				this.progress.logger.info("Loading transaction inputs from memory");
+				this.transactionInputs = (LongOpenHashSet[]) BinIO.loadObject(transactionInputsFile.toFile());
+			} catch (IOException | ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			}
+		} else {
+			this.computeInputs();
+			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
 		}
 	}
 
