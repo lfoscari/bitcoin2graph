@@ -19,10 +19,14 @@ public class GraphDiff {
         System.out.print("basename second graph: ");
         String g2b = sc.nextLine();
 
+        pl.logger.info("Loading first graph");
         BVGraph g1 = BVGraph.load(g1b);
+        pl.logger.info("Loading second graph");
         BVGraph g2 = BVGraph.load(g2b);
 
         pl.expectedUpdates = Integer.min(g1.numNodes(), g2.numNodes());
+
+        pl.start("Checking nodes");
 
         NodeIterator g1it = g1.nodeIterator();
         NodeIterator g2it = g2.nodeIterator();
@@ -56,5 +60,7 @@ public class GraphDiff {
                 pl.logger.error("Successor mismatch for node " + g1n + ":\n\t" + Arrays.toString(g1suc) + "\n\t" + Arrays.toString(g2suc));
             }
         }
+
+        pl.done();
     }
 }
