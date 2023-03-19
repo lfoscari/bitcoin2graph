@@ -46,22 +46,7 @@ public class Utils {
 	}
 
 	public static byte[] columnBytes(MutableString line, int col) {
-		int start = 0, inc;
-		while (col-- > 0) {
-			if ((inc = line.indexOf('\t', start)) > 0) {
-				start = inc + 1;
-			} else {
-				throw new RuntimeException("Column number too high");
-			}
-		}
-
-		int end = line.indexOf('\t', start);
-
-		if (end == -1) {
-			end = line.length();
-		}
-
-		return Arrays.copyOfRange(line.toString().getBytes(), start, end);
+		return column(line, col).toString().getBytes();
 	}
 
 	static Iterator<MutableString> readTSVs(Path tsv) {
