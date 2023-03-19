@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -10,7 +11,7 @@ import java.util.Scanner;
 
 public class GraphDiff {
     public static void main(String[] args) throws IOException {
-        ProgressLogger pl = new ProgressLogger("nodes");
+        ProgressLogger pl = new ProgressLogger(LoggerFactory.getLogger(GraphDiff.class), "nodes");
 
         Scanner sc = new Scanner(System.in);
         System.out.print("basename first graph: ");
@@ -20,9 +21,9 @@ public class GraphDiff {
         String g2b = sc.nextLine();
 
         pl.logger.info("Loading first graph");
-        BVGraph g1 = BVGraph.load(g1b);
+        BVGraph g1 = BVGraph.loadOffline(g1b, pl);
         pl.logger.info("Loading second graph");
-        BVGraph g2 = BVGraph.load(g2b);
+        BVGraph g2 = BVGraph.loadOffline(g2b, pl);
 
         pl.expectedUpdates = Integer.min(g1.numNodes(), g2.numNodes());
 
