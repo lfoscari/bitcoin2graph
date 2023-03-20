@@ -63,12 +63,12 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 		}
 
 		while (this.transaction < this.transactionMap.size64()) {
-			LongOpenHashSet inputAddresses = this.transactionsDatabase.getInputAddresses(this.transaction);
-			LongOpenHashSet outputAddresses = this.transactionsDatabase.getOutputAddresses(this.transaction);
+			long[] inputAddresses = this.transactionsDatabase.getInputAddresses(this.transaction);
+			long[] outputAddresses = this.transactionsDatabase.getOutputAddresses(this.transaction);
 
 			this.transaction++;
 
-			if (inputAddresses.size() == 0 || outputAddresses.size() == 0) {
+			if (inputAddresses.length == 0 || outputAddresses.length == 0) {
 				continue;
 			}
 
