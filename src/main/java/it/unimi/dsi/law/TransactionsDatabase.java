@@ -1,7 +1,10 @@
 package it.unimi.dsi.law;
 
+import it.unimi.dsi.fastutil.BigArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.longs.LongArrays;
+import it.unimi.dsi.fastutil.longs.LongBigArrays;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -20,8 +23,8 @@ public class TransactionsDatabase {
 	private final ProgressLogger progress;
 	private final GOV3Function<byte[]> addressMap;
 	private final GOV3Function<byte[]> transactionMap;
-	private LongOpenHashSet[] transactionInputs;
-	private LongOpenHashSet[] transactionOutputs;
+	private long[][] transactionInputs;
+	private long[][] transactionOutputs;
 
 	public TransactionsDatabase(GOV3Function<byte[]> addressMap, GOV3Function<byte[]> transactionMap) throws IOException {
 		this(addressMap, transactionMap, null);
@@ -32,22 +35,10 @@ public class TransactionsDatabase {
 		this.transactionMap = transactionMap;
 		this.progress = progress == null ? Utils.getProgressLogger(Blockchain2Webgraph.class, "sources") : progress;
 
-		if (transactionOutputsFile.toFile().exists()) {
-			try {
-				this.progress.logger.info("Loading transaction outputs table from memory");
-				this.transactionOutputs = (LongOpenHashSet[]) BinIO.loadObject(transactionOutputsFile.toFile());
-			} catch (IOException | ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			}
-		} else {
-			this.computeOutputs();
-			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
-		}
-
 		if (transactionInputsFile.toFile().exists()) {
 			try {
 				this.progress.logger.info("Loading transaction inputs from memory");
-				this.transactionInputs = (LongOpenHashSet[]) BinIO.loadObject(transactionInputsFile.toFile());
+				this.transactionInputs = (long[][]) BinIO.loadObject(transactionInputsFile.toFile());
 			} catch (IOException | ClassNotFoundException e) {
 				throw new RuntimeException(e);
 			}
@@ -55,26 +46,36 @@ public class TransactionsDatabase {
 			this.computeInputs();
 			BinIO.storeObject(this.transactionInputs, transactionInputsFile.toFile());
 		}
+
+		if (transactionOutputsFile.toFile().exists()) {
+			try {
+				this.progress.logger.info("Loading transaction outputs table from memory");
+				this.transactionOutputs = (long[][]) BinIO.loadObject(transactionOutputsFile.toFile());
+			} catch (IOException | ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			}
+		} else {
+			this.computeOutputs();
+			BinIO.storeObject(this.transactionOutputs, transactionOutputsFile.toFile());
+		}
 	}
 
 	private void computeInputs() throws IOException {
-		this.transactionInputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
-		for (int i = 0; i < this.transactionInputs.length; i++) this.transactionInputs[i] = new LongOpenHashSet();
-
+		this.transactionInputs = new long[Math.toIntExact(this.transactionMap.size64())][0];
+		int[] offsets = new int[Math.toIntExact(this.transactionMap.size64())];
 		this.progress.start("Computing transaction inputs table");
 
 		File[] sources = inputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
-		if (sources == null) {
-			throw new NoSuchFileException("No inputs found in " + inputsDirectory);
-		}
+		if (sources == null) throw new NoSuchFileException("No inputs found in " + inputsDirectory);
 
 		Utils.readTSVs(sources, null).forEachRemaining((s) -> {
-			long addressId, transactionId;
+			long addressId;
+			int transactionId;
 			try {
 				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
-				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
+				transactionId = (int) this.transactionMap.getLong(Utils.columnBytes(s, SPENDING_TRANSACTION_HASH));
 			} catch (RuntimeException e) {
-				progress.logger.error("Column number too high for line\n\t" + s);
+				this.progress.logger.error("Column number too high for line\n\t" + s);
 				return;
 			}
 
@@ -82,49 +83,50 @@ public class TransactionsDatabase {
 				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, SPENDING_TRANSACTION_HASH) + " (" + transactionId + ")");
 			}
 
-			this.transactionInputs[(int) transactionId].add(addressId);
+			this.transactionInputs[transactionId] = LongArrays.ensureCapacity(this.transactionInputs[transactionId], this.transactionInputs[transactionId].length + 1);
+			this.transactionInputs[transactionId][offsets[transactionId]++] = addressId;
 			this.progress.lightUpdate();
 		});
 		this.progress.done();
 	}
 
 	private void computeOutputs() throws IOException {
-		this.transactionOutputs = new LongOpenHashSet[Math.toIntExact(this.transactionMap.size64())];
-		for (int i = 0; i < this.transactionOutputs.length; i++) this.transactionOutputs[i] = new LongOpenHashSet();
+		this.transactionOutputs = new long[Math.toIntExact(this.transactionMap.size64())][0];
+		int[] offsets = new int[Math.toIntExact(this.transactionMap.size64())];
 
 		LineFilter filter = (line) -> Utils.column(line, IS_FROM_COINBASE).equals("0");
 		File[] sources = outputsDirectory.toFile().listFiles((d, s) -> s.endsWith(".tsv"));
-		if (sources == null) {
-			throw new NoSuchFileException("No outputs found in " + outputsDirectory);
-		}
+		if (sources == null) throw new NoSuchFileException("No outputs found in " + outputsDirectory);
 
 		this.progress.start("Computing transaction outputs table");
 
 		Utils.readTSVs(sources, filter).forEachRemaining((s) -> {
-			long addressId, transactionId;
+			long addressId;
+			int transactionId;
 			try {
 				addressId = this.addressMap.getLong(Utils.columnBytes(s, RECIPIENT));
-				transactionId = this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
+				transactionId = (int) this.transactionMap.getLong(Utils.columnBytes(s, TRANSACTION_HASH));
 			} catch (RuntimeException e) {
-				progress.logger.error("Column number too high for line\n\t" + s);
+				this.progress.logger.error("Column number too high for line\n\t" + s);
 				return;
 			}
 			if (addressId == this.addressMap.defaultReturnValue() || transactionId == this.transactionMap.defaultReturnValue()) {
 				throw new RuntimeException("Unknown address " + Utils.column(s, RECIPIENT) + " (" + addressId + ") or transaction " + Utils.column(s, TRANSACTION_HASH) + " (" + transactionId + ")");
 			}
 
-			this.transactionOutputs[(int) transactionId].add(addressId);
+			this.transactionOutputs[transactionId] = LongArrays.ensureCapacity(this.transactionOutputs[transactionId], this.transactionOutputs[transactionId].length + 1);
+			this.transactionOutputs[transactionId][offsets[transactionId]++] = addressId;
 			this.progress.lightUpdate();
 		});
 
 		this.progress.done();
 	}
 
-	public LongOpenHashSet getInputAddresses(long transaction) {
+	public long[] getInputAddresses(long transaction) {
 		return this.transactionInputs[(int) transaction];
 	}
 
-	public LongOpenHashSet getOutputAddresses(long transaction) {
+	public long[] getOutputAddresses(long transaction) {
 		return this.transactionOutputs[(int) transaction];
 	}
 }

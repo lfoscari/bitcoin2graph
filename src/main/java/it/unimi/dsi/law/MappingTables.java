@@ -59,12 +59,8 @@ public class MappingTables {
 	}
 
 	private static GOV3Function<byte[]> buildMap(Iterable<byte[]> keys, Path destination) throws IOException {
-		File tempDir = Files.createTempDirectory(resources, "map_temp_").toFile();
-		tempDir.deleteOnExit();
-
 		GOV3Function<byte[]> map = new GOV3Function.Builder<byte[]>()
 				.keys(keys)
-				.tempDir(tempDir)
 				.transform(TransformationStrategies.rawByteArray())
 				.signed(10)
 				.build();
