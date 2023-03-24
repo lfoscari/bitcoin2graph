@@ -54,8 +54,12 @@ public class APISanityCheck {
 					if (IntStream.of(successors).noneMatch(s -> s == outputId)) {
 						pl.logger.error("Inconsistency for transaction " + transactionHash + " on input " + input + " and output " + output);
 					}
+
+					pl.lightUpdate();
 				}
 			}
 		}
+
+		pl.done();
 	}
 }
