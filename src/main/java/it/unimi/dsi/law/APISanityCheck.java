@@ -1,17 +1,25 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.io.FileLinesByteArrayIterable;
+import it.unimi.dsi.io.FileLinesByteArrayIterable.FileLinesIterator;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOV3Function;
 import it.unimi.dsi.webgraph.ImmutableGraph;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -39,17 +47,28 @@ public class APISanityCheck {
 		pl.start("Checking transactions");
 
 		for (File transaction: transactions) {
-			final List<String> lines = Files.readAllLines(transaction.toPath(), Charset.defaultCharset());
-			final String[] inputs = lines.get(0).split(" "), outputs = lines.get(1).split(" ");
+			FileLinesByteArrayIterable it = new FileLinesByteArrayIterable(transaction.toString());
+			final ObjectList<byte[]> lines = it.allLines();
+			byte[] inputs = lines.get(0), outputs = lines.get(1);
 
 			final String transactionHash = transaction.getName().substring(0, transaction.getName().length() - 4);
 			// final long transactionId = transactionMap.getLong(transactionHash.getBytes());
 
-			for (String input: inputs) {
-				final long inputId = addressMap.getLong(input.getBytes());
+			int inputOffset = 0;
+			BitSet inputDelim = ArrayUtils.indexesOf(inputs, (byte) 32);
 
-				for (String output: outputs) {
-					final long outputId = addressMap.getLong(output.getBytes());
+			for (int inputSpace: inputDelim.stream().toArray()) {
+				byte[] input = Arrays.copyOfRange(inputs, inputOffset, inputSpace);
+				inputOffset += inputSpace;
+				final long inputId = addressMap.getLong(input);
+
+				int outputOffset = 0;
+				BitSet outputDelim = ArrayUtils.indexesOf(outputs, (byte) 32);
+
+				for (int outputSpace: outputDelim.stream().toArray()) {
+					byte[] output = Arrays.copyOfRange(outputs, outputOffset, outputSpace);
+					outputOffset += outputSpace;
+					final long outputId = addressMap.getLong(output);
 
 					final int[] successors = graph.successorArray((int) inputId);
 					if (IntStream.of(successors).noneMatch(s -> s == outputId)) {
