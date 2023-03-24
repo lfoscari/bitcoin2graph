@@ -22,9 +22,9 @@ import java.util.concurrent.TimeUnit;
 import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
 import static it.unimi.dsi.law.Parameters.*;
 
-public class SanityCheck {
+public class LocalSanityCheck {
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
-	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(SanityCheck.class));
+	private static final ProgressLogger progress = new ProgressLogger(LoggerFactory.getLogger(LocalSanityCheck.class));
 	private static int transactionAmount = 10_000;
 	private static int missingInputsOutputs = 0, missingNodes = 0, notFound = 0;
 
