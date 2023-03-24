@@ -22,7 +22,7 @@ public class APISanityCheck {
 	 * of the Blockchair API <a href="https://blockchair.com/api/docs#link_200">Blockchair API</a>.
 	 */
 
-	private static final Path transactionBaselineFiles = resources.resolve("baseline-transaction/stripped-transactions");
+	private static final Path transactionBaselineFiles = resources.resolve("baseline-transactions/stripped-transactions");
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		final ProgressLogger pl = new ProgressLogger(LoggerFactory.getLogger(APISanityCheck.class), "transactions");
@@ -50,7 +50,7 @@ public class APISanityCheck {
 				for (String output: outputs) {
 					final long outputId = addressMap.getLong(output.getBytes());
 
-					int[] successors = graph.successorArray((int) inputId);
+					final int[] successors = graph.successorArray((int) inputId);
 					if (IntStream.of(successors).noneMatch(s -> s == outputId)) {
 						pl.logger.error("Inconsistency for transaction " + transactionHash + " on input " + input + " and output " + output);
 					}
