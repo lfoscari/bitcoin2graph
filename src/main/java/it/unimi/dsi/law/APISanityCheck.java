@@ -56,18 +56,23 @@ public class APISanityCheck {
 
 			int inputOffset = 0;
 			BitSet inputDelim = ArrayUtils.indexesOf(inputs, (byte) 32);
+			BitSet outputDelim = ArrayUtils.indexesOf(outputs, (byte) 32);
+
+			System.out.println(new String(inputs));
+			System.out.println(inputDelim);
+
+			System.out.println(new String(outputs));
+			System.out.println(outputDelim);
 
 			for (int inputSpace: inputDelim.stream().toArray()) {
 				byte[] input = Arrays.copyOfRange(inputs, inputOffset, inputSpace);
-				inputOffset += inputSpace;
+				inputOffset += inputSpace + 1;
 				final long inputId = addressMap.getLong(input);
 
 				int outputOffset = 0;
-				BitSet outputDelim = ArrayUtils.indexesOf(outputs, (byte) 32);
-
 				for (int outputSpace: outputDelim.stream().toArray()) {
 					byte[] output = Arrays.copyOfRange(outputs, outputOffset, outputSpace);
-					outputOffset += outputSpace;
+					outputOffset += outputSpace + 1;
 					final long outputId = addressMap.getLong(output);
 
 					final int[] successors = graph.successorArray((int) inputId);
