@@ -12,6 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -27,11 +28,11 @@ public class APISanityCheck {
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		final ProgressLogger pl = new ProgressLogger(LoggerFactory.getLogger(APISanityCheck.class), "transactions");
 		pl.logger.info("Loading graph");
-		final ImmutableGraph graph = ImmutableGraph.loadOffline(basename.toString());
+		final ImmutableGraph graph = null; // ImmutableGraph.loadOffline(basename.toString());
 		pl.logger.info("Loading address map");
-		final GOV3Function<byte[]> addressMap = (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
+		final GOV3Function<byte[]> addressMap = null; // (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
 		pl.logger.info("Loading transaction map");
-		final GOV3Function<byte[]> transactionMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
+		final GOV3Function<byte[]> transactionMap = null; // (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
 
 		final File[] transactions = transactionBaselineFiles.toFile().listFiles((d, s) -> s.endsWith(".json"));
 		if (transactions == null) throw new NoSuchFileException("Not transactions in " + transactionBaselineFiles);
@@ -41,8 +42,11 @@ public class APISanityCheck {
 		for (File transaction: transactions) {
 			final List<String> lines = Files.readAllLines(transaction.toPath(), Charset.defaultCharset());
 			final String[] inputs = lines.get(0).split(" "), outputs = lines.get(1).split(" ");
+
+			System.out.println(inputs);
+
 			final String transactionHash = transaction.getName().substring(0, transaction.getName().length() - 4);
-			final long transactionId = transactionMap.getLong(transactionHash);
+			final long transactionId = transactionMap.getLong(transactionHash.getBytes());
 
 			for (String input: inputs) {
 				final long inputId = addressMap.getLong(input.getBytes());
