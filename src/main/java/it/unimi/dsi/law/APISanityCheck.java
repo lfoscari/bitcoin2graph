@@ -43,6 +43,7 @@ public class APISanityCheck {
 
 		pl.start("Checking transactions...");
 		pl.itemsName = "transactions";
+		pl.expectedUpdates = transactions.length;
 
 		for (File transaction: transactions) {
 			final byte[] inputs;
@@ -113,7 +114,7 @@ public class APISanityCheck {
 				}
 			}
 
-			if (DEBUG) System.out.println();
+			pl.lightUpdate();
 		}
 
 		pl.logger.info("Total inconsistencies: " + inconsistencies);
