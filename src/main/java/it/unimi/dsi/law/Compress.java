@@ -53,27 +53,27 @@ public class Compress {
             newBasenameDir.mkdir();
         }
 
-        logger.info("Loading graph");
+        logger.warn("Loading graph");
         ImmutableGraph graph = ImmutableGraph.loadMapped(oldBasename, pl);
 
         if (jsapResult.contains("simplify")) {
-            logger.info("Symmetrizing");
+            logger.warn("Symmetrizing");
             graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
 
-            logger.info("Removing loops");
+            logger.warn("Removing loops");
             graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
         } else {
             File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
-            logger.info("Computing permutation");
+            logger.warn("Computing permutation");
             LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
             int[] permutation = llp.computePermutation(clustersFile.toString());
 
-            logger.info("Applying permutation");
+            logger.warn("Applying permutation");
             graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
         }
 
-        logger.info("Storing graph");
+        logger.warn("Storing graph");
         BVGraph.store(graph, newBasename, pl);
     }
 }
