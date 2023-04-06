@@ -7,6 +7,7 @@ import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
 import it.unimi.dsi.webgraph.labelling.ScatteredLabelledArcsASCIIGraph;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +16,7 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class Compress {
     private static final int SEED = 33;
-    private static final ProgressLogger pl = new ProgressLogger();
+    private static final ProgressLogger pl = new ProgressLogger(LoggerFactory.getLogger(Compress.class));
 
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(ScatteredLabelledArcsASCIIGraph.class.getName(),
@@ -49,8 +50,10 @@ public class Compress {
         String oldBasename = jsapResult.getString("oldBasename");
         String newBasename = jsapResult.getString("newBasename");
 
-        if (!new File(newBasename).toPath().getParent().toFile().exists()) {
-            throw new JSAPException(newBasename + " is not on an existing path");
+        File newBasenameDir = new File(newBasename).toPath().getParent().toFile();
+        if (!newBasenameDir.exists()) {
+            pl.logger.warn(newBasenameDir + " does not exist, creating it");
+            newBasenameDir.mkdir();
         }
 
         pl.logger.info("Loading graph");
