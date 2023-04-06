@@ -61,7 +61,7 @@ public class Compress {
         }
 
         logger.info("Loading graph");
-        ImmutableGraph graph = ImmutableGraph.load(oldBasename, pl);
+        ImmutableGraph graph = ImmutableGraph.loadMapped(oldBasename, pl);
 
         if (jsapResult.contains("simplify")) {
             logger.info("Symmetrizing");
@@ -75,7 +75,7 @@ public class Compress {
             int[] permutation = llp.computePermutation(clusterFile.toString());
 
             logger.info("Applying permutation");
-            graph = Transform.map(graph, permutation, pl);
+            graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
         }
 
         logger.info("Storing graph");
