@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 
 public class Compress {
     private static final int SEED = 33;
@@ -59,20 +60,20 @@ public class Compress {
         }
 
         logger.info("Loading graph");
-        ImmutableGraph graph = BVGraph.loadMapped(oldBasename, pl);
+        ImmutableGraph graph = ImmutableGraph.load(oldBasename, pl);
 
         logger.info("Symmetrizing");
-        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
+        graph = Transform.symmetrize(graph, pl);
 
         logger.info("Removing loops");
-        graph =  Transform.filterArcs(graph, Transform.NO_LOOPS, pl);
+        graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
         logger.info("Permuting");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
         int[] permutation = llp.computePermutation(clusterFile.toString());
 
         logger.info("Applying permutation");
-        graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
+        graph = Transform.map(graph, permutation, pl);
 
         logger.info("Storing graph");
         BVGraph.store(graph, newBasename, pl);
