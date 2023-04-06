@@ -26,10 +26,11 @@ public class Compress {
                 "Compress a given graph using LLP",
                 new Parameter[]{
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, resources.toString(), JSAP.NOT_REQUIRED, 't', "temp-dir", "A directory for all temporary batch files."),
-                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
+                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "1000000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
                         new FlaggedOption("clustersDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'c', "clusters-dir", "A directory for clusters."),
                         new FlaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "basename", "The basename of the input graph."),
                         new FlaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "new-basename", "The basename of the output graph."),
+                        new Switch("simplify", 's', "simplify", "Perform the simplification (necessary)."),
                 }
         );
 
@@ -62,18 +63,20 @@ public class Compress {
         logger.info("Loading graph");
         ImmutableGraph graph = ImmutableGraph.load(oldBasename, pl);
 
-        logger.info("Symmetrizing");
-        graph = Transform.symmetrize(graph, pl);
+        if (jsapResult.contains("simplify")) {
+            logger.info("Symmetrizing");
+            graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
 
-        logger.info("Removing loops");
-        graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
+            logger.info("Removing loops");
+            graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
+        } else {
+            logger.info("Computing permutation");
+            LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
+            int[] permutation = llp.computePermutation(clusterFile.toString());
 
-        logger.info("Permuting");
-        LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
-        int[] permutation = llp.computePermutation(clusterFile.toString());
-
-        logger.info("Applying permutation");
-        graph = Transform.map(graph, permutation, pl);
+            logger.info("Applying permutation");
+            graph = Transform.map(graph, permutation, pl);
+        }
 
         logger.info("Storing graph");
         BVGraph.store(graph, newBasename, pl);
