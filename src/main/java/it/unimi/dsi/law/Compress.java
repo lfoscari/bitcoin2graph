@@ -29,7 +29,6 @@ public class Compress {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
                         new FlaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "basename", "The basename of the input graph."),
                         new FlaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "new-basename", "The basename of the output graph."),
-                        new Switch("simplify", 's', "simplify", "Perform the simplification and save the resulting graph, this step is necessary for compression."),
                 }
         );
 
@@ -56,22 +55,24 @@ public class Compress {
         logger.warn("Loading graph");
         ImmutableGraph graph = ImmutableGraph.loadMapped(oldBasename, pl);
 
-        if (jsapResult.contains("simplify")) {
-            logger.warn("Symmetrizing");
-            graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
+        logger.warn("Symmetrizing");
+        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
 
-            logger.warn("Removing loops");
-            graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
-        } else {
-            File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
+        logger.warn("Removing loops");
+        graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
-            logger.warn("Computing permutation");
-            LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
-            int[] permutation = llp.computePermutation(clustersFile.toString());
+        logger.warn("Temporarily storing graph");
+        BVGraph.store(graph, newBasename, pl);
+        graph = BVGraph.load(newBasename);
 
-            logger.warn("Applying permutation");
-            graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
-        }
+        File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
+
+        logger.warn("Computing permutation");
+        LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
+        int[] permutation = llp.computePermutation(clustersFile.toString());
+
+        logger.warn("Applying permutation");
+        graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
 
         logger.warn("Storing graph");
         BVGraph.store(graph, newBasename, pl);
