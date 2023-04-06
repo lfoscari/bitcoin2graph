@@ -7,6 +7,7 @@ import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
 import it.unimi.dsi.webgraph.labelling.ScatteredLabelledArcsASCIIGraph;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -16,7 +17,8 @@ import static it.unimi.dsi.law.Parameters.*;
 
 public class Compress {
     private static final int SEED = 33;
-    private static final ProgressLogger pl = new ProgressLogger(LoggerFactory.getLogger(Compress.class));
+    private static final Logger logger = LoggerFactory.getLogger(Compress.class);
+    private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(ScatteredLabelledArcsASCIIGraph.class.getName(),
@@ -35,7 +37,7 @@ public class Compress {
 
         File tempDir = new File(jsapResult.getString("tempDir"));
         if (!tempDir.exists()) {
-            pl.logger.warn(tempDir + " does not exist, creating it");
+            logger.info(tempDir + " does not exist, creating it");
             tempDir.mkdir();
         }
 
@@ -43,7 +45,7 @@ public class Compress {
 
         File clustersDir = new File(jsapResult.getString("clustersDir"));
         if (!clustersDir.exists()) {
-            pl.logger.warn(clustersDir + " does not exist, creating it");
+            logger.info(clustersDir + " does not exist, creating it");
             clustersDir.mkdir();
         }
 
@@ -52,27 +54,27 @@ public class Compress {
 
         File newBasenameDir = new File(newBasename).toPath().getParent().toFile();
         if (!newBasenameDir.exists()) {
-            pl.logger.warn(newBasenameDir + " does not exist, creating it");
+            logger.info(newBasenameDir + " does not exist, creating it");
             newBasenameDir.mkdir();
         }
 
-        pl.logger.info("Loading graph");
-        ImmutableGraph graph = ImmutableGraph.loadMapped(oldBasename, pl);
+        logger.info("Loading graph");
+        ImmutableGraph graph = BVGraph.loadMapped(oldBasename, pl);
 
-        pl.logger.info("Symmetrizing");
+        logger.info("Symmetrizing");
         graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
 
-        pl.logger.info("Removing loops");
+        logger.info("Removing loops");
         graph =  Transform.filterArcs(graph, Transform.NO_LOOPS, pl);
 
-        pl.logger.info("Permuting");
+        logger.info("Permuting");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
         int[] permutation = llp.computePermutation(clusterFile.toString());
 
-        pl.logger.info("Applying permutation");
+        logger.info("Applying permutation");
         graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
 
-        pl.logger.info("Storing graph");
+        logger.info("Storing graph");
         BVGraph.store(graph, newBasename, pl);
     }
 }
