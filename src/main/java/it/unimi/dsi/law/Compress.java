@@ -19,7 +19,7 @@ import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 public class Compress {
     private static final int SEED = 33;
     private static final Logger logger = LoggerFactory.getLogger(Compress.class);
-    private static final ProgressLogger pl = new ProgressLogger(logger);
+    private static final ProgressLogger pl = new ProgressLogger();
 
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(ScatteredLabelledArcsASCIIGraph.class.getName(),
@@ -27,7 +27,6 @@ public class Compress {
                 new Parameter[]{
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, resources.toString(), JSAP.NOT_REQUIRED, 't', "temp-dir", "A directory for all temporary batch files."),
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
-                        new FlaggedOption("clustersDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 'c', "clusters-dir", "A directory for clusters."),
                         new FlaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "basename", "The basename of the input graph."),
                         new FlaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "new-basename", "The basename of the output graph."),
                         new Switch("simplify", 's', "simplify", "Perform the simplification and save the resulting graph, this step is necessary for compression."),
@@ -64,17 +63,11 @@ public class Compress {
             logger.info("Removing loops");
             graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
         } else {
-            if (!jsapResult.contains("clustersDir")) throw new JSAPException("Provide a clusters directory when computing permutations");
-
-            File clustersDir = new File(jsapResult.getString("clustersDir"));
-            if (!clustersDir.exists()) {
-                logger.warn(clustersDir + " does not exist, creating it");
-                clustersDir.mkdir();
-            }
+            File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
             logger.info("Computing permutation");
             LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
-            int[] permutation = llp.computePermutation(clusterFile.toString());
+            int[] permutation = llp.computePermutation(clustersFile.toString());
 
             logger.info("Applying permutation");
             graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
