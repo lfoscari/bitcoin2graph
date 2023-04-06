@@ -32,7 +32,7 @@ public class APISanityCheck {
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		pl.logger.info("Loading address map...");
 		final GOV3Function<byte[]> addressMap = (GOV3Function<byte[]>) BinIO.loadObject(addressesMapFile.toFile());
-		pl.logger.info("Loading transaction map");
+		pl.logger.info("Loading transaction map...");
 		final GOV3Function<byte[]> transactionMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
 		pl.logger.info("Loading graph...");
 		final ImmutableGraph graph = ImmutableGraph.loadMapped(basename.toString());

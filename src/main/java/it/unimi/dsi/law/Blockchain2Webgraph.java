@@ -1,11 +1,9 @@
 package it.unimi.dsi.law;
 
 import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOV3Function;
 import it.unimi.dsi.webgraph.BVGraph;
-import it.unimi.dsi.webgraph.EFGraph;
 import it.unimi.dsi.webgraph.ScatteredArcsASCIIGraph;
 
 import java.io.File;
@@ -32,7 +30,7 @@ public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	}
 
 	public static void main(String[] args) throws IOException {
-		graph.toFile().mkdir();
+		graphDir.toFile().mkdir();
 		artifacts.toFile().mkdir();
 
 		GOV3Function<byte[]> addressMap = MappingTables.buildAddressesMap();
