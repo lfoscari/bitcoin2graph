@@ -8,7 +8,7 @@ public class Parameters {
 
 	// Paths
 
-	public final static Path resources = new File("/mnt/extra/analysis/lfoscari/").toPath();
+	public final static Path resources = Path.of("/mnt/big/analysis/lfoscari/bitcoin");
 	public final static Path artifacts = resources.resolve("artifacts");
 	public final static Path graphDir = resources.resolve("graph-labelled");
 	public final static Path clusterFile = graphDir.resolve("clusters");
