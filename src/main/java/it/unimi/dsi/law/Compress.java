@@ -22,7 +22,7 @@ public class Compress {
                 "Compress a given graph using LLP",
                 new Parameter[]{
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, resources.toString(), JSAP.NOT_REQUIRED, 't', "temp-dir", "A directory for all temporary batch files."),
-                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10_000_000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
+                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "batch-size", "A directory for all temporary batch files."),
                         new FlaggedOption("clustersDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'c', "clusters-dir", "A directory for clusters."),
                         new FlaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "basename", "The basename of the input graph."),
                         new FlaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "new-basename", "The basename of the output graph."),
