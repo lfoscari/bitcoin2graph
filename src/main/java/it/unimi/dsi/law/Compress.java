@@ -43,28 +43,28 @@ public class Compress {
 
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
-        logger.warn("Loading graph");
+        logger.info("Loading graph");
         ImmutableGraph graph = ImmutableGraph.load(oldBasename, pl);
 
-        logger.warn("Symmetrizing");
+        logger.info("Symmetrizing");
         graph = Transform.symmetrize(graph, pl);
 
-        logger.warn("Removing loops");
+        logger.info("Removing loops");
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
-        logger.warn("Temporarily storing graph");
+        logger.info("Temporarily storing graph");
         // This is needed to obtain a fully computed union of the graph and its transpose
         BVGraph.store(graph, newBasename, pl);
         graph = ImmutableGraph.load(newBasename);
 
-        logger.warn("Computing permutation");
+        logger.info("Computing permutation");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
         int[] permutation = llp.computePermutation(clustersFile.toString());
 
-        logger.warn("Applying permutation");
+        logger.info("Applying permutation");
         graph = Transform.map(graph, permutation, pl);
 
-        logger.warn("Storing graph");
+        logger.info("Storing graph");
         BVGraph.store(graph, newBasename, pl);
     }
 }
