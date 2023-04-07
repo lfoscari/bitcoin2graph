@@ -21,9 +21,8 @@ public class Compress {
     private static final ProgressLogger pl = new ProgressLogger();
 
     public static void main(String[] args) throws IOException, JSAPException {
-        final SimpleJSAP jsap = new SimpleJSAP(ScatteredLabelledArcsASCIIGraph.class.getName(),
-                "Compress a given graph using LLP",
-                new Parameter[]{
+        final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Compress a given graph using LLP",
+                new Parameter[] {
                         new UnflaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the input graph."),
                         new UnflaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the output graph."),
                 }
@@ -55,7 +54,7 @@ public class Compress {
         logger.info("Temporarily storing graph");
         // This is needed to obtain a fully computed union of the graph and its transpose
         BVGraph.store(graph, newBasename, pl);
-        graph = ImmutableGraph.load(newBasename);
+        graph = ImmutableGraph.load(newBasename, pl);
 
         logger.info("Computing permutation");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
@@ -65,7 +64,7 @@ public class Compress {
         graph = null;
 
         logger.info("Applying permutation");
-        graph = ImmutableGraph.load(oldBasename);
+        graph = ImmutableGraph.load(oldBasename, pl);
         graph = Transform.map(graph, permutation, pl);
 
         logger.info("Storing graph");
