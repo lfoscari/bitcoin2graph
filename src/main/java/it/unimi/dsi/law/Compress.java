@@ -61,7 +61,11 @@ public class Compress {
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
         int[] permutation = llp.computePermutation(clustersFile.toString());
 
+        llp = null;
+        graph = null;
+
         logger.info("Applying permutation");
+        graph = ImmutableGraph.load(oldBasename);
         graph = Transform.map(graph, permutation, pl);
 
         logger.info("Storing graph");
