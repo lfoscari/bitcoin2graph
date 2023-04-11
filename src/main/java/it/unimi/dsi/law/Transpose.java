@@ -15,7 +15,7 @@ import java.nio.file.Path;
 import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 
 public class Transpose {
-    private static final Logger logger = LoggerFactory.getLogger(Compress.class);
+    private static final Logger logger = LoggerFactory.getLogger(Transpose.class);
     private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws JSAPException, IOException {
