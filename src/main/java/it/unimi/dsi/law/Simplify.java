@@ -12,11 +12,11 @@ import java.nio.file.Path;
 
 import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 
-public class Transpose {
+public class Simplify {
     private static final ProgressLogger pl = new ProgressLogger();
 
     public static void main(String[] args) throws JSAPException, IOException {
-        final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Transpose a given graph",
+        final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Remove loops and symmetrize a given graph",
                 new Parameter[] {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
@@ -34,7 +34,9 @@ public class Transpose {
         File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : basenamePath.getParent().toFile();
 
         ImmutableGraph graph = ImmutableGraph.loadOffline(basenamePath.toString(), pl);
-        graph = Transform.transposeOffline(graph, batchSize, tempDir, pl);
+
+        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
+        graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
         BVGraph.store(graph, transposedBasename, pl);
     }
