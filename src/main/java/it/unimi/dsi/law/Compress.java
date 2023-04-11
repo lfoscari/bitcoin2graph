@@ -64,6 +64,6 @@ public class Compress {
         graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
 
         logger.info("Storing graph");
-        BVGraph.store(graph, newBasenameDir + new File(simplifiedBasename).getName(), pl);
+        BVGraph.store(graph, newBasenameDir.toPath().resolve(new File(simplifiedBasename).getName()).toString(), pl);
     }
 }
