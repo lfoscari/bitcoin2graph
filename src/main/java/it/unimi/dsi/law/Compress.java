@@ -18,7 +18,7 @@ import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 public class Compress {
     private static final int SEED = 33;
     private static final Logger logger = LoggerFactory.getLogger(Compress.class);
-    private static final ProgressLogger pl = new ProgressLogger();
+    private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Compress a given graph using LLP",

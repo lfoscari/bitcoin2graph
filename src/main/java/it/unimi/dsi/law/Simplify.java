@@ -5,6 +5,8 @@ import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +15,8 @@ import java.nio.file.Path;
 import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 
 public class Simplify {
-    private static final ProgressLogger pl = new ProgressLogger();
+    private static final Logger logger = LoggerFactory.getLogger(Compress.class);
+    private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws JSAPException, IOException {
         final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Remove loops and symmetrize a given graph",
@@ -28,9 +31,13 @@ public class Simplify {
         if (jsap.messagePrinted()) System.exit(1);
 
         Path basenamePath = new File(jsapResult.getString("basename")).toPath();
-        Path destinationDirectory = basenamePath.getParent().resolve("simplified");
-        String transposedBasename = destinationDirectory.resolve(basenamePath.getFileName()).toString();
-        destinationDirectory.toFile().mkdir();
+        File destinationDirectory = basenamePath.getParent().resolve("simplified").toFile();
+        String simplifiedBasename = destinationDirectory.toPath().resolve(basenamePath.getFileName()).toString();
+
+        if (!destinationDirectory.exists()) {
+            logger.warn(destinationDirectory + " does not exist, creating it");
+            destinationDirectory.mkdir();
+        }
 
         int batchSize = jsapResult.getInt("batchSize");
         File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : basenamePath.getParent().toFile();
@@ -40,6 +47,6 @@ public class Simplify {
         graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
-        BVGraph.store(graph, transposedBasename, pl);
+        BVGraph.store(graph, simplifiedBasename, pl);
     }
 }
