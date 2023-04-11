@@ -19,7 +19,7 @@ public class Transpose {
     private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws JSAPException, IOException {
-        final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Transpose a given graph",
+        final SimpleJSAP jsap = new SimpleJSAP(Transpose.class.getName(), "Transpose a given graph",
                 new Parameter[] {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
