@@ -51,7 +51,11 @@ public class Compress {
         ImmutableGraph graph = BVGraph.loadMapped(simplifiedBasename, pl);
 
         logger.info("Computing permutation");
-        int[] permutation = new LayeredLabelPropagation(graph, SEED).computePermutation(clustersFile.toString());
+        LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
+        int[] permutation = llp.computePermutation(clustersFile.toString());
+
+        llp = null;
+        graph = null;
 
         logger.info("Loading original graph");
         graph = ImmutableGraph.loadOffline(basename, pl);
