@@ -1,7 +1,6 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
-import it.unimi.dsi.io.OutputBitStream;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
@@ -49,14 +48,6 @@ public class Simplify {
 
         graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
-
-        final OutputBitStream offsets = new OutputBitStream(destBasename +  ".offsets", 64 * 1024);
-        pl.expectedUpdates = graph.numNodes();
-        pl.start("Writing offsets...");
-        ((BVGraph)graph).writeOffsets(offsets, pl);
-        offsets.close();
-        pl.count = graph.numNodes();
-        pl.done();
 
         BVGraph.store(graph, destBasename.toString(), pl);
     }
