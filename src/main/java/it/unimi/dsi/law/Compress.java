@@ -23,6 +23,8 @@ public class Compress {
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Compress a given graph using LLP",
                 new Parameter[] {
+                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
+                        new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
                         new UnflaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the input graph."),
                         new UnflaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the output graph."),
                 }
@@ -40,13 +42,16 @@ public class Compress {
             newBasenameDir.mkdir();
         }
 
+        int batchSize = jsapResult.getInt("batchSize");
+        File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : newBasenameDir;
+
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
         logger.info("Loading graph");
-        ImmutableGraph graph = ImmutableGraph.load(oldBasename, pl);
+        ImmutableGraph graph = ImmutableGraph.loadOffline(oldBasename, pl);
 
         logger.info("Symmetrizing");
-        graph = Transform.symmetrize(graph, pl);
+        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
 
         logger.info("Removing loops");
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
@@ -54,7 +59,7 @@ public class Compress {
         logger.info("Temporarily storing graph");
         // This is needed to obtain a fully computed union of the graph and its transpose
         BVGraph.store(graph, newBasename, pl);
-        graph = ImmutableGraph.load(newBasename, pl);
+        graph = ImmutableGraph.loadOffline(newBasename, pl);
 
         logger.info("Computing permutation");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
@@ -64,8 +69,8 @@ public class Compress {
         graph = null;
 
         logger.info("Applying permutation");
-        graph = ImmutableGraph.load(oldBasename, pl);
-        graph = Transform.map(graph, permutation, pl);
+        graph = ImmutableGraph.loadOffline(oldBasename, pl);
+        graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
 
         logger.info("Storing graph");
         BVGraph.store(graph, newBasename, pl);
