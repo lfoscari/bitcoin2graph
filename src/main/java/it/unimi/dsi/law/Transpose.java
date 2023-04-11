@@ -23,6 +23,7 @@ public class Transpose {
                 new Parameter[] {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
+                        new FlaggedOption("destBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 'd', "The basename of the resulting graph."),
                         new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
                 }
         );
@@ -31,12 +32,14 @@ public class Transpose {
         if (jsap.messagePrinted()) System.exit(1);
 
         Path basenamePath = new File(jsapResult.getString("basename")).toPath();
-        File destinationDirectory = basenamePath.getParent().resolve("transposed").toFile();
-        String transposedBasename = destinationDirectory.toPath().resolve(basenamePath.getFileName()).toString();
+        File destBasename = jsapResult.contains("destBasename") ?
+                basenamePath.getParent().resolve("transposed").resolve(basenamePath.getFileName()).toFile() :
+                new File(jsapResult.getString("destBasename"));
 
-        if (!destinationDirectory.exists()) {
-            logger.warn(destinationDirectory + " does not exist, creating it");
-            destinationDirectory.mkdir();
+
+        if (!destBasename.getParentFile().exists()) {
+            logger.warn(destBasename.getParentFile() + " does not exist, creating it");
+            destBasename.getParentFile().mkdir();
         }
 
         int batchSize = jsapResult.getInt("batchSize");
@@ -45,6 +48,6 @@ public class Transpose {
         ImmutableGraph graph = ImmutableGraph.loadOffline(basenamePath.toString(), pl);
         graph = Transform.transposeOffline(graph, batchSize, tempDir, pl);
 
-        BVGraph.store(graph, transposedBasename, pl);
+        BVGraph.store(graph, destBasename.toString(), pl);
     }
 }

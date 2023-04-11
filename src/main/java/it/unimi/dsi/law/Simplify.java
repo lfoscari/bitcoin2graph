@@ -23,6 +23,7 @@ public class Simplify {
                 new Parameter[] {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
+                        new FlaggedOption("destBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 'd', "The basename of the resulting graph."),
                         new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
                 }
         );
@@ -31,12 +32,13 @@ public class Simplify {
         if (jsap.messagePrinted()) System.exit(1);
 
         Path basenamePath = new File(jsapResult.getString("basename")).toPath();
-        File destinationDirectory = basenamePath.getParent().resolve("simplified").toFile();
-        String simplifiedBasename = destinationDirectory.toPath().resolve(basenamePath.getFileName()).toString();
+        File destBasename = jsapResult.contains("destBasename") ?
+                basenamePath.getParent().resolve("simplified").resolve(basenamePath.getFileName()).toFile() :
+                new File(jsapResult.getString("destBasename"));
 
-        if (!destinationDirectory.exists()) {
-            logger.warn(destinationDirectory + " does not exist, creating it");
-            destinationDirectory.mkdir();
+        if (!destBasename.getParentFile().exists()) {
+            logger.warn(destBasename.getParentFile() + " does not exist, creating it");
+            destBasename.getParentFile().mkdir();
         }
 
         int batchSize = jsapResult.getInt("batchSize");
@@ -47,6 +49,6 @@ public class Simplify {
         graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
-        BVGraph.store(graph, simplifiedBasename, pl);
+        BVGraph.store(graph, destBasename.toString(), pl);
     }
 }
