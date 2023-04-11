@@ -33,8 +33,8 @@ public class Simplify {
 
         Path basenamePath = new File(jsapResult.getString("basename")).toPath();
         File destBasename = jsapResult.contains("destBasename") ?
-                basenamePath.getParent().resolve("simplified").resolve(basenamePath.getFileName()).toFile() :
-                new File(jsapResult.getString("destBasename"));
+                new File(jsapResult.getString("destBasename")) :
+                basenamePath.getParent().resolve("simplified").resolve(basenamePath.getFileName()).toFile();
 
         if (!destBasename.getParentFile().exists()) {
             logger.warn(destBasename.getParentFile() + " does not exist, creating it");
