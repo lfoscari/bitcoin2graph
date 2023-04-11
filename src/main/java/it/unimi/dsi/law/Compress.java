@@ -25,18 +25,18 @@ public class Compress {
                 new Parameter[] {
                         new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
                         new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
-                        new UnflaggedOption("oldBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the input graph."),
-                        new UnflaggedOption("newBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the output graph."),
+                        new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
+                        new UnflaggedOption("simplifiedBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the simplified graph."),
                 }
         );
 
         final JSAPResult jsapResult = jsap.parse(args);
         if (jsap.messagePrinted()) System.exit(1);
 
-        String oldBasename = jsapResult.getString("oldBasename");
-        String newBasename = jsapResult.getString("newBasename");
+        String basename = jsapResult.getString("basename");
+        String simplifiedBasename = jsapResult.getString("simplifiedBasename");
 
-        File newBasenameDir = new File(newBasename).toPath().getParent().toFile();
+        File newBasenameDir = new File(basename).toPath().getParent().resolve("compressed").toFile();
         if (!newBasenameDir.exists()) {
             logger.warn(newBasenameDir + " does not exist, creating it");
             newBasenameDir.mkdir();
@@ -47,32 +47,19 @@ public class Compress {
 
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
-        logger.info("Loading graph");
-        ImmutableGraph graph = ImmutableGraph.loadOffline(oldBasename, pl);
-
-        logger.info("Symmetrizing");
-        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
-
-        logger.info("Removing loops");
-        graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
-
-        logger.info("Temporarily storing graph");
-        // This is needed to obtain a fully computed union of the graph and its transpose
-        BVGraph.store(graph, newBasename, pl);
-        graph = ImmutableGraph.loadOffline(newBasename, pl);
+        logger.info("Loading simplified graph");
+        ImmutableGraph graph = ImmutableGraph.loadOffline(simplifiedBasename, pl);
 
         logger.info("Computing permutation");
-        LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
-        int[] permutation = llp.computePermutation(clustersFile.toString());
+        int[] permutation = new LayeredLabelPropagation(graph, SEED).computePermutation(clustersFile.toString());
 
-        llp = null;
-        graph = null;
+        logger.info("Loading original graph");
+        graph = ImmutableGraph.loadOffline(basename, pl);
 
         logger.info("Applying permutation");
-        graph = ImmutableGraph.loadOffline(oldBasename, pl);
         graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
 
         logger.info("Storing graph");
-        BVGraph.store(graph, newBasename, pl);
+        BVGraph.store(graph, newBasenameDir + new File(basename).getName(), pl);
     }
 }

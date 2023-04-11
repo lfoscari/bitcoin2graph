@@ -28,7 +28,9 @@ public class Simplify {
         if (jsap.messagePrinted()) System.exit(1);
 
         Path basenamePath = new File(jsapResult.getString("basename")).toPath();
-        String transposedBasename = basenamePath.getParent().resolve("transposed").resolve(basenamePath.getFileName()).toString();
+        Path destinationDirectory = basenamePath.getParent().resolve("simplified");
+        String transposedBasename = destinationDirectory.resolve(basenamePath.getFileName()).toString();
+        destinationDirectory.toFile().mkdir();
 
         int batchSize = jsapResult.getInt("batchSize");
         File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : basenamePath.getParent().toFile();
