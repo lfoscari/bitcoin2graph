@@ -5,6 +5,7 @@ import it.unimi.dsi.law.graph.LayeredLabelPropagation;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
+import it.unimi.dsi.webgraph.ImmutableSequentialGraph;
 import it.unimi.dsi.webgraph.Transform;
 import it.unimi.dsi.webgraph.labelling.ScatteredLabelledArcsASCIIGraph;
 import org.slf4j.Logger;
@@ -48,18 +49,19 @@ public class Compress {
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
 
         logger.info("Loading simplified graph");
-        ImmutableGraph graph = ImmutableGraph.loadOffline(simplifiedBasename, pl);
+        BVGraph graph = BVGraph.loadOffline(simplifiedBasename, pl);
 
         logger.info("Computing permutation");
         int[] permutation = new LayeredLabelPropagation(graph, SEED).computePermutation(clustersFile.toString());
 
         logger.info("Loading original graph");
-        graph = ImmutableGraph.loadOffline(basename, pl);
+        graph = BVGraph.loadOffline(basename, pl);
 
         logger.info("Applying permutation");
-        graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
+        ImmutableSequentialGraph permutedGraph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
+        graph = null;
 
         logger.info("Storing graph");
-        BVGraph.store(graph, newBasenameDir + new File(simplifiedBasename).getName(), pl);
+        BVGraph.store(permutedGraph, newBasenameDir + new File(simplifiedBasename).getName(), pl);
     }
 }
