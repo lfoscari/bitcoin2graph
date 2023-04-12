@@ -77,7 +77,7 @@ public class APISanityCheck {
 			}
 
 			for (int i = 1; i < inputOffsets.length; i++) {
-				final byte[] input = Arrays.copyOfRange(inputs, inputOffsets[i - 1], inputOffsets[i]);
+				final byte[] input = Arrays.copyOfRange(inputs, inputOffsets[i - 1] + 1, inputOffsets[i]);
 				final int inputId = (int) addressMap.getLong(input);
 
 				if (inputId == addressMap.defaultReturnValue()) {
@@ -89,7 +89,7 @@ public class APISanityCheck {
 				final int outdegree = graph.outdegree(inputId);
 
 				for (int j = 1; j < outputOffsets.length; j++) {
-					final byte[] output = Arrays.copyOfRange(outputs, outputOffsets[j - 1], outputOffsets[j]);
+					final byte[] output = Arrays.copyOfRange(outputs, outputOffsets[j - 1] + 1, outputOffsets[j]);
 					final int outputId = (int) addressMap.getLong(output);
 
 					pl.lightUpdate();
