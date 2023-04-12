@@ -35,7 +35,7 @@ public class APISanityCheck {
 		pl.logger.info("Loading transaction map...");
 		final GOV3Function<byte[]> transactionMap = (GOV3Function<byte[]>) BinIO.loadObject(transactionsMapFile.toFile());
 		pl.logger.info("Loading graph...");
-		final ImmutableGraph graph = ImmutableGraph.loadMapped(basename.toString());
+		final ImmutableGraph graph = ImmutableGraph.loadOffline(basename.toString(), pl);
 		if (!graph.randomAccess()) throw new IllegalArgumentException("Provided graph does not permit random access");
 
 		final File[] transactions = transactionsDir.toFile().listFiles((d, s) -> s.endsWith(".txt"));
