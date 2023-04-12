@@ -63,13 +63,11 @@ public class APISanityCheck {
 
 			final BitSet inputDelimSet = ArrayUtils.indexesOf(inputs, (byte) 32);
 			inputDelimSet.set(inputs.length);
-			inputDelimSet.set(0);
 			final BitSet outputDelimSet = ArrayUtils.indexesOf(outputs, (byte) 32);
 			outputDelimSet.set(outputs.length);
-			outputDelimSet.set(0);
 
-			final int[] inputOffsets = inputDelimSet.stream().toArray();
-			final int[] outputOffsets = outputDelimSet.stream().toArray();
+			final int[] inputOffsets = ArrayUtils.addFirst(inputDelimSet.stream().toArray(), -1);
+			final int[] outputOffsets = ArrayUtils.addFirst(outputDelimSet.stream().toArray(), -1);
 
 			if (DEBUG) {
 				System.out.println("Transaction file: " + transaction);
@@ -79,7 +77,7 @@ public class APISanityCheck {
 			}
 
 			for (int i = 1; i < inputOffsets.length; i++) {
-				final byte[] input = Arrays.copyOfRange(inputs, inputOffsets[i - 1] + + (i == 1 ? 0 : 1), inputOffsets[i]);
+				final byte[] input = Arrays.copyOfRange(inputs, inputOffsets[i - 1], inputOffsets[i]);
 				final int inputId = (int) addressMap.getLong(input);
 
 				if (inputId == addressMap.defaultReturnValue()) {
@@ -91,7 +89,7 @@ public class APISanityCheck {
 				final int outdegree = graph.outdegree(inputId);
 
 				for (int j = 1; j < outputOffsets.length; j++) {
-					final byte[] output = Arrays.copyOfRange(outputs, outputOffsets[j - 1] + (j == 1 ? 0 : 1), outputOffsets[j]);
+					final byte[] output = Arrays.copyOfRange(outputs, outputOffsets[j - 1], outputOffsets[j]);
 					final int outputId = (int) addressMap.getLong(output);
 
 					pl.lightUpdate();
