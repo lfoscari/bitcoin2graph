@@ -1,19 +1,17 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.law.graph.LayeredLabelPropagation;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
-import it.unimi.dsi.webgraph.labelling.ScatteredLabelledArcsASCIIGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-
-import static it.unimi.dsi.webgraph.Transform.NO_LOOPS;
 
 public class Compress {
     private static final int SEED = 33;
@@ -46,6 +44,7 @@ public class Compress {
         File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : newBasenameDir;
 
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
+        File permFile = newBasenameDir.toPath().resolve("permutation").toFile();
 
         logger.info("Loading simplified graph");
         ImmutableGraph graph = BVGraph.loadMapped(simplifiedBasename, pl);
@@ -53,6 +52,9 @@ public class Compress {
         logger.info("Computing permutation");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
         int[] permutation = llp.computePermutation(clustersFile.toString());
+
+        logger.info("Storing permutation");
+        BinIO.storeInts(permutation, permFile.toString());
 
         logger.info("Loading original graph");
         graph = ImmutableGraph.loadOffline(basename, pl);
