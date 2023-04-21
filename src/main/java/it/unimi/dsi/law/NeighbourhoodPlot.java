@@ -39,7 +39,7 @@ public class NeighbourhoodPlot {
             double numNodes = Double.parseDouble(iterator.next().toString());
             double squaredNumNodes = numNodes * numNodes;
 
-            normalized.println(1);
+            normalized.println(1 / numNodes);
 
             while (iterator.hasNext()) {
                 double pairAmount = Double.parseDouble(iterator.next().toString());
