@@ -48,7 +48,7 @@ public class Compress {
         File permFile = newBasenameDir.toPath().resolve("permutation").toFile();
 
         logger.info("Loading simplified graph");
-        ImmutableGraph graph = BVGraph.loadMapped(simplifiedBasename, pl);
+        ImmutableGraph graph = BVGraph.load(simplifiedBasename, pl);
 
         logger.info("Computing permutation");
         LayeredLabelPropagation llp = new LayeredLabelPropagation(graph, SEED);
@@ -58,10 +58,10 @@ public class Compress {
         BinIO.storeInts(permutation, permFile.toString());
 
         logger.info("Loading original graph");
-        graph = ImmutableGraph.loadOffline(basename, pl);
+        graph = ImmutableGraph.load(basename, pl);
 
         logger.info("Applying permutation");
-        graph = Transform.mapOffline(graph, permutation, batchSize, tempDir, pl);
+        graph = Transform.map(graph, permutation, pl);
 
         logger.info("Storing graph");
         BVGraph.store(graph, newBasenameDir.toPath().resolve(new File(simplifiedBasename).getName()).toString(), pl);
