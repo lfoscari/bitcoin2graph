@@ -43,13 +43,13 @@ public class NeighbourhoodPlot {
             normalized.println(1);
             singleValues.println(1);
 
-            double previousPairAmount = 0;
+            double previous = 1;
             while (iterator.hasNext()) {
                 double pairAmount = Double.parseDouble(iterator.next().toString());
                 normalized.println(pairAmount / squaredNumNodes);
-                singleValues.println((pairAmount - previousPairAmount) / squaredNumNodes);
+                singleValues.println((pairAmount / numNodes) - previous);
 
-                previousPairAmount = pairAmount;
+                previous = (pairAmount / numNodes) - previous;
                 pl.lightUpdate();
             }
         }
