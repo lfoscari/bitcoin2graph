@@ -1,4 +1,4 @@
-package it.unimi.dsi.law;
+package it.unimi.dsi.law.graph;
 
 import it.unimi.dsi.bits.TransformationStrategies;
 import it.unimi.dsi.fastutil.io.BinIO;
@@ -7,9 +7,7 @@ import it.unimi.dsi.sux4j.mph.GOV3Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;

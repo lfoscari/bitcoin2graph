@@ -49,15 +49,15 @@ public class Utils {
 		return column(line, col).toString().getBytes();
 	}
 
-	static Iterator<MutableString> readTSVs(Path tsv) {
+	public static Iterator<MutableString> readTSVs(Path tsv) {
 		return new TSVIterator(new File[]{tsv.toFile()});
 	}
 
-	static Iterator<MutableString> readTSVs(Path tsv, LineFilter filter) {
+	public static Iterator<MutableString> readTSVs(Path tsv, LineFilter filter) {
 		return readTSVs(new File[]{tsv.toFile()}, filter);
 	}
 
-	static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
+	public static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
 		Iterator<MutableString> iterator = new TSVIterator(files);
 
 		if (filter != null) {
@@ -67,7 +67,7 @@ public class Utils {
 		return iterator;
 	}
 
-	interface LineFilter {
+	public interface LineFilter {
 		boolean accept(MutableString str);
 	}
 

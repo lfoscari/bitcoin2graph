@@ -1,6 +1,7 @@
-package it.unimi.dsi.law;
+package it.unimi.dsi.law.graph;
 
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.law.Utils;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.sux4j.mph.GOV3Function;
 import it.unimi.dsi.webgraph.BVGraph;
