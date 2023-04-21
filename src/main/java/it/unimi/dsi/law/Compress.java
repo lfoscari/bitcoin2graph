@@ -7,7 +7,6 @@ import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.BVGraph;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
-import it.unimi.dsi.webgraph.algo.HyperBall;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
