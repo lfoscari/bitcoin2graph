@@ -34,22 +34,16 @@ public class NeighbourhoodPlot {
         pl.start("Reading neighbourhood function");
 
         try (PrintStream normalized = new PrintStream(new FastBufferedOutputStream(Files.newOutputStream(Paths.get(ff + ".normalized"))));
-             PrintStream singleValues = new PrintStream(new FastBufferedOutputStream(Files.newOutputStream(Paths.get(ff + ".single"))));
              FileLinesMutableStringIterable.FileLinesIterator iterator = msit.iterator()) {
 
             double numNodes = Double.parseDouble(iterator.next().toString());
             double squaredNumNodes = numNodes * numNodes;
 
             normalized.println(1);
-            singleValues.println(1);
 
-            double previous = 1;
             while (iterator.hasNext()) {
                 double pairAmount = Double.parseDouble(iterator.next().toString());
                 normalized.println(pairAmount / squaredNumNodes);
-                singleValues.println((pairAmount / numNodes) - previous);
-
-                previous = (pairAmount / numNodes) - previous;
                 pl.lightUpdate();
             }
         }
