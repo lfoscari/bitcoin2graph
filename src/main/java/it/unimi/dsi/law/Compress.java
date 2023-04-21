@@ -21,8 +21,6 @@ public class Compress {
     public static void main(String[] args) throws IOException, JSAPException {
         final SimpleJSAP jsap = new SimpleJSAP(Compress.class.getName(), "Compress a given graph using LLP",
                 new Parameter[] {
-                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
-                        new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
                         new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
                         new UnflaggedOption("simplifiedBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the simplified graph."),
                 }
@@ -39,9 +37,6 @@ public class Compress {
             logger.warn(newBasenameDir + " does not exist, creating it");
             newBasenameDir.mkdir();
         }
-
-        int batchSize = jsapResult.getInt("batchSize");
-        File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : newBasenameDir;
 
         File clustersFile = newBasenameDir.toPath().resolve("clusters").toFile();
         File permFile = newBasenameDir.toPath().resolve("permutation").toFile();

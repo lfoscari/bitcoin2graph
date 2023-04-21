@@ -21,8 +21,6 @@ public class Simplify {
     public static void main(String[] args) throws JSAPException, IOException {
         final SimpleJSAP jsap = new SimpleJSAP(Simplify.class.getName(), "Remove loops and symmetrize a given graph",
                 new Parameter[] {
-                        new FlaggedOption("batchSize", JSAP.INTEGER_PARSER, "10000000", JSAP.NOT_REQUIRED, 'b', "The batch size."),
-                        new FlaggedOption("tempDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 't', "The temporary directory to store intermediate files."),
                         new FlaggedOption("destBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 'd', "The basename of the resulting graph."),
                         new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
                 }
@@ -41,12 +39,9 @@ public class Simplify {
             destBasename.getParentFile().mkdir();
         }
 
-        int batchSize = jsapResult.getInt("batchSize");
-        File tempDir = jsapResult.contains("tempDir") ? new File(jsapResult.getString("tempDir")) : basenamePath.getParent().toFile();
-
         ImmutableGraph graph = ImmutableGraph.loadOffline(basenamePath.toString(), pl);
 
-        graph = Transform.symmetrizeOffline(graph, batchSize, tempDir, pl);
+        graph = Transform.symmetrize(graph, pl);
         graph =  Transform.filterArcs(graph, NO_LOOPS, pl);
 
         BVGraph.store(graph, destBasename.toString(), pl);
