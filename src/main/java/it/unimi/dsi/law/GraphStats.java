@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledNodeIterator;
+import it.unimi.dsi.webgraph.labelling.BitStreamArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.LongArrayListLabel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class GraphStats {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		String basename = jsapResult.getString("basename");
-		ArcLabelledImmutableGraph g = ArcLabelledImmutableGraph.load(basename, pl);
+		BitStreamArcLabelledImmutableGraph g = BitStreamArcLabelledImmutableGraph.load(basename, pl);
 
 		pl.start("Computing: label size mean, outdegree mean");
 		pl.expectedUpdates = g.numNodes();
