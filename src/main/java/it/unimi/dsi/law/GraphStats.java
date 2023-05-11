@@ -51,5 +51,8 @@ public class GraphStats {
 
 			pl.lightUpdate();
 		}
+
+		System.out.println("mean label size: " + labelSizeMean);
+		System.out.println("mean outdegree: " + outdegreeMean);
 	}
 }
