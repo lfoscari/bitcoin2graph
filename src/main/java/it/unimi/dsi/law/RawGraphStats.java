@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.concurrent.TimeUnit;
 
 public class RawGraphStats {
 	private static final Logger logger = LoggerFactory.getLogger(RawGraphStats.class);
@@ -28,6 +29,10 @@ public class RawGraphStats {
 
 		File labelFile = new File(jsapResult.getString("basename") + ".labels");
 		InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
+
+		pl.start("Computing: label size mean, outdegree mean");
+		pl.itemsName = "nodes";
+		pl.logInterval = TimeUnit.SECONDS.toMillis(10);
 
 		float labelSizeMean = 0f;
 		float labelCount = 0f;
@@ -53,6 +58,10 @@ public class RawGraphStats {
 
 			labelSizeMean = (labelSizeMean * labelCount) + unique / (labelCount + 1);
 			labelCount++;
+
+			pl.lightUpdate();
 		}
+
+		pl.done();
 	}
 }
