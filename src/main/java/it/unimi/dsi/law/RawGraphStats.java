@@ -30,7 +30,7 @@ public class RawGraphStats {
 		File labelFile = new File(jsapResult.getString("basename") + ".labels");
 		InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
 
-		pl.start("Computing: label size mean, outdegree mean");
+		pl.start("Computing: label size mean");
 		pl.itemsName = "nodes";
 		pl.logInterval = TimeUnit.SECONDS.toMillis(10);
 
@@ -47,7 +47,7 @@ public class RawGraphStats {
 
 			if (length != 0) {
 				for (int i = 0; i < length; i++) transactions[i] = fbis.readLongDelta();
-				LongArrays.unstableSort(transactions);
+				LongArrays.unstableSort(transactions, 0, length);
 
 				unique = 1;
 				for (int i = 1; i < length; i++)
