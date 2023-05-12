@@ -1,10 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
-import it.unimi.dsi.fastutil.longs.LongArraySet;
-import it.unimi.dsi.fastutil.longs.LongCollection;
-import it.unimi.dsi.fastutil.longs.LongList;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.labelling.*;
 import org.slf4j.Logger;
@@ -46,8 +43,7 @@ public class GraphStats {
 			outdegreeMean = (outdegreeMean * nodeCount) + it.outdegree() / (nodeCount + 1);
 
 			for (Label la: it.labelArray()) {
-				LongCollection values = ((LongArrayListLabel) la).values;
-				int unique = new LongArraySet(values).size();
+				int unique = distinctSize(((LongArrayListLabel) la).values);
 				labelSizeMean = (labelSizeMean * labelCount) + unique / (labelCount + 1);
 			}
 
@@ -61,5 +57,18 @@ public class GraphStats {
 		System.out.println("mean outdegree: " + outdegreeMean);
 
 		pl.done();
+	}
+
+	private static int distinctSize(final LongList values) {
+		if (values.size() == 0) return 0;
+
+		int unique = 1;
+		values.sort(Long::compare);
+
+		for (int i = 1; i < values.size(); i++)
+			if (values.getLong(i) != values.getLong(i - 1))
+				unique++;
+
+		return unique;
 	}
 }
