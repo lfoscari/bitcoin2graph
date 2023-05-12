@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
+import it.unimi.dsi.fastutil.longs.LongCollection;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -42,8 +43,8 @@ public class GraphStats {
 			outdegreeMean = (outdegreeMean * nodeCount) + it.outdegree() / (nodeCount + 1);
 
 			for (Label la: it.labelArray()) {
-				long[] values = ((LongArrayListLabel) la).values.toLongArray();
-				int unique = LongArraySet.of(values).size();
+				LongCollection values = ((LongArrayListLabel) la).values;
+				int unique = new LongArraySet(values).size();
 				labelSizeMean = (labelSizeMean * labelCount) + unique / (labelCount + 1);
 			}
 
