@@ -8,6 +8,7 @@ import it.unimi.dsi.logging.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,7 +42,11 @@ public class RawGraphStats {
 		int length;
 
 		while (fbis.hasNext()) {
-			length = fbis.readDelta();
+			try {
+				length = fbis.readDelta();
+			} catch (EOFException e) {
+				break;
+			}
 			transactions = LongArrays.grow(transactions, length);
 			int unique;
 
@@ -61,6 +66,8 @@ public class RawGraphStats {
 
 			pl.lightUpdate();
 		}
+
+		System.out.println(labelSizeMean);
 
 		pl.done();
 	}
