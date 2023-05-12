@@ -35,8 +35,8 @@ public class RawGraphStats {
 		pl.itemsName = "nodes";
 		pl.logInterval = TimeUnit.SECONDS.toMillis(10);
 
-		float labelSizeMean = 0f;
-		float labelCount = 0f;
+		double labelSizeMean = 0f;
+		double labelCount = 0f;
 
 		long[] transactions = new long[512];
 		int length;
