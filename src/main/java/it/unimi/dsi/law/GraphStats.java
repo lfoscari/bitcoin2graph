@@ -38,8 +38,7 @@ public class GraphStats {
 		float labelCount = 0f;
 		float nodeCount = 0f;
 
-		for (ArcLabelledNodeIterator it = g.nodeIterator(); it.hasNext();) {
-			// int node = it.nextInt();
+		for (ArcLabelledNodeIterator it = g.nodeIterator(); it.hasNext(); it.nextInt()) {
 			outdegreeMean = (outdegreeMean * nodeCount) + it.outdegree() / (nodeCount + 1);
 
 			for (LongArrayListLabel la: (LongArrayListLabel[]) it.labelArray()) {
