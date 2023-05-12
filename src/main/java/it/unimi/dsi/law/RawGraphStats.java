@@ -71,7 +71,8 @@ public class RawGraphStats {
 
 		System.out.println(labelSizeMean);
 
-		try (FileOutputStream fos = new FileOutputStream(jsapResult.getString("output"))) {
+		File outputFile = new File(jsapResult.getString("output"));
+		try (FileOutputStream fos = new FileOutputStream(outputFile)) {
 			fos.write(Double.toString(labelSizeMean).getBytes());
 		}
 
