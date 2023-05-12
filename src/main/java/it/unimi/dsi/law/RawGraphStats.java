@@ -61,7 +61,7 @@ public class RawGraphStats {
 				unique = 0;
 			}
 
-			labelSizeMean = (labelSizeMean * labelCount) + unique / (labelCount + 1);
+			labelSizeMean = ((labelSizeMean * labelCount) + unique) / (labelCount + 1);
 			labelCount++;
 
 			pl.lightUpdate();
