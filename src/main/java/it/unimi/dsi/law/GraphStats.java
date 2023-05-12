@@ -63,7 +63,7 @@ public class GraphStats {
 		if (values.size() == 0) return 0;
 
 		int unique = 1;
-		values.sort(Long::compare);
+		values.unstableSort(Long::compare);
 
 		for (int i = 1; i < values.size(); i++)
 			if (values.getLong(i) != values.getLong(i - 1))
