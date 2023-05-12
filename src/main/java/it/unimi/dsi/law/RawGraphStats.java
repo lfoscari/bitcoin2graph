@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +23,7 @@ public class RawGraphStats {
 		final SimpleJSAP jsap = new SimpleJSAP(RawGraphStats.class.getName(), "Compute some stats on the given transaction graph",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
+						new UnflaggedOption("output", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The output file."),
 				}
 		);
 
@@ -68,6 +70,10 @@ public class RawGraphStats {
 		}
 
 		System.out.println(labelSizeMean);
+
+		try (FileOutputStream fos = new FileOutputStream(jsapResult.getFile("output"))) {
+			fos.write(Double.toString(labelSizeMean).getBytes());
+		}
 
 		pl.done();
 	}
