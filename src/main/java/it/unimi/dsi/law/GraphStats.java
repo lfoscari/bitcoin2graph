@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -42,7 +43,7 @@ public class GraphStats {
 
 			for (Label la: it.labelArray()) {
 				long[] values = ((LongArrayListLabel) la).values.toLongArray();
-				int unique = LongSet.of(values).size();
+				int unique = LongArraySet.of(values).size();
 				labelSizeMean = (labelSizeMean * labelCount) + unique / (labelCount + 1);
 			}
 
