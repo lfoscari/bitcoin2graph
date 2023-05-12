@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class GraphStats {
 	private static final Logger logger = LoggerFactory.getLogger(GraphStats.class);
@@ -31,6 +32,8 @@ public class GraphStats {
 
 		pl.start("Computing: label size mean, outdegree mean");
 		pl.expectedUpdates = g.numNodes();
+		pl.itemsName = "nodes";
+		pl.logInterval = TimeUnit.SECONDS.toMillis(10);
 
 		float labelSizeMean = 0f;
 		float outdegreeMean = 0f;
