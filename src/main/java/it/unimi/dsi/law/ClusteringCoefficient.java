@@ -53,7 +53,7 @@ public class ClusteringCoefficient {
 		};
 
 		int[][] nodePairs = collectNodePairs(g.nodeIterator(), (int) (g.numNodes() * samplingFactor), nodeFilter);
-		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + (nodePairs.length / g.numNodes()) * 100 + "%)");
+		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + ((float) nodePairs.length / g.numNodes()) * 100 + "%)");
 		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), nodePairs);
 
 		System.out.println(globalClusteringCoefficient);
