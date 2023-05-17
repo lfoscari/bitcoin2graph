@@ -47,8 +47,9 @@ public class ClusteringCoefficient {
 		pl.itemsName = "nodes";
 		pl.displayFreeMemory = true;
 		
-		// Build a hashing function with 100 outputs and create a filter
-		// passing only values with a value of at most samplingFactor * 100
+		// Build a hashing function with 100 outputs and create a filter passing only
+		// values with a value of at most samplingFactor * 100 (a better much more memory-
+		// consuming solution would be a random permutation int[])
 
 		Int2BooleanFunction nodeFilter = new Int2BooleanFunction() {
 			private final HashFunction hf = Hashing.adler32();
@@ -59,19 +60,18 @@ public class ClusteringCoefficient {
 			}
 		};
 
-		int[][] triangleNodes = buildNodePairs(g.nodeIterator(), nodeFilter);
-		pl.logger.info("Sampled " + triangleNodes.length + " which equals the " + (g.numNodes() / triangleNodes.length) * 100 + "%");
-
+		int[][] triangleNodes = buildNodePairs(g.nodeIterator(), (int) (g.numNodes() * samplingFactor), nodeFilter);
+		pl.logger.info("Sampled " + triangleNodes.length + "/" + g.numNodes() + " nodes (" + (triangleNodes.length / g.numNodes()) * 100 + "%)");
 		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), triangleNodes);
 
 		System.out.println(globalClusteringCoefficient);
 	}
 
-	private static int[][] buildNodePairs(NodeIterator nodeIterator, Int2BooleanFunction nodeFilter) {
+	private static int[][] buildNodePairs(NodeIterator nodeIterator, int nodesToSample, Int2BooleanFunction nodeFilter) {
 		pl.start("Building node pairs");
 
 		int index = 0;
-		int[][] triangleNodes = new int[64][2];
+		int[][] triangleNodes = new int[nodesToSample][2];
 
 		while (nodeIterator.hasNext()) {
 			int node = nodeIterator.nextInt();
@@ -83,10 +83,12 @@ public class ClusteringCoefficient {
 			int[] chosenIndices = r.ints(0, nodeIterator.outdegree()).distinct().limit(2).toArray();
 
 			if (index >= triangleNodes.length)
-				triangleNodes = ObjectArrays.grow(triangleNodes, index);
+				break; // out of space
 
-			triangleNodes[index][0] = neighbours[chosenIndices[0]];
-			triangleNodes[index][1] = neighbours[chosenIndices[1]];
+			triangleNodes[index] = new int[] {
+				neighbours[chosenIndices[0]],
+				neighbours[chosenIndices[1]]
+			};
 			index++;
 
 			pl.lightUpdate();
