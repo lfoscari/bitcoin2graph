@@ -19,6 +19,8 @@ public class ClusteringCoefficient {
 	private static final Logger logger = LoggerFactory.getLogger(ClusteringCoefficient.class);
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
+	private static final int trials = 10000;
+
 	public static void main(String[] args) throws IOException, JSAPException {
 		final SimpleJSAP jsap = new SimpleJSAP(ClusteringCoefficient.class.getName(), "Compute the clustering coefficient on the given graph",
 				new Parameter[]{
@@ -32,18 +34,16 @@ public class ClusteringCoefficient {
 		String basename = jsapResult.getString("basename");
 		ImmutableGraph g = ImmutableGraph.load(basename, pl);
 
-		int trials = 10000, triangles = 0;
-
 		pl.itemsName = "nodes";
 		pl.displayFreeMemory = true;
 
 		pl.start("Picking " + trials + " random nodes");
-		int[] nodes = r.ints(0, g.numNodes()).distinct().limit(trials).toArray();
+		int[] nodes = r.ints(0, g.numNodes() / 10).distinct().limit(trials).toArray();
 		IntArrays.unstableSort(nodes);
 		pl.done();
 
 		int[][] triangleNodes = buildNodePairs(trials, g.nodeIterator(), nodes);
-		float globalClusteringCoefficient = countTriangles(g, trials, triangles, triangleNodes);
+		float globalClusteringCoefficient = countTriangles(g, g.nodeIterator(), triangleNodes);
 
 		System.out.println(globalClusteringCoefficient);
 	}
@@ -54,51 +54,48 @@ public class ClusteringCoefficient {
 
 		int[][] triangleNodes = new int[trials][2];
 
-		int previous = 0;
 		for (int i = 0; i < trials; i++) {
 			int sourceNode = nodes[i];
-			nodeIterator.skip(sourceNode - previous - 1);
-			assert nodeIterator.nextInt() == sourceNode;
-
-			if (nodeIterator.outdegree() < 2) {
-				// ???
-				continue;
-			}
-
+			
+			while (nodeIterator.nextInt() != sourceNode);
+			if (nodeIterator.outdegree() < 2)
+				continue; // ???
+			
 			int[] neighbours = nodeIterator.successorArray();
 			int[] chosenIndices = r.ints(0, nodeIterator.outdegree()).distinct().limit(2).toArray();
 
 			triangleNodes[i][0] = neighbours[chosenIndices[0]];
 			triangleNodes[i][1] = neighbours[chosenIndices[1]];
 
-			previous = sourceNode;
 			pl.lightUpdate();
 		}
 
-		ObjectArrays.unstableSort(triangleNodes, Comparator.comparingInt(a -> a[1]));
+		ObjectArrays.unstableSort(triangleNodes, Comparator.comparingInt(a -> a[0]));
 
-		pl.stop();
+		pl.done();
 		return triangleNodes;
 	}
 
-	private static float countTriangles(ImmutableGraph g, int trials, int triangles, int[][] triangleNodes) {
+	private static float countTriangles(ImmutableGraph g, NodeIterator nodeIterator, int[][] triangleNodes) {
 		pl.start("Counting triangles");
-		pl.expectedUpdates = trials;
+		pl.expectedUpdates = triangleNodes.length;
 
-		NodeIterator it = g.nodeIterator(triangleNodes[0][0]);
-		int previous = 0;
-		for (int i = 0; i < trials; i++) {
-			int sourceNode = triangleNodes[i][0];
-			int destNode = triangleNodes[i][1];
+		int triangles = 0;
 
-			it.skip(sourceNode - previous - 1);
-			assert it.nextInt() == sourceNode;
+		for (int i = 0; i < triangleNodes.length; i++) {
+			int sourceNode = triangleNodes[i][0], destNode = triangleNodes[i][1];
 
-			if (ArrayUtils.contains(it.successorArray(), destNode)) {
-				triangles++;
+			int node;
+			while ((node = nodeIterator.nextInt()) < sourceNode);
+			
+			if (node > sourceNode) {
+				// sourceNode has no neighbours
+				continue;
 			}
-
-			previous = sourceNode;
+			
+			if (ArrayUtils.contains(nodeIterator.successorArray(), destNode))
+				triangles++;
+			
 			pl.lightUpdate();
 		}
 
