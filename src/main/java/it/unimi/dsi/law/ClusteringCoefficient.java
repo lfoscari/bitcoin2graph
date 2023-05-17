@@ -73,12 +73,16 @@ public class ClusteringCoefficient {
 				continue;
 
 			int[] neighbours = nodeIterator.successorArray();
-			int[] chosenIndices = r.ints(0, nodeIterator.outdegree()).distinct().limit(2).toArray();
+
+			// Generate two distinct indices in [0..outdegree]
+			int firstIndex = r.nextInt(nodeIterator.outdegree());
+			int secondIndex;
+			while ((secondIndex = r.nextInt(nodeIterator.outdegree())) == firstIndex);
 
 			if (index >= triangleNodes.length)
 				break; // out of space
 
-			triangleNodes[index++] = new int[] { neighbours[chosenIndices[0]], neighbours[chosenIndices[1]] };
+			triangleNodes[index++] = new int[] { neighbours[firstIndex], neighbours[secondIndex] };
 			pl.lightUpdate();
 		}
 
