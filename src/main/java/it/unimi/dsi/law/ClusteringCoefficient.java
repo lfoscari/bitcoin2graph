@@ -54,7 +54,7 @@ public class ClusteringCoefficient {
 
 		int[][] nodePairs = collectNodePairs(g.nodeIterator(), g.numNodes(), samplingFactor, nodeFilter);
 		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + ((float) nodePairs.length / g.numNodes()) * 100 + "%)");
-		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), nodePairs);
+		float globalClusteringCoefficient = countConnectedPairs(g.nodeIterator(), nodePairs);
 
 		System.out.println(globalClusteringCoefficient);
 	}
@@ -67,17 +67,18 @@ public class ClusteringCoefficient {
 		int[][] triangleNodes = new int[(int) (numNodes * samplingFactor)][2];
 
 		while (nodeIterator.hasNext()) {
-			int node = nodeIterator.nextInt();
+			final int node = nodeIterator.nextInt();
+			final int outdegree = nodeIterator.outdegree();
 
-			if (nodeIterator.outdegree() < 2 || !nodeFilter.get(node))
+			if (outdegree < 2 || !nodeFilter.get(node))
 				continue;
 
 			int[] neighbours = nodeIterator.successorArray();
 
 			// Generate two distinct indices in [0..outdegree]
-			int firstIndex = r.nextInt(nodeIterator.outdegree());
+			int firstIndex = r.nextInt(outdegree);
 			int secondIndex;
-			while ((secondIndex = r.nextInt(nodeIterator.outdegree())) == firstIndex);
+			while ((secondIndex = r.nextInt(outdegree)) == firstIndex);
 
 			if (index >= triangleNodes.length)
 				break; // out of space
@@ -86,14 +87,15 @@ public class ClusteringCoefficient {
 			pl.lightUpdate();
 		}
 
+		pl.done();
+
 		ObjectArrays.trim(triangleNodes, index);
 		ObjectArrays.unstableSort(triangleNodes, Comparator.comparingInt(a -> a[0]));
 
-		pl.done();
 		return triangleNodes;
 	}
 
-	private static float countTriangles(NodeIterator nodeIterator, int[][] nodePairs) {
+	private static float countConnectedPairs(NodeIterator nodeIterator, int[][] nodePairs) {
 		pl.start("Counting connected node pairs");
 		pl.expectedUpdates = nodePairs.length;
 		pl.itemsName = "pairs";
