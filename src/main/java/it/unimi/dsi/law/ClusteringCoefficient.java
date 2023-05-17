@@ -89,23 +89,23 @@ public class ClusteringCoefficient {
 		return triangleNodes;
 	}
 
-	private static float countTriangles(NodeIterator nodeIterator, int[][] triangleNodes) {
-		pl.start("Counting triangles");
-		pl.expectedUpdates = triangleNodes.length;
+	private static float countTriangles(NodeIterator nodeIterator, int[][] nodePairs) {
+		pl.start("Counting connected node pairs");
+		pl.expectedUpdates = nodePairs.length;
+		pl.itemsName = "pairs";
 
-		int triangles = 0;
-
-		for (int[] triangleNode : triangleNodes) {
-			int sourceNode = triangleNode[0], destNode = triangleNode[1];
+		int connected = 0;
+		for (int[] nodePair : nodePairs) {
+			int sourceNode = nodePair[0], destNode = nodePair[1];
 			while (nodeIterator.nextInt() < sourceNode);
 
 			if (ArrayUtils.contains(nodeIterator.successorArray(), destNode))
-				triangles++;
+				connected++;
 
 			pl.lightUpdate();
 		}
 
 		pl.done();
-		return (float) triangles / triangleNodes.length;
+		return (float) connected / nodePairs.length;
 	}
 }
