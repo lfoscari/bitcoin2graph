@@ -9,7 +9,6 @@ import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
-import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +23,7 @@ public class ClusteringCoefficient {
 	public static void main(String[] args) throws IOException, JSAPException {
 		final SimpleJSAP jsap = new SimpleJSAP(ClusteringCoefficient.class.getName(), "Compute the clustering coefficient on the given graph",
 				new Parameter[]{
-						new UnflaggedOption("samplingFactor", JSAP.DOUBLE_PARSER, "0.3", JSAP.NOT_REQUIRED, false, "The sampling factor (default: 0.3)."),
+						new FlaggedOption("samplingFactor", JSAP.DOUBLE_PARSER, "0.3", JSAP.NOT_REQUIRED, 's', "The sampling factor (default: 0.3)."),
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
 				}
 		);
@@ -61,7 +60,7 @@ public class ClusteringCoefficient {
 	}
 
 	private static int[][] collectNodePairs(NodeIterator nodeIterator, int numNodes, double samplingFactor, Int2BooleanFunction nodeFilter) {
-		pl.start("Building node pairs");
+		pl.start("Sampling node pairs");
 		pl.expectedUpdates = numNodes;
 
 		int index = 0;
