@@ -85,12 +85,7 @@ public class ClusteringCoefficient {
 			if (index >= triangleNodes.length)
 				break; // out of space
 
-			triangleNodes[index] = new int[] {
-				neighbours[chosenIndices[0]],
-				neighbours[chosenIndices[1]]
-			};
-			index++;
-
+			triangleNodes[index++] = new int[] { neighbours[chosenIndices[0]], neighbours[chosenIndices[1]] };
 			pl.lightUpdate();
 		}
 
@@ -109,12 +104,7 @@ public class ClusteringCoefficient {
 
 		for (int[] triangleNode : triangleNodes) {
 			int sourceNode = triangleNode[0], destNode = triangleNode[1];
-
-			int node;
-			while ((node = nodeIterator.nextInt()) < sourceNode);
-
-			if (node > sourceNode)
-				continue; // sourceNode has no neighbours
+			while (nodeIterator.nextInt() < sourceNode);
 
 			if (ArrayUtils.contains(nodeIterator.successorArray(), destNode))
 				triangles++;
