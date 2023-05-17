@@ -3,14 +3,9 @@ package it.unimi.dsi.law;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.martiansoftware.jsap.*;
-import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.Int2BooleanFunction;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntHash;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.sux4j.mph.GOVMinimalPerfectHashFunction;
 import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
@@ -19,10 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.List;
 
 public class ClusteringCoefficient {
 	private static final XoRoShiRo128PlusPlusRandom r = new XoRoShiRo128PlusPlusRandom();
@@ -60,15 +52,16 @@ public class ClusteringCoefficient {
 			}
 		};
 
-		int[][] triangleNodes = buildNodePairs(g.nodeIterator(), (int) (g.numNodes() * samplingFactor), nodeFilter);
-		pl.logger.info("Sampled " + triangleNodes.length + "/" + g.numNodes() + " nodes (" + (triangleNodes.length / g.numNodes()) * 100 + "%)");
-		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), triangleNodes);
+		int[][] nodePairs = collectNodePairs(g.nodeIterator(), (int) (g.numNodes() * samplingFactor), nodeFilter);
+		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + (nodePairs.length / g.numNodes()) * 100 + "%)");
+		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), nodePairs);
 
 		System.out.println(globalClusteringCoefficient);
 	}
 
-	private static int[][] buildNodePairs(NodeIterator nodeIterator, int nodesToSample, Int2BooleanFunction nodeFilter) {
+	private static int[][] collectNodePairs(NodeIterator nodeIterator, int nodesToSample, Int2BooleanFunction nodeFilter) {
 		pl.start("Building node pairs");
+		pl.expectedUpdates = (int) (nodesToSample / samplingFactor);
 
 		int index = 0;
 		int[][] triangleNodes = new int[nodesToSample][2];
