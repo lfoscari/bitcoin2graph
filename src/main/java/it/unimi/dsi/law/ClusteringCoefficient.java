@@ -82,7 +82,7 @@ public class ClusteringCoefficient {
 			int[] neighbours = nodeIterator.successorArray();
 			int[] chosenIndices = r.ints(0, nodeIterator.outdegree()).distinct().limit(2).toArray();
 
-			if (index > triangleNodes.length)
+			if (index >= triangleNodes.length)
 				triangleNodes = ObjectArrays.grow(triangleNodes, index);
 
 			triangleNodes[index][0] = neighbours[chosenIndices[0]];
