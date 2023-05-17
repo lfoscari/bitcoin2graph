@@ -21,11 +21,10 @@ public class ClusteringCoefficient {
 	private static final Logger logger = LoggerFactory.getLogger(ClusteringCoefficient.class);
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
-	private static final float samplingFactor = 30.0F / 100.0F;
-
 	public static void main(String[] args) throws IOException, JSAPException {
 		final SimpleJSAP jsap = new SimpleJSAP(ClusteringCoefficient.class.getName(), "Compute the clustering coefficient on the given graph",
 				new Parameter[]{
+						new UnflaggedOption("samplingFactor", JSAP.DOUBLE_PARSER, "0.3", JSAP.NOT_REQUIRED, false, "The sampling factor (default: 0.3)."),
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
 				}
 		);
@@ -34,37 +33,39 @@ public class ClusteringCoefficient {
 		if (jsap.messagePrinted()) System.exit(1);
 		
 		String basename = jsapResult.getString("basename");
+		double samplingFactor = jsapResult.getDouble("samplingFactor");
+
 		ImmutableGraph g = ImmutableGraph.load(basename, pl);
 
 		pl.itemsName = "nodes";
 		pl.displayFreeMemory = true;
 		
-		// Build a hashing function with 100 outputs and create a filter passing only
-		// values with a value of at most samplingFactor * 100 (a better much more memory-
+		// Build a filter to sample {samplingFactor} of the nodes (a better but more memory-
 		// consuming solution would be a random permutation int[])
 
 		Int2BooleanFunction nodeFilter = new Int2BooleanFunction() {
 			private final HashFunction hf = Hashing.adler32();
+			private final int threshold = (int) (samplingFactor * Integer.MAX_VALUE);
 
 			@Override
 			public boolean get(int key) {
-				return (this.hf.hashInt(key).asInt() % 100) < (samplingFactor * 100);
+				return this.hf.hashInt(key).asInt() < this.threshold;
 			}
 		};
 
-		int[][] nodePairs = collectNodePairs(g.nodeIterator(), (int) (g.numNodes() * samplingFactor), nodeFilter);
+		int[][] nodePairs = collectNodePairs(g.nodeIterator(), g.numNodes(), samplingFactor, nodeFilter);
 		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + ((float) nodePairs.length / g.numNodes()) * 100 + "%)");
 		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), nodePairs);
 
 		System.out.println(globalClusteringCoefficient);
 	}
 
-	private static int[][] collectNodePairs(NodeIterator nodeIterator, int nodesToSample, Int2BooleanFunction nodeFilter) {
+	private static int[][] collectNodePairs(NodeIterator nodeIterator, int numNodes, double samplingFactor, Int2BooleanFunction nodeFilter) {
 		pl.start("Building node pairs");
-		pl.expectedUpdates = (int) (nodesToSample / samplingFactor);
+		pl.expectedUpdates = numNodes;
 
 		int index = 0;
-		int[][] triangleNodes = new int[nodesToSample][2];
+		int[][] triangleNodes = new int[(int) (numNodes * samplingFactor)][2];
 
 		while (nodeIterator.hasNext()) {
 			int node = nodeIterator.nextInt();
@@ -103,13 +104,18 @@ public class ClusteringCoefficient {
 			int sourceNode = nodePair[0], destNode = nodePair[1];
 			while (nodeIterator.nextInt() < sourceNode);
 
-			if (ArrayUtils.contains(nodeIterator.successorArray(), destNode))
+			if (contains(nodeIterator.successorArray(), destNode, nodeIterator.outdegree()))
 				connected++;
-
 			pl.lightUpdate();
 		}
 
 		pl.done();
 		return (float) connected / nodePairs.length;
+	}
+
+	private static boolean contains(int[] array, int valueToFind, int length) {
+		for (int i = 0; i < Math.min(array.length, length); i++)
+			if (array[i] == valueToFind) return true;
+		return false;
 	}
 }
