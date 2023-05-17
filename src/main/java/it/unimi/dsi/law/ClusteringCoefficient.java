@@ -60,6 +60,8 @@ public class ClusteringCoefficient {
 		};
 
 		int[][] triangleNodes = buildNodePairs(g.nodeIterator(), nodeFilter);
+		pl.logger.info("Sampled " + triangleNodes.length + " which equals the " + (g.numNodes() / triangleNodes.length) * 100 + "%");
+
 		float globalClusteringCoefficient = countTriangles(g.nodeIterator(), triangleNodes);
 
 		System.out.println(globalClusteringCoefficient);
@@ -90,6 +92,7 @@ public class ClusteringCoefficient {
 			pl.lightUpdate();
 		}
 
+		ObjectArrays.trim(triangleNodes, index);
 		ObjectArrays.unstableSort(triangleNodes, Comparator.comparingInt(a -> a[0]));
 
 		pl.done();
