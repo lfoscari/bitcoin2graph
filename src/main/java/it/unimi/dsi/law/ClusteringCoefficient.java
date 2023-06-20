@@ -34,12 +34,15 @@ public class ClusteringCoefficient {
 		String basename = jsapResult.getString("basename");
 		double samplingFactor = jsapResult.getDouble("samplingFactor");
 
+		if (samplingFactor < 0 || samplingFactor > 1)
+			throw new JSAPException("Sampling factor must be between 0 and 1");
+
 		ImmutableGraph g = ImmutableGraph.load(basename, pl);
 
 		pl.itemsName = "nodes";
 		pl.displayFreeMemory = true;
 		
-		// Build a filter to sample {samplingFactor} of the nodes (a better but more memory-
+		// Build a filter to sample {samplingFactor} of the nodes (a faster but more memory-
 		// consuming solution would be a random permutation int[])
 
 		Int2BooleanFunction nodeFilter = new Int2BooleanFunction() {
@@ -56,7 +59,7 @@ public class ClusteringCoefficient {
 		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + ((float) nodePairs.length / g.numNodes()) * 100 + "%)");
 		float globalClusteringCoefficient = countConnectedPairs(g.nodeIterator(), nodePairs);
 
-		System.out.println(globalClusteringCoefficient);
+		pl.logger.info("Global clustering coefficient: " + globalClusteringCoefficient);
 	}
 
 	private static int[][] collectNodePairs(NodeIterator nodeIterator, int numNodes, double samplingFactor, Int2BooleanFunction nodeFilter) {
