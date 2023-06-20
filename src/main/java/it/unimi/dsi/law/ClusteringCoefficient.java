@@ -24,7 +24,7 @@ public class ClusteringCoefficient {
 		final SimpleJSAP jsap = new SimpleJSAP(ClusteringCoefficient.class.getName(), "Compute the clustering coefficient on the given graph",
 				new Parameter[]{
 						new FlaggedOption("samplingFactor", JSAP.DOUBLE_PARSER, "0.3", JSAP.NOT_REQUIRED, 's', "The sampling factor (default: 0.3)."),
-						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
+						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph (preferably symmetric)."),
 				}
 		);
 
@@ -41,7 +41,12 @@ public class ClusteringCoefficient {
 
 		pl.itemsName = "nodes";
 		pl.displayFreeMemory = true;
-		
+
+		float globalClusteringCoefficient = computeGlobalClusteringCoefficient(g, samplingFactor);
+		pl.logger.info("Global clustering coefficient: " + globalClusteringCoefficient);
+	}
+
+	static float computeGlobalClusteringCoefficient(ImmutableGraph g, double samplingFactor) {
 		// Build a filter to sample {samplingFactor} of the nodes (a faster but more memory-
 		// consuming solution would be a random permutation int[])
 
@@ -57,9 +62,7 @@ public class ClusteringCoefficient {
 
 		int[][] nodePairs = collectNodePairs(g.nodeIterator(), g.numNodes(), samplingFactor, nodeFilter);
 		pl.logger.info("Sampled " + nodePairs.length + "/" + g.numNodes() + " nodes (" + ((float) nodePairs.length / g.numNodes()) * 100 + "%)");
-		float globalClusteringCoefficient = countConnectedPairs(g.nodeIterator(), nodePairs);
-
-		pl.logger.info("Global clustering coefficient: " + globalClusteringCoefficient);
+		return countConnectedPairs(g.nodeIterator(), nodePairs);
 	}
 
 	private static int[][] collectNodePairs(NodeIterator nodeIterator, int numNodes, double samplingFactor, Int2BooleanFunction nodeFilter) {
