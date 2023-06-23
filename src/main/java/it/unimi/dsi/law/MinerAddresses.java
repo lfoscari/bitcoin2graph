@@ -34,11 +34,13 @@ public class MinerAddresses {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		File inputsDir = jsapResult.getFile("inputsDir");
+		File inputsDir = new File(jsapResult.getString("inputsDir"));
+		if (!inputsDir.exists() || !inputsDir.isDirectory()) throw new JSAPException(inputsDir + " either does not exist or is not a directory");
 		File[] inputs = inputsDir.listFiles((d, s) -> s.endsWith("tar.gz"));
 		if (inputs == null || inputs.length == 0) throw new JSAPException("No inputs in " + inputsDir);
 
-		File addressMapFile = jsapResult.getFile("addressMapFile");
+		File addressMapFile = new File(jsapResult.getString("addressMapFile"));
+		if (!addressMapFile.exists()) throw new JSAPException(addressMapFile + " does not exist");
 		Object2LongFunction<byte[]> addressMap = (Object2LongFunction<byte[]>) BinIO.loadObject(addressMapFile);
 
 		File outputFile = jsapResult.getFile("outputFile");
