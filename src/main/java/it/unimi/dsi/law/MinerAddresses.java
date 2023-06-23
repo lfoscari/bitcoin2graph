@@ -25,7 +25,7 @@ public class MinerAddresses {
 	public static void main(String[] args) throws IOException, JSAPException, ClassNotFoundException {
 		final SimpleJSAP jsap = new SimpleJSAP(MinerAddresses.class.getName(), "For each address count the number of mined blocks",
 				new Parameter[]{
-						new FlaggedOption("inputsDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "The directory containing all the inputs in tar.gz."),
+						new FlaggedOption("inputsDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "The directory containing all the inputs in gz."),
 						new FlaggedOption("addressMapFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'a', "The file with the address map."),
 						new FlaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "The file to store the resulting integer array."),
 				}
@@ -36,7 +36,7 @@ public class MinerAddresses {
 
 		File inputsDir = new File(jsapResult.getString("inputsDir"));
 		if (!inputsDir.exists() || !inputsDir.isDirectory()) throw new JSAPException(inputsDir + " either does not exist or is not a directory");
-		File[] inputs = inputsDir.listFiles((d, s) -> s.endsWith("tar.gz"));
+		File[] inputs = inputsDir.listFiles((d, s) -> s.endsWith("tsv.gz"));
 		if (inputs == null || inputs.length == 0) throw new JSAPException("No inputs in " + inputsDir);
 
 		File addressMapFile = new File(jsapResult.getString("addressMapFile"));
