@@ -27,7 +27,7 @@ public class MinerAddresses {
 				new Parameter[]{
 						new FlaggedOption("inputsDir", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'i', "The directory containing all the inputs in tar.gz."),
 						new FlaggedOption("addressMapFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'a', "The file with the address map."),
-						new FlaggedOption("addressMapFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "The file to store the resulting integer array."),
+						new FlaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "The file to store the resulting integer array."),
 				}
 		);
 
