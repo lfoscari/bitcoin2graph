@@ -47,6 +47,7 @@ public class MinerAddresses {
 
 		pl.start("Loading inputs files");
 		pl.expectedUpdates = inputs.length;
+		pl.itemsName = "files";
 
 		int[] miners = new int[addressMap.size()];
 		int unknown = 0;
@@ -70,6 +71,8 @@ public class MinerAddresses {
 				}
 			}
 
+			if (pl.count % 100 == 0)
+				pl.logger.info("Unknown addresses: " + unknown);
 			pl.update();
 		}
 		pl.done();
