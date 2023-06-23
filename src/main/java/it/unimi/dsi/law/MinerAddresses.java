@@ -49,6 +49,7 @@ public class MinerAddresses {
 		pl.expectedUpdates = inputs.length;
 
 		int[] miners = new int[addressMap.size()];
+		int unknown = 0;
 
 		for (File input: inputs) {
 			try (BufferedReader gzipReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(Files.newInputStream(input.toPath()))))) {
@@ -63,7 +64,9 @@ public class MinerAddresses {
 
 					// Increment associated address values
 					long addressId = addressMap.getLong(address);
-					miners[(int) addressId]++;
+
+					if (addressId == -1) unknown++;
+					else miners[(int) addressId]++;
 				}
 			}
 
@@ -71,6 +74,7 @@ public class MinerAddresses {
 		}
 		pl.done();
 
+		pl.logger.info("Unknown addresses: " + unknown);
 		BinIO.storeInts(miners, outputFile);
 	}
 }
