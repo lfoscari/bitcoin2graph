@@ -43,6 +43,9 @@ public class MinerAddresses {
 
 		File outputFile = jsapResult.getFile("outputFile");
 
+		pl.start("Loading inputs files");
+		pl.expectedUpdates = inputs.length;
+
 		int[] miners = new int[addressMap.size()];
 
 		for (File input: inputs) {
@@ -61,7 +64,10 @@ public class MinerAddresses {
 					miners[(int) addressId]++;
 				}
 			}
+
+			pl.update();
 		}
+		pl.done();
 
 		BinIO.storeInts(miners, outputFile);
 	}
