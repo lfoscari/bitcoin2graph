@@ -4,6 +4,7 @@ import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.Parameter;
 import com.martiansoftware.jsap.SimpleJSAP;
 import com.martiansoftware.jsap.UnflaggedOption;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.lang.MutableString;
@@ -78,6 +79,14 @@ public class MinerAddresses {
 		pl.done();
 
 		pl.logger.info("Unknown addresses: " + unknown);
-		BinIO.storeInts(miners, outputFile);
+
+		int sum = 0;
+		for (int m: miners) sum += m;
+
+		float[] miners_p = new float[miners.length];
+		for (int i = 0; i < miners.length; i++)
+			miners_p[i] = (float) miners[i] / sum;
+
+		BinIO.storeFloats(miners_p, outputFile);
 	}
 }
