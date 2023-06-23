@@ -1,7 +1,6 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
-import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
 import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.io.InputBitStream;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -23,7 +22,7 @@ public class RawGraphStats {
 		final SimpleJSAP jsap = new SimpleJSAP(RawGraphStats.class.getName(), "Compute some stats on the given transaction graph",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph."),
-						new UnflaggedOption("output", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The output file."),
+						new UnflaggedOption("output", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The output file."),
 				}
 		);
 
@@ -71,9 +70,11 @@ public class RawGraphStats {
 
 		System.out.println(labelSizeMean);
 
-		File outputFile = new File(jsapResult.getString("output"));
-		try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-			fos.write(Double.toString(labelSizeMean).getBytes());
+		if (jsapResult.contains("output")) {
+			File outputFile = new File(jsapResult.getString("output"));
+			try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+				fos.write(Double.toString(labelSizeMean).getBytes());
+			}
 		}
 
 		pl.done();

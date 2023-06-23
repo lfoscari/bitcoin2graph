@@ -59,7 +59,7 @@ public class GraphStats {
 		pl.done();
 	}
 
-	private static int distinctSize(final LongList values) {
+	public static int distinctSize(final LongList values) {
 		if (values.size() == 0) return 0;
 
 		int unique = 1;
