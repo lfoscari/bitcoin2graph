@@ -43,7 +43,7 @@ public class MinerAddresses {
 		if (!addressMapFile.exists()) throw new JSAPException(addressMapFile + " does not exist");
 		Object2LongFunction<byte[]> addressMap = (Object2LongFunction<byte[]>) BinIO.loadObject(addressMapFile);
 
-		File outputFile = jsapResult.getFile("outputFile");
+		File outputFile = new File(jsapResult.getString("outputFile"));
 
 		pl.start("Loading inputs files");
 		pl.expectedUpdates = inputs.length;
