@@ -58,7 +58,7 @@ public class MinerAddresses {
 					MutableString line = new MutableString(gzipReader.readLine());
 
 					// Check that the line is from coinbase
-					if (Utils.column(line, 9).equals("0"))
+					if (!Utils.column(line, 9).equals("1"))
 						continue;
 
 					byte[] address = Utils.columnBytes(line, 6);
