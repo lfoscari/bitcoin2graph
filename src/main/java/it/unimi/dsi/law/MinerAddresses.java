@@ -21,7 +21,7 @@ import java.nio.file.Files;
 import java.util.zip.GZIPInputStream;
 
 public class MinerAddresses {
-	private static final Logger logger = LoggerFactory.getLogger(RawGraphStats.class);
+	private static final Logger logger = LoggerFactory.getLogger(MinerAddresses.class);
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
 	public static void main(String[] args) throws IOException, JSAPException, ClassNotFoundException {
