@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.io.FileLinesByteArrayIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -12,6 +13,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
@@ -33,20 +35,20 @@ public class HeavyHitters {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
-		Object2LongFunction<byte[]> objectMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("objectMap"));
+		final double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
+		final Object2LongFunction<byte[]> objectMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("objectMap"));
 
-		int amount = jsapResult.getInt("amount");
+		final int amount = jsapResult.getInt("amount");
 
 		// The quickselect find the k-th minimum value, we want the k-th maximum
-		int k = rank.length - amount + 1;
+		final int k = rank.length - amount + 1;
 		pl.start("Finding " + amount + "-th statistics");
-		double max = new Quickselect().quickselect(rank, k);
+		final double max = new Quickselect().quickselect(rank, k);
 		pl.done();
 
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
-		int[] nodes = new int[amount];
+		final int[] nodes = new int[amount];
 		int j = 0;
 		for (int i = 0; i < rank.length; i++)
 			if (rank[i] >= max) nodes[j++] = i;
@@ -56,31 +58,28 @@ public class HeavyHitters {
 		pl.done();
 
 		// Find the objects corresponding to the isolated nodes
-		String[] hh = new String[amount];
+		final byte[][] hh = new byte[amount][];
 
 		pl.start("Reverse-mapping nodes to objects");
 		pl.expectedUpdates = amount;
 		pl.itemsName = "nodes";
-		for (MutableString obj: new FileLinesMutableStringIterable(jsapResult.getString("objects"))) {
-			char[] cc = obj.toCharArray();
-			byte[] bb = new byte[cc.length];
-			for (int c = 0; c < cc.length; c++) bb[c] = (byte) cc[c];
 
-			// Check if this obj corresponds to any of the heavyhitting nodes
-			long objectId = objectMap.getLong(bb);
+		for (byte[] obj: new FileLinesByteArrayIterable(jsapResult.getString("objects"))) {
+			// Check if this object corresponds to any of the heavyhitting nodes
+			final long objectId = objectMap.getLong(obj);
 			if (objectId == -1) continue;
 
 			final int pos = ArrayUtils.indexOf(nodes, (int) objectId);
 			if (pos == INDEX_NOT_FOUND) continue;
 
-			hh[pos] = obj.clone().toString();
+			hh[pos] = obj.clone();
 			pl.update();
 		}
 
 		pl.done();
 
 		for (int i = 0; i < nodes.length; i++)
-			System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
+			System.out.println(new String(hh[i]) + " (" + rank[nodes[i]] + ")");
 	}
 
 	private static class Quickselect {
