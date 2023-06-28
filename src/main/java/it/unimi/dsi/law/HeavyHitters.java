@@ -8,10 +8,13 @@ import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+
+import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
 
 public class HeavyHitters {
 	private static final Logger logger = LoggerFactory.getLogger(HeavyHitters.class);
@@ -38,7 +41,7 @@ public class HeavyHitters {
 		// The quickselect find the k-th minimum value, we want the k-th maximum
 		int k = rank.length - amount + 1;
 		pl.start("Finding " + amount + "-th statistics");
-		double max =  new Quickselect().quickselect(rank, k);
+		double max = new Quickselect().quickselect(rank, k);
 		pl.done();
 
 		// Isolate the nodes with a rank above the threshold
@@ -64,13 +67,16 @@ public class HeavyHitters {
 			for (int c = 0; c < cc.length; c++) bb[c] = (byte) cc[c];
 
 			// Check if this obj corresponds to any of the heavyhitting nodes
-			for (int i = 0; i < nodes.length; i++) {
-				if (objectMap.getLong(bb) == nodes[i]) {
-					hh[i] = obj.clone().toString();
-					pl.update();
-				}
-			}
+			long objectId = objectMap.getLong(bb);
+			if (objectId == -1) continue;
+
+			final int pos = ArrayUtils.indexOf(nodes, (int) objectId);
+			if (pos == INDEX_NOT_FOUND) continue;
+
+			hh[pos] = obj.clone().toString();
+			pl.update();
 		}
+
 		pl.done();
 
 		for (int i = 0; i < nodes.length; i++)
