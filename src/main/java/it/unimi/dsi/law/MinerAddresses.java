@@ -88,6 +88,6 @@ public class MinerAddresses {
 		for (int i = 0; i < miners.length; i++)
 			miners_p[i] = (double) miners[i] / sum;
 
-		BinIO.storeObject(DoubleList.of(miners_p), outputFile);
+		BinIO.storeDoubles(miners_p, outputFile);
 	}
 }
