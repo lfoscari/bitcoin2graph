@@ -4,6 +4,7 @@ import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.io.FileLinesByteArrayIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
@@ -13,8 +14,12 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
 
@@ -29,6 +34,7 @@ public class HeavyHitters {
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
 						new FlaggedOption("objectMap", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'm', "The object map used to build the graph."),
 						new FlaggedOption("objects", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the objects in string form."),
+						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavyhitters will be written, otherwise stdout.")
 				}
 		);
 
@@ -73,13 +79,20 @@ public class HeavyHitters {
 			if (pos == INDEX_NOT_FOUND) continue;
 
 			hh[pos] = obj.clone();
-			pl.update();
+			pl.lightUpdate();
 		}
 
 		pl.done();
 
-		for (int i = nodes.length - 1; i >= 0; i--)
-			System.out.println(new String(hh[i]) + " (" + rank[nodes[i]] + ")");
+		if (jsapResult.contains("outputFile")) {
+			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
+				for (int i = nodes.length - 1; i >= 0; i--)
+					fbos.write((new String(hh[i]) + " (" + rank[nodes[i]] + ")\n").getBytes());
+			}
+		} else {
+			for (int i = nodes.length - 1; i >= 0; i--)
+				System.out.println(new String(hh[i]) + " (" + rank[nodes[i]] + ")");
+		}
 	}
 
 	private static class Quickselect {
