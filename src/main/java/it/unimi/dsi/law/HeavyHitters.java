@@ -64,7 +64,7 @@ public class HeavyHitters {
 		pl.expectedUpdates = amount;
 		pl.itemsName = "nodes";
 
-		for (byte[] obj: new FileLinesByteArrayIterable(jsapResult.getString("objects"))) {
+		for (final byte[] obj: new FileLinesByteArrayIterable(jsapResult.getString("objects"))) {
 			// Check if this object corresponds to any of the heavyhitting nodes
 			final long objectId = objectMap.getLong(obj);
 			if (objectId == -1) continue;
@@ -78,7 +78,7 @@ public class HeavyHitters {
 
 		pl.done();
 
-		for (int i = 0; i < nodes.length; i++)
+		for (int i = nodes.length - 1; i >= 0; i--)
 			System.out.println(new String(hh[i]) + " (" + rank[nodes[i]] + ")");
 	}
 
