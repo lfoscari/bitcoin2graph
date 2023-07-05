@@ -67,7 +67,7 @@ public class HeavyHitters {
 		final byte[][] hh = new byte[amount][];
 
 		pl.start("Reverse-mapping nodes to objects");
-		pl.expectedUpdates = amount;
+		if (objectMap.size() != -1) pl.expectedUpdates = objectMap.size();
 		pl.itemsName = "nodes";
 
 		for (final byte[] obj: new FileLinesByteArrayIterable(jsapResult.getString("objects"))) {
