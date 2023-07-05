@@ -75,11 +75,12 @@ public class HeavyHitters {
 			final long objectId = objectMap.getLong(obj);
 			if (objectId == -1) continue;
 
+			pl.lightUpdate();
+
 			final int pos = ArrayUtils.indexOf(nodes, (int) objectId);
 			if (pos == INDEX_NOT_FOUND) continue;
 
 			hh[pos] = obj.clone();
-			pl.lightUpdate();
 		}
 
 		pl.done();
