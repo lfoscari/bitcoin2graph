@@ -24,18 +24,22 @@ public class ClusteringCoefficient {
 		final SimpleJSAP jsap = new SimpleJSAP(ClusteringCoefficient.class.getName(), "Compute the clustering coefficient on the given graph",
 				new Parameter[]{
 						new FlaggedOption("samplingFactor", JSAP.DOUBLE_PARSER, "0.3", JSAP.NOT_REQUIRED, 's', "The sampling factor (default: 0.3)."),
+						new FlaggedOption("seed", JSAP.LONG_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 'r', "Random seed."),
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the graph (preferably symmetric)."),
 				}
 		);
 
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
-		
+
 		String basename = jsapResult.getString("basename");
 		double samplingFactor = jsapResult.getDouble("samplingFactor");
 
 		if (samplingFactor < 0 || samplingFactor > 1)
 			throw new JSAPException("Sampling factor must be between 0 and 1");
+
+		if (jsapResult.contains("seed"))
+			r.setSeed(jsapResult.getLong("seed"));
 
 		ImmutableGraph g = ImmutableGraph.load(basename, pl);
 
