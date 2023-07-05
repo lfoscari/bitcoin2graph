@@ -145,7 +145,7 @@ public class HeavyHitters {
 		}
 
 		public int medianOf3(double[] list, int leftIndex, int rightIndex) {
-			int centerIndex = (leftIndex + rightIndex) / 2;
+			int centerIndex = (int) (((long) leftIndex + (long) rightIndex) / 2);
 
 			if (list[leftIndex] > list[rightIndex])
 				DoubleArrays.swap(list, leftIndex, centerIndex);
