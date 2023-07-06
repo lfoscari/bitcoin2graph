@@ -65,13 +65,19 @@ public class RawGraphStats {
 
 			// Each transaction is {transactionSize} long for a total of:
 			final long size = (long) length * transactionSize;
-			fbis.skip(size);
+			final long skipped = fbis.skip(size);
+			if (skipped != size) throw new IllegalStateException("Skipped " + skipped + " instead of " + size + " bits");
 
 			pl.lightUpdate();
 		}
 		pl.done();
 
-		if (fbis.hasNext()) pl.logger.info("The label file still had " + fbis.skip(Long.MAX_VALUE) + " bits");
+		long bitsLeft = 0;
+		while (fbis.hasNext()) {
+			fbis.readBit();
+			bitsLeft++;
+		}
+		if (bitsLeft > 0) pl.logger.warn(bitsLeft + " were left in the stream");
 		fbis.close();
 
 		BinIO.storeInts(transactionAmount, jsapResult.getFile("output"));
