@@ -1,6 +1,9 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.BigArrays;
+import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntBigArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.io.InputBitStream;
@@ -44,42 +47,34 @@ public class RawGraphStats {
 
 		final String underlyingBasename = new File(basename).getParentFile().toPath().resolve(p.getProperty("underlyinggraph")).toString();
 		final ImmutableGraph g = ImmutableGraph.loadOffline(underlyingBasename);
-		final int[] transactionAmount = new int[g.numNodes()];
+		final int[][] transactionAmount = IntBigArrays.newBigArray(g.numArcs());
 
 		final File labelFile = new File(basename + ".labels");
 		final InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
 
-		pl.start("Computing transaction amount for each node");
-		pl.itemsName = "nodes";
-		pl.expectedUpdates = g.numNodes();
+		pl.start("Computing transaction amount for each arc");
+		pl.itemsName = "arcs";
+		pl.expectedUpdates = g.numArcs();
 
 		int length;
-		for (int i = 0; i < transactionAmount.length; i++) {
+		for (long i = 0; i < BigArrays.length(transactionAmount); i++) {
 			try {
 				length = fbis.readGamma();
 			} catch (EOFException e) {
 				break;
 			}
 
-			transactionAmount[i] = length;
+			BigArrays.set(transactionAmount, i, length);
 
 			// Each transaction is {transactionSize} long for a total of:
 			final long size = (long) length * transactionSize;
-			final long skipped = fbis.skip(size);
-			if (skipped != size) throw new IllegalStateException("Skipped " + skipped + " instead of " + size + " bits");
+			fbis.skip(size);
 
 			pl.lightUpdate();
 		}
 		pl.done();
-
-		long bitsLeft = 0;
-		while (fbis.hasNext()) {
-			fbis.readBit();
-			bitsLeft++;
-		}
-		if (bitsLeft > 0) pl.logger.warn(bitsLeft + " were left in the stream");
 		fbis.close();
 
-		BinIO.storeInts(transactionAmount, jsapResult.getFile("output"));
+		BinIO.storeInts(transactionAmount, jsapResult.getString("output"));
 	}
 }
