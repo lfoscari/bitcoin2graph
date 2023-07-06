@@ -1,17 +1,20 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.io.InputBitStream;
 import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.webgraph.ImmutableGraph;
+import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.lang.module.Configuration;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class RawGraphStats {
@@ -29,54 +32,46 @@ public class RawGraphStats {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		File labelFile = new File(jsapResult.getString("basename") + ".labels");
+		String basename = jsapResult.getString("basename");
+
+		Properties p = new Properties();
+		p.load(Files.newInputStream(Paths.get(basename + ".properties")));
+
+		// Get long width from labelspec
+		String labelSpec = p.getProperty("labelspec");
+		String labelSize = labelSpec.substring(labelSpec.lastIndexOf(','), labelSpec.length() - 1);
+		int transactionSize = Integer.parseInt(labelSize);
+
+		String underlyingGraph = p.getProperty("underlyinggraph");
+		ImmutableGraph g = ImmutableGraph.loadOffline(underlyingGraph);
+		int[] transactionAmount = new int[g.numNodes()];
+
+		File labelFile = new File(basename + ".labels");
 		InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
 
-		pl.start("Computing: label size mean");
+		pl.start("Computing transaction amount for each node");
 		pl.itemsName = "nodes";
-		pl.logInterval = TimeUnit.SECONDS.toMillis(10);
+		pl.expectedUpdates = g.numNodes();
 
-		double labelSizeMean = 0f;
-		double labelCount = 0f;
-
-		long[] transactions = new long[512];
-		int length;
-
+		int length, i = 0;
 		while (fbis.hasNext()) {
 			try {
-				length = fbis.readDelta();
+				length = fbis.readGamma();
 			} catch (EOFException e) {
 				break;
 			}
-			transactions = LongArrays.grow(transactions, length);
-			int unique;
 
-			if (length != 0) {
-				for (int i = 0; i < length; i++) transactions[i] = fbis.readLongDelta();
-				LongArrays.unstableSort(transactions, 0, length);
+			transactionAmount[i] = length;
 
-				unique = 1;
-				for (int i = 1; i < length; i++)
-					if (transactions[i] == transactions[i - 1]) unique++;
-			} else {
-				unique = 0;
-			}
-
-			labelSizeMean = ((labelSizeMean * labelCount) + unique) / (labelCount + 1);
-			labelCount++;
+			// Each transaction is {transactionSize} long for a total of:
+			long size = (long) length * transactionSize;
+			fbis.skip(size);
 
 			pl.lightUpdate();
+			i++;
 		}
-
-		System.out.println(labelSizeMean);
-
-		if (jsapResult.contains("output")) {
-			File outputFile = new File(jsapResult.getString("output"));
-			try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-				fos.write(Double.toString(labelSizeMean).getBytes());
-			}
-		}
-
 		pl.done();
+
+		BinIO.storeInts(transactionAmount, jsapResult.getFile("output"));
 	}
 }
