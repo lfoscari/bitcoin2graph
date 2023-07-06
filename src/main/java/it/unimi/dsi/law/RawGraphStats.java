@@ -42,7 +42,7 @@ public class RawGraphStats {
 		String labelSize = labelSpec.substring(labelSpec.lastIndexOf(',') + 1, labelSpec.length() - 1);
 		int transactionSize = Integer.parseInt(labelSize);
 
-		String underlyingBasename = new File(basename).getParentFile().toString() + p.getProperty("underlyinggraph");
+		String underlyingBasename = new File(basename).getParentFile().toPath().resolve(p.getProperty("underlyinggraph")).toString();
 		ImmutableGraph g = ImmutableGraph.loadOffline(underlyingBasename);
 		int[] transactionAmount = new int[g.numNodes()];
 
