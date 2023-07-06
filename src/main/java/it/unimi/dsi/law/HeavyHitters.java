@@ -7,16 +7,11 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.io.FileLinesByteArrayIterable;
-import it.unimi.dsi.io.FileLinesMutableStringIterable;
-import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -30,11 +25,11 @@ public class HeavyHitters {
 	public static void main(String[] args) throws JSAPException, IOException, ClassNotFoundException {
 		final SimpleJSAP jsap = new SimpleJSAP(HeavyHitters.class.getName(), "Given a mapping from objects to nodes and a ranking on the nodes find the top objects according to the rank.",
 				new Parameter[] {
-						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "100", JSAP.NOT_REQUIRED, 'a', "The number of heavyhitters to retrieve."),
+						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "100", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
 						new FlaggedOption("objectMap", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'm', "The object map used to build the graph."),
 						new FlaggedOption("objects", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the objects in string form."),
-						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavyhitters will be written, otherwise stdout.")
+						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavy-hitters will be written, otherwise stdout.")
 				}
 		);
 
@@ -97,7 +92,7 @@ public class HeavyHitters {
 	}
 
 	private static class Quickselect {
-		/** @credits <a href="https://github.com/JohnKurlak/Algorithms">source</a> */
+		/** @credits <a href="https://github.com/JohnKurlak/Algorithms">John Kurlak</a> */
 
 		public Double quickselect(double[] list, int k) {
 			return this.quickselect(list, 0, list.length - 1, k);

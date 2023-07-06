@@ -39,7 +39,7 @@ public class RawGraphStats {
 
 		// Get long width from labelspec
 		String labelSpec = p.getProperty("labelspec");
-		String labelSize = labelSpec.substring(labelSpec.lastIndexOf(','), labelSpec.length() - 1);
+		String labelSize = labelSpec.substring(labelSpec.lastIndexOf(',') + 1, labelSpec.length() - 1);
 		int transactionSize = Integer.parseInt(labelSize);
 
 		String underlyingGraph = p.getProperty("underlyinggraph");
