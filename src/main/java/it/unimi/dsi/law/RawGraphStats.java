@@ -32,29 +32,29 @@ public class RawGraphStats {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		String basename = jsapResult.getString("basename");
+		final String basename = jsapResult.getString("basename");
 
-		Properties p = new Properties();
+		final Properties p = new Properties();
 		p.load(Files.newInputStream(Paths.get(basename + ".properties")));
 
 		// Get long width from labelspec
-		String labelSpec = p.getProperty("labelspec");
-		String labelSize = labelSpec.substring(labelSpec.lastIndexOf(',') + 1, labelSpec.length() - 1);
-		int transactionSize = Integer.parseInt(labelSize);
+		final String labelSpec = p.getProperty("labelspec");
+		final String labelSize = labelSpec.substring(labelSpec.lastIndexOf(',') + 1, labelSpec.length() - 1);
+		final int transactionSize = Integer.parseInt(labelSize);
 
-		String underlyingBasename = new File(basename).getParentFile().toPath().resolve(p.getProperty("underlyinggraph")).toString();
-		ImmutableGraph g = ImmutableGraph.loadOffline(underlyingBasename);
-		int[] transactionAmount = new int[g.numNodes()];
+		final String underlyingBasename = new File(basename).getParentFile().toPath().resolve(p.getProperty("underlyinggraph")).toString();
+		final ImmutableGraph g = ImmutableGraph.loadOffline(underlyingBasename);
+		final int[] transactionAmount = new int[g.numNodes()];
 
-		File labelFile = new File(basename + ".labels");
-		InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
+		final File labelFile = new File(basename + ".labels");
+		final InputBitStream fbis = new InputBitStream(Files.newInputStream(labelFile.toPath()));
 
 		pl.start("Computing transaction amount for each node");
 		pl.itemsName = "nodes";
 		pl.expectedUpdates = g.numNodes();
 
-		int length, i = 0;
-		while (fbis.hasNext()) {
+		int length;
+		for (int i = 0; i < transactionAmount.length; i++) {
 			try {
 				length = fbis.readGamma();
 			} catch (EOFException e) {
@@ -64,13 +64,15 @@ public class RawGraphStats {
 			transactionAmount[i] = length;
 
 			// Each transaction is {transactionSize} long for a total of:
-			long size = (long) length * transactionSize;
+			final long size = (long) length * transactionSize;
 			fbis.skip(size);
 
 			pl.lightUpdate();
-			i++;
 		}
 		pl.done();
+
+		if (fbis.hasNext()) pl.logger.info("The label file still had " + fbis.skip(Long.MAX_VALUE) + " bits");
+		fbis.close();
 
 		BinIO.storeInts(transactionAmount, jsapResult.getFile("output"));
 	}
