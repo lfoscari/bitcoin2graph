@@ -25,7 +25,7 @@ public class TransactionDegree {
 		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute for each address the number of transactions in which it was involved.",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the labelled transaction graph."),
-						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The output file."),
+						new UnflaggedOption("outputBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the output files."),
 				}
 		);
 
@@ -57,11 +57,16 @@ public class TransactionDegree {
 
 		pl.done();
 
-		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
-			for (int i = 0; i < transactionInput.length; i++) {
-				fbos.write(transactionInput[i]);
-				fbos.write('\t');
-				fbos.write(transactionOutput[i]);
+		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".input")))) {
+			for (final int j : transactionInput) {
+				fbos.write(j);
+				fbos.write('\n');
+			}
+		}
+
+		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".output")))) {
+			for (final int j : transactionOutput) {
+				fbos.write(j);
 				fbos.write('\n');
 			}
 		}
