@@ -51,7 +51,7 @@ public class HeavyHitters {
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
 		int j = 0;
-		for (int i = 0; i < rank.length; i++)
+		for (int i = 0; i < rank.length && j < rank.length; i++)
 			if (rank[i] >= max) nodes[j++] = i;
 
 		// Sort the nodes according to rank
