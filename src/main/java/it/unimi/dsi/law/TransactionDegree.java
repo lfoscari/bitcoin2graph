@@ -2,6 +2,7 @@ package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.io.BinIO;
+import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
@@ -11,7 +12,10 @@ import it.unimi.dsi.webgraph.labelling.MergeableFixedWidthLongListLabel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class TransactionDegree {
 	private static final Logger logger = LoggerFactory.getLogger(TransactionDegree.class);
@@ -21,7 +25,7 @@ public class TransactionDegree {
 		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute for each address the number of transactions in which it was involved.",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the labelled transaction graph."),
-						new UnflaggedOption("resultBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The basename of the results files."),
+						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The output file."),
 				}
 		);
 
@@ -53,7 +57,13 @@ public class TransactionDegree {
 
 		pl.done();
 
-		BinIO.storeInts(transactionInput, jsapResult.getString("resultBasename") + ".input");
-		BinIO.storeInts(transactionOutput, jsapResult.getString("resultBasename") + ".output");
+		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
+			for (int i = 0; i < transactionInput.length; i++) {
+				fbos.write(transactionInput[i]);
+				fbos.write('\t');
+				fbos.write(transactionOutput[i]);
+				fbos.write('\n');
+			}
+		}
 	}
 }
