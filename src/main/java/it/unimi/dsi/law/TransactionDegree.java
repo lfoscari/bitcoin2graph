@@ -59,14 +59,14 @@ public class TransactionDegree {
 
 		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".input")))) {
 			for (final int j : transactionInput) {
-				fbos.write(j);
+				fbos.write(Integer.toString(j).getBytes());
 				fbos.write('\n');
 			}
 		}
 
 		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".output")))) {
 			for (final int j : transactionOutput) {
-				fbos.write(j);
+				fbos.write(Integer.toString(j).getBytes());
 				fbos.write('\n');
 			}
 		}
