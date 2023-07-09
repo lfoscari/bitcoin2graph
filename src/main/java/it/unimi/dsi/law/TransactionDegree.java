@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
@@ -64,24 +65,25 @@ public class TransactionDegree {
 
 		pl.start("Computing counts for the cardinalities");
 
-		int[] inputCardinality = IntArrays.EMPTY_ARRAY;
-		int maxOutdegree = computeCardinalities(transactionInput, inputCardinality);
-		TextIO.storeInts(inputCardinality, 0, maxOutdegree + 1,jsapResult.getString("outputBasename") + ".input");
+		int[] inputCardinality =  computeCardinalities(transactionInput);
+		TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
 
-		int[] outputCardinality = IntArrays.EMPTY_ARRAY;
-		maxOutdegree = computeCardinalities(transactionOutput, outputCardinality);
-		TextIO.storeInts(outputCardinality, 0, maxOutdegree + 1, jsapResult.getString("outputBasename") + ".output");
+		int[] outputCardinality =  computeCardinalities(transactionOutput);
+		TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
 
 		pl.done();
 	}
 
-	private static int computeCardinalities(final int[] transactionData, int[] cardinality) {
+	private static int[] computeCardinalities(final int[] transactionData) {
+		int[] cardinality = IntArrays.EMPTY_ARRAY;
 		int maxd = 0;
-		for (final int j : transactionData) {
-			if (j >= cardinality.length) cardinality = IntArrays.grow(cardinality, j + 1);
-			if (j > maxd) maxd = j;
-			cardinality[j]++;
+
+		for (final int d : transactionData) {
+			if (d >= cardinality.length) cardinality = IntArrays.grow(cardinality, d + 1);
+			if (d > maxd) maxd = d;
+			cardinality[d]++;
 		}
-		return maxd;
+
+		return IntArrays.trim(cardinality, maxd + 1);
 	}
 }
