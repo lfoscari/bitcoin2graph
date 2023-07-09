@@ -1,16 +1,20 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
+import it.unimi.dsi.fastutil.io.TextIO;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledNodeIterator;
 import it.unimi.dsi.webgraph.labelling.Label;
 import it.unimi.dsi.webgraph.labelling.MergeableFixedWidthLongListLabel;
+import org.checkerframework.common.value.qual.IntRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Text;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -39,16 +43,17 @@ public class TransactionDegree {
 		pl.expectedUpdates = g.numNodes();
 		pl.itemsName = "nodes";
 
-		for (final ArcLabelledNodeIterator it = g.nodeIterator(); it.hasNext(); ) {
+		final ArcLabelledNodeIterator it = g.nodeIterator();
+		for (int i = 0; i < g.numNodes(); i++) {
 			final int node = it.nextInt();
 			final int[] neighbours = it.successorArray();
 			final Label[] labels = it.labelArray();
 
 			int outputAmount = 0;
-			for (int i = 0; i < it.outdegree(); i++) {
-				final int length = ((MergeableFixedWidthLongListLabel) labels[i]).value.length;
+			for (int j = 0; j < it.outdegree(); j++) {
+				final int length = ((MergeableFixedWidthLongListLabel) labels[j]).value.length;
 				outputAmount += length;
-				transactionInput[neighbours[i]] += length;
+				transactionInput[neighbours[j]] += length;
 			}
 
 			transactionOutput[node] = outputAmount;
@@ -57,18 +62,27 @@ public class TransactionDegree {
 
 		pl.done();
 
-		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".input")))) {
-			for (final int j : transactionInput) {
-				fbos.write(Integer.toString(j).getBytes());
-				fbos.write('\n');
-			}
+		pl.start("Computing counts for the cardinalities");
+		pl.expectedUpdates = transactionInput.length * 2L;
+		pl.itemsName = "entries";
+
+		int[] inputCardinality = IntArrays.EMPTY_ARRAY, outputCardinality = IntArrays.EMPTY_ARRAY;
+
+		for (final int j : transactionInput) {
+			if (j > inputCardinality.length) inputCardinality = IntArrays.grow(inputCardinality, j + 1);
+			inputCardinality[j]++;
+			pl.lightUpdate();
 		}
 
-		try (FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputBasename") + ".output")))) {
-			for (final int j : transactionOutput) {
-				fbos.write(Integer.toString(j).getBytes());
-				fbos.write('\n');
-			}
+		for (final int j : transactionOutput) {
+			if (j > outputCardinality.length) outputCardinality = IntArrays.grow(outputCardinality, j + 1);
+			outputCardinality[j]++;
+			pl.lightUpdate();
 		}
+
+		pl.done();
+
+		TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
+		TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
 	}
 }
