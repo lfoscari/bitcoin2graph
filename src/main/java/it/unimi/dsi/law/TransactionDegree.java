@@ -69,13 +69,13 @@ public class TransactionDegree {
 		int[] inputCardinality = IntArrays.EMPTY_ARRAY, outputCardinality = IntArrays.EMPTY_ARRAY;
 
 		for (final int j : transactionInput) {
-			if (j > inputCardinality.length) inputCardinality = IntArrays.grow(inputCardinality, j + 1);
+			if (j >= inputCardinality.length) inputCardinality = IntArrays.grow(inputCardinality, j + 1);
 			inputCardinality[j]++;
 			pl.lightUpdate();
 		}
 
 		for (final int j : transactionOutput) {
-			if (j > outputCardinality.length) outputCardinality = IntArrays.grow(outputCardinality, j + 1);
+			if (j >= outputCardinality.length) outputCardinality = IntArrays.grow(outputCardinality, j + 1);
 			outputCardinality[j]++;
 			pl.lightUpdate();
 		}
