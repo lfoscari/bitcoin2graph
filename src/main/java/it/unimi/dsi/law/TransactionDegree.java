@@ -63,26 +63,25 @@ public class TransactionDegree {
 		pl.done();
 
 		pl.start("Computing counts for the cardinalities");
-		pl.expectedUpdates = transactionInput.length * 2L;
-		pl.itemsName = "entries";
 
-		int[] inputCardinality = IntArrays.EMPTY_ARRAY, outputCardinality = IntArrays.EMPTY_ARRAY;
+		int[] inputCardinality = IntArrays.EMPTY_ARRAY;
+		int maxOutdegree = computeCardinalities(transactionInput, inputCardinality);
+		TextIO.storeInts(inputCardinality, 0, maxOutdegree + 1,jsapResult.getString("outputBasename") + ".input");
 
-		for (final int j : transactionInput) {
-			if (j >= inputCardinality.length) inputCardinality = IntArrays.grow(inputCardinality, j + 1);
-			inputCardinality[j]++;
-			pl.lightUpdate();
-		}
-
-		for (final int j : transactionOutput) {
-			if (j >= outputCardinality.length) outputCardinality = IntArrays.grow(outputCardinality, j + 1);
-			outputCardinality[j]++;
-			pl.lightUpdate();
-		}
+		int[] outputCardinality = IntArrays.EMPTY_ARRAY;
+		maxOutdegree = computeCardinalities(transactionOutput, outputCardinality);
+		TextIO.storeInts(outputCardinality, 0, maxOutdegree + 1, jsapResult.getString("outputBasename") + ".output");
 
 		pl.done();
+	}
 
-		TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
-		TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
+	private static int computeCardinalities(final int[] transactionData, int[] cardinality) {
+		int maxd = 0;
+		for (final int j : transactionData) {
+			if (j >= cardinality.length) cardinality = IntArrays.grow(cardinality, j + 1);
+			if (j > maxd) maxd = j;
+			cardinality[j]++;
+		}
+		return maxd;
 	}
 }
