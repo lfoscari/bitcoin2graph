@@ -97,6 +97,7 @@ public class HeavyHitters {
 
 		DoubleArrays.quickSortIndirect(perm, nodesrank);
 		for (int i = 0; i < perm.length; i++) ObjectArrays.swap(hh, i, perm[i]);
+		for (int i = 0; i < perm.length; i++) DoubleArrays.swap(rank, i, perm[i]);
 
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
