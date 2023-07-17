@@ -7,6 +7,8 @@ import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.io.FileLinesByteArrayIterable;
+import it.unimi.dsi.io.FileLinesMutableStringIterable;
+import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
@@ -16,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import static it.unimi.dsi.io.FileLinesMutableStringIterable.*;
 import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
 
 public class HeavyHitters {
@@ -23,12 +26,12 @@ public class HeavyHitters {
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
 	public static void main(String[] args) throws JSAPException, IOException, ClassNotFoundException {
-		final SimpleJSAP jsap = new SimpleJSAP(HeavyHitters.class.getName(), "Given a mapping from objects to nodes and a ranking on the nodes find the top objects according to the rank.",
+		final SimpleJSAP jsap = new SimpleJSAP(HeavyHitters.class.getName(), "Given a mapping from addresses to nodes and a ranking on the nodes find the top addresses according to the rank.",
 				new Parameter[] {
 						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "100", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
-						new FlaggedOption("objectMap", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'm', "The object map used to build the graph."),
-						new FlaggedOption("objects", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the objects in string form."),
+						new FlaggedOption("addressMap", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'm', "The address map used to build the graph."),
+						new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."),
 						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavy-hitters will be written, otherwise stdout.")
 				}
 		);
@@ -37,7 +40,7 @@ public class HeavyHitters {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		final double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
-		final Object2LongFunction<byte[]> objectMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("objectMap"));
+		final Object2LongFunction<byte[]> addressMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("addressMap"));
 
 		final int amount = jsapResult.getInt("amount");
 
@@ -55,39 +58,34 @@ public class HeavyHitters {
 			if (rank[i] >= max) nodes[j++] = i;
 
 		// Sort the nodes according to rank
-		IntArrays.quickSort(nodes, (a, b) -> Double.compare(rank[a], rank[b]));
+		// IntArrays.quickSort(nodes, (a, b) -> Double.compare(rank[a], rank[b]));
 		pl.done();
 
-		// Find the objects corresponding to the isolated nodes
-		final byte[][] hh = new byte[amount][];
+		// Find the addresses corresponding to the isolated nodes
+		// Considering that the addressMap is made starting from the addresses themselves,
+		// we can simply find the address associated with node v by checking the v-th row.
 
-		pl.start("Reverse-mapping nodes to objects");
-		if (objectMap.size() != -1) pl.expectedUpdates = objectMap.size();
-		pl.itemsName = "nodes";
+		final String[] hh = new String[amount];
+		MutableString address;
+		int current = 0;
 
-		for (final byte[] obj: new FileLinesByteArrayIterable(jsapResult.getString("objects"))) {
-			// Check if this object corresponds to any of the heavyhitting nodes
-			final long objectId = objectMap.getLong(obj);
-			if (objectId == -1) continue;
+		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
+			for (int addressId = 0; addressId < addressMap.size(); addressId++) {
+				address = it.next();
+				if (addressId != nodes[current]) continue;
 
-			pl.lightUpdate();
-
-			final int pos = ArrayUtils.indexOf(nodes, (int) objectId);
-			if (pos == INDEX_NOT_FOUND) continue;
-
-			hh[pos] = obj.clone();
+				hh[current++] = address.toString();
+			}
 		}
-
-		pl.done();
 
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
 				for (int i = nodes.length - 1; i >= 0; i--)
-					fbos.write((new String(hh[i]) + " (" + rank[nodes[i]] + ")\n").getBytes());
+					fbos.write((hh[i] + " (" + rank[nodes[i]] + ")\n").getBytes());
 			}
 		} else {
 			for (int i = nodes.length - 1; i >= 0; i--)
-				System.out.println(new String(hh[i]) + " (" + rank[nodes[i]] + ")");
+				System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
 		}
 	}
 
