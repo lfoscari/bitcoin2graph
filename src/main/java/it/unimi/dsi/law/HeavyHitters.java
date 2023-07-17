@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 
 import static it.unimi.dsi.io.FileLinesMutableStringIterable.*;
 import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
+import static org.apache.commons.lang3.ArrayUtils.add;
 
 public class HeavyHitters {
 	private static final Logger logger = LoggerFactory.getLogger(HeavyHitters.class);
@@ -32,7 +33,6 @@ public class HeavyHitters {
 				new Parameter[] {
 						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "100", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
-						new FlaggedOption("addressMap", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'm', "The address map used to build the graph."),
 						new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."),
 						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavy-hitters will be written, otherwise stdout.")
 				}
@@ -42,9 +42,8 @@ public class HeavyHitters {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
-		final Object2LongFunction<byte[]> addressMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("addressMap"));
-
 		final int amount = jsapResult.getInt("amount");
+		final int numNodes = rank.length;
 
 		// The quickselect find the k-th minimum value, we want the k-th maximum
 		final int k = rank.length - amount + 1;
@@ -59,8 +58,6 @@ public class HeavyHitters {
 		for (int i = 0; i < rank.length && j < amount; i++)
 			if (rank[i] >= max) nodes[j++] = i;
 
-		// Sort the nodes according to rank
-		// IntArrays.quickSort(nodes, (a, b) -> Double.compare(rank[a], rank[b]));
 		pl.done();
 
 		// Find the addresses corresponding to the isolated nodes
@@ -68,7 +65,7 @@ public class HeavyHitters {
 		// we can simply find the address associated with node v by checking the v-th row.
 
 		pl.start("Reverse-mapping nodes to addresses");
-		pl.expectedUpdates = addressMap.size();
+		pl.expectedUpdates = numNodes;
 		pl.itemsName = "nodes";
 
 		final String[] hh = new String[amount];
@@ -76,37 +73,25 @@ public class HeavyHitters {
 		int current = 0;
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
-			for (int addressId = 0; addressId < addressMap.size(); addressId++) {
+			for (int addressId = 0; addressId < numNodes; addressId++) {
 				address = it.next();
 				pl.lightUpdate();
-				if (addressId != nodes[current]) continue;
 
+				if (addressId != nodes[current]) continue;
 				hh[current++] = address.toString();
 			}
 		}
 
 		pl.done();
 
-		int[] perm = new int[amount];
-		for (int i = 0; i < perm.length; i++) perm[i] = i;
-
-		// We are only interested in the rank of the heavyhitters, we can forget the rest
-		double[] nodesrank = new double[amount];
-		for (int i = 0; i < nodesrank.length; i++) nodesrank[i] = rank[nodes[i]];
-		rank = nodesrank;
-
-		DoubleArrays.quickSortIndirect(perm, nodesrank);
-		for (int i = 0; i < perm.length; i++) ObjectArrays.swap(hh, i, perm[i]);
-		for (int i = 0; i < perm.length; i++) DoubleArrays.swap(rank, i, perm[i]);
-
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
 				for (int i = nodes.length - 1; i >= 0; i--)
-					fbos.write((hh[i] + " (" + rank[i] + ")\n").getBytes());
+					fbos.write((hh[i] + " (" + rank[nodes[i]] + ")\n").getBytes());
 			}
 		} else {
 			for (int i = nodes.length - 1; i >= 0; i--)
-				System.out.println(hh[i] + " (" + rank[i] + ")");
+				System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
 		}
 	}
 
