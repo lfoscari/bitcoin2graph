@@ -101,11 +101,11 @@ public class HeavyHitters {
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
 				for (int i = nodes.length - 1; i >= 0; i--)
-					fbos.write((hh[i] + " (" + rank[nodes[i]] + ")\n").getBytes());
+					fbos.write((hh[i] + " (" + rank[i] + ")\n").getBytes());
 			}
 		} else {
 			for (int i = nodes.length - 1; i >= 0; i--)
-				System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
+				System.out.println(hh[i] + " (" + rank[i] + ")");
 		}
 	}
 
