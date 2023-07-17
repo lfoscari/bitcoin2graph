@@ -1,11 +1,13 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.io.FileLinesByteArrayIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
@@ -65,6 +67,10 @@ public class HeavyHitters {
 		// Considering that the addressMap is made starting from the addresses themselves,
 		// we can simply find the address associated with node v by checking the v-th row.
 
+		pl.start("Reverse-mapping nodes to addresses");
+		pl.expectedUpdates = addressMap.size();
+		pl.itemsName = "nodes";
+
 		final String[] hh = new String[amount];
 		MutableString address;
 		int current = 0;
@@ -72,11 +78,20 @@ public class HeavyHitters {
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < addressMap.size(); addressId++) {
 				address = it.next();
+				pl.lightUpdate();
 				if (addressId != nodes[current]) continue;
 
 				hh[current++] = address.toString();
 			}
 		}
+
+		pl.done();
+
+		int[] perm = new int[amount];
+		for (int i = 0; i < perm.length; i++) perm[i] = i;
+
+		DoubleArrays.quickSortIndirect(perm, rank);
+		for (int i = 0; i < perm.length; i++) ObjectArrays.swap(hh, i, perm[i]);
 
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
