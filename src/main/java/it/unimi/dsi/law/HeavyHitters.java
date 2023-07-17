@@ -2,8 +2,10 @@ package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.Arrays;
+import it.unimi.dsi.fastutil.Swapper;
 import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.objects.Object2LongFunction;
@@ -54,8 +56,7 @@ public class HeavyHitters {
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		int j = 0;
-		for (int i = 0; i < rank.length && j < amount; i++)
+		for (int i = 0, j = 0; i < rank.length && j < amount; i++)
 			if (rank[i] >= max) nodes[j++] = i;
 
 		pl.done();
@@ -84,14 +85,16 @@ public class HeavyHitters {
 
 		pl.done();
 
+		Arrays.quickSort(0, nodes.length, (i, j) -> Double.compare(rank[nodes[i]], rank[nodes[j]]), (a, b) -> ObjectArrays.swap(hh, a, b));
+
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
 				for (int i = nodes.length - 1; i >= 0; i--)
-					fbos.write((hh[i] + " (" + rank[nodes[i]] + ")\n").getBytes());
+					fbos.write((hh[i] + "\n").getBytes());
 			}
 		} else {
 			for (int i = nodes.length - 1; i >= 0; i--)
-				System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
+				System.out.println(hh[i]);
 		}
 	}
 
