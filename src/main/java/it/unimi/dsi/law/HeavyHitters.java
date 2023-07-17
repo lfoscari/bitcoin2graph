@@ -41,7 +41,7 @@ public class HeavyHitters {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		final double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
+		double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
 		final Object2LongFunction<byte[]> addressMap = (Object2LongFunction<byte[]>) BinIO.loadObject(jsapResult.getString("addressMap"));
 
 		final int amount = jsapResult.getInt("amount");
@@ -90,7 +90,12 @@ public class HeavyHitters {
 		int[] perm = new int[amount];
 		for (int i = 0; i < perm.length; i++) perm[i] = i;
 
-		DoubleArrays.quickSortIndirect(perm, rank);
+		// We are only interested in the rank of the heavyhitters, we can forget the rest
+		double[] nodesrank = new double[amount];
+		for (int i = 0; i < nodesrank.length; i++) nodesrank[i] = rank[nodes[i]];
+		rank = nodesrank;
+
+		DoubleArrays.quickSortIndirect(perm, nodesrank);
 		for (int i = 0; i < perm.length; i++) ObjectArrays.swap(hh, i, perm[i]);
 
 		if (jsapResult.contains("outputFile")) {
