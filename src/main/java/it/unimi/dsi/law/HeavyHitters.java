@@ -85,16 +85,19 @@ public class HeavyHitters {
 
 		pl.done();
 
-		Arrays.quickSort(0, nodes.length, (i, j) -> Double.compare(rank[nodes[i]], rank[nodes[j]]), (a, b) -> ObjectArrays.swap(hh, a, b));
+		Arrays.quickSort(0, nodes.length, (i, j) -> Double.compare(rank[nodes[i]], rank[nodes[j]]), (a, b) -> {
+			ObjectArrays.swap(hh, a, b);
+			IntArrays.swap(nodes, a, b);
+		});
 
 		if (jsapResult.contains("outputFile")) {
 			try (final FastBufferedOutputStream fbos = new FastBufferedOutputStream(Files.newOutputStream(Paths.get(jsapResult.getString("outputFile"))))) {
 				for (int i = nodes.length - 1; i >= 0; i--)
-					fbos.write((hh[i] + "\n").getBytes());
+					fbos.write((hh[i] + " (" + rank[nodes[i]] + ")\n").getBytes());
 			}
 		} else {
 			for (int i = nodes.length - 1; i >= 0; i--)
-				System.out.println(hh[i]);
+				System.out.println(hh[i] + " (" + rank[nodes[i]] + ")");
 		}
 	}
 
