@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 public class HarmonicDiameter {
 	public static void main(String[] args) throws IOException, JSAPException {
@@ -25,8 +23,9 @@ public class HarmonicDiameter {
 
 		final float[] harmonics = BinIO.loadFloats(jsapResult.getString("harmonic"));
 
-		BigDecimal sum = new BigDecimal(0);
-		for (float f: harmonics) sum = sum.add(BigDecimal.valueOf(f));
-		System.out.println(new BigDecimal(harmonics.length * (harmonics.length - 1)).divide(sum, RoundingMode.UP));
+		float sum = 0;
+		for (float f: harmonics) sum += f;
+
+		System.out.printf("%,f\n", harmonics.length * (harmonics.length - 1) / sum);
 	}
 }
