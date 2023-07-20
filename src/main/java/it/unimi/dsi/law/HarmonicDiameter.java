@@ -23,9 +23,9 @@ public class HarmonicDiameter {
 
 		final float[] harmonics = BinIO.loadFloats(jsapResult.getString("harmonic"));
 
-		float sum = 0;
-		for (float f: harmonics) sum += f;
+		double sum = 0;
+		for (double f: harmonics) sum += f;
 
-		System.out.printf("%,f\n", harmonics.length * (harmonics.length - 1) / sum);
+		System.out.printf("%,f\n", harmonics.length * (harmonics.length - 1.0d) / sum);
 	}
 }
