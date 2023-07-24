@@ -29,7 +29,7 @@ public class HeavyHitters {
 	public static void main(String[] args) throws JSAPException, IOException, ClassNotFoundException {
 		final SimpleJSAP jsap = new SimpleJSAP(HeavyHitters.class.getName(), "Given a mapping from addresses to nodes and a ranking on the nodes find the top addresses according to the rank.",
 				new Parameter[] {
-						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "100", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
+						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "10", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
 						new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."),
 						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavy-hitters will be written, otherwise stdout.")
@@ -53,8 +53,9 @@ public class HeavyHitters {
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		for (int i = 0, j = 0; i < rank.length; i++)
-			if (rank[i] > max) nodes[j++] = i;
+		int current = 0;
+		for (int i = 0; i < rank.length; i++)
+			if (rank[i] > max) nodes[current++] = i;
 
 		pl.done();
 
@@ -68,7 +69,7 @@ public class HeavyHitters {
 
 		final String[] hh = new String[amount];
 		MutableString address;
-		int current = 0;
+		current = 0;
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < numNodes; addressId++) {
