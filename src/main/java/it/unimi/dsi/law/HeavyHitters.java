@@ -78,14 +78,13 @@ public class HeavyHitters {
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < numNodes; addressId++) {
-				if (current > amount)
-
 				address = it.next();
 				pl.lightUpdate();
 
 				// `nodes` is ordered
 				if (addressId != nodes[current]) continue;
 				hh[current++] = address.toString();
+				if (current >= amount) break;
 			}
 		}
 
