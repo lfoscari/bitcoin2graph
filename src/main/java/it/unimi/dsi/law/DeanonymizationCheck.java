@@ -32,6 +32,8 @@ public class DeanonymizationCheck {
 		int node = nodeIt.nextInt();
 		int[] successors = nodeIt.successorArray();
 
+		IntArrays.trim(successors, nodeIt.outdegree());
+
 		System.out.println(node + ": " + Arrays.toString(successors));
 
 		int[] nodes = IntArrays.grow(successors, successors.length + 1);
