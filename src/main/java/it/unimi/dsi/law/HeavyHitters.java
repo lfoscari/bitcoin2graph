@@ -47,15 +47,14 @@ public class HeavyHitters {
 		// We actually search for the (k-1)-th maximum to avoid ties on the lowest rank
 		final int k = rank.length - (amount + 1) + 1;
 		pl.start("Finding " + amount + "-th statistics");
-		final double max = new Quickselect().quickselect(rank, k);
+		final double max = new Quickselect().quickselect(ArrayUtils.clone(rank), k);
 		pl.done();
 
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		int current = 0;
-		for (int i = 0; i < rank.length; i++)
-			if (rank[i] > max) nodes[current++] = i;
+		for (int i = 0, j = 0; i < rank.length; i++)
+			if (rank[i] > max) nodes[j++] = i;
 
 		pl.done();
 
@@ -69,7 +68,7 @@ public class HeavyHitters {
 
 		final String[] hh = new String[amount];
 		MutableString address;
-		current = 0;
+		int current = 0;
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < numNodes; addressId++) {
