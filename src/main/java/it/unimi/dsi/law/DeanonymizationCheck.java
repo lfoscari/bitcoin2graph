@@ -36,7 +36,7 @@ public class DeanonymizationCheck {
 
 		System.out.println(node + ": " + Arrays.toString(successors));
 
-		int[] nodes = IntArrays.grow(successors, successors.length + 1);
+		int[] nodes = IntArrays.ensureCapacity(successors, successors.length + 1);
 		nodes[nodes.length - 1] = node;
 
 		try (FileLinesMutableStringIterable.FileLinesIterator addrIt = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
