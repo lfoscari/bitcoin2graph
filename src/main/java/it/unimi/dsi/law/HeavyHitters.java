@@ -2,15 +2,11 @@ package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.Arrays;
-import it.unimi.dsi.fastutil.Swapper;
 import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.io.BinIO;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
-import it.unimi.dsi.fastutil.objects.Object2LongFunction;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
-import it.unimi.dsi.io.FileLinesByteArrayIterable;
 import it.unimi.dsi.io.FileLinesMutableStringIterable;
 import it.unimi.dsi.lang.MutableString;
 import it.unimi.dsi.logging.ProgressLogger;
@@ -48,7 +44,8 @@ public class HeavyHitters {
 		final int numNodes = rank.length;
 
 		// The quickselect find the k-th minimum value, we want the k-th maximum
-		final int k = rank.length - amount + 1;
+		// We actually search for the (k-1)-th maximum to avoid ties on the lowest rank
+		final int k = rank.length - (amount + 1) + 1;
 		pl.start("Finding " + amount + "-th statistics");
 		final double max = new Quickselect().quickselect(rank, k);
 		pl.done();
@@ -56,16 +53,8 @@ public class HeavyHitters {
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		boolean duplicates = true;
-		for (int i = 0, j = 0; i < rank.length; i++) {
-			if (rank[i] > max) {
-				nodes[j++] = i;
-			} else if (duplicates && rank[i] == max) {
-				// In case of duplicates at the lowest rank, we only want one
-				nodes[j++] = i;
-				duplicates = false;
-			}
-		}
+		for (int i = 0, j = 0; i < rank.length; i++)
+			if (rank[i] > max) nodes[j++] = i;
 
 		pl.done();
 
@@ -79,16 +68,16 @@ public class HeavyHitters {
 
 		final String[] hh = new String[amount];
 		MutableString address;
+		int current = 0;
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < numNodes; addressId++) {
 				address = it.next();
 				pl.lightUpdate();
 
-				int pos = ArrayUtils.indexOf(nodes, addressId);
-				if (pos == INDEX_NOT_FOUND) continue;
-
-				hh[pos] = address.toString();
+				// `nodes` is ordered
+				if (addressId != nodes[current]) continue;
+				hh[current++] = address.toString();
 			}
 		}
 
