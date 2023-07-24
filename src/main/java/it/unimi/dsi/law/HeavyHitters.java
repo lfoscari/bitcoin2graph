@@ -44,8 +44,7 @@ public class HeavyHitters {
 		final int numNodes = rank.length;
 
 		// The quickselect find the k-th minimum value, we want the k-th maximum
-		// We actually search for the (k-1)-th maximum to avoid ties on the lowest rank
-		final int k = rank.length - (amount + 1) + 1;
+		final int k = rank.length - amount + 1;
 		pl.start("Finding " + amount + "-th statistics");
 		final double max = new Quickselect().quickselect(ArrayUtils.clone(rank), k);
 		pl.done();
@@ -53,8 +52,15 @@ public class HeavyHitters {
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		for (int i = 0, j = 0; i < rank.length; i++)
-			if (rank[i] > max) nodes[j++] = i;
+		boolean duplicates = true;
+		for (int i = 0, j = 0; i < rank.length; i++) {
+			if (rank[i] > max) {
+				nodes[j++] = i;
+			} else if (duplicates && rank[i] == max) {
+				nodes[j++] = i;
+				duplicates = false;
+			}
+		}
 
 		pl.done();
 
