@@ -56,8 +56,16 @@ public class HeavyHitters {
 		// Isolate the nodes with a rank above the threshold
 		pl.start("Isolating heavy-hitting nodes");
 		final int[] nodes = new int[amount];
-		for (int i = 0, j = 0; i < rank.length && j < amount; i++)
-			if (rank[i] >= max) nodes[j++] = i;
+		boolean duplicates = true;
+		for (int i = 0, j = 0; i < rank.length; i++) {
+			if (rank[i] > max) {
+				nodes[j++] = i;
+			} else if (duplicates && rank[i] == max) {
+				// In case of duplicates at the lowest rank, we only want one
+				nodes[j++] = i;
+				duplicates = false;
+			}
+		}
 
 		pl.done();
 
@@ -71,15 +79,16 @@ public class HeavyHitters {
 
 		final String[] hh = new String[amount];
 		MutableString address;
-		int current = 0;
 
 		try (FileLinesIterator it = new FileLinesMutableStringIterable(jsapResult.getString("addresses")).iterator()) {
 			for (int addressId = 0; addressId < numNodes; addressId++) {
 				address = it.next();
 				pl.lightUpdate();
 
-				if (addressId != nodes[current]) continue;
-				hh[current++] = address.toString();
+				int pos = ArrayUtils.indexOf(nodes, addressId);
+				if (pos == INDEX_NOT_FOUND) continue;
+
+				hh[pos] = address.toString();
 			}
 		}
 
