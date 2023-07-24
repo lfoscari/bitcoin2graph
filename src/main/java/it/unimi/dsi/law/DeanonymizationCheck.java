@@ -20,7 +20,7 @@ public class DeanonymizationCheck {
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
 	public static void main(String[] args) throws JSAPException, IOException, ClassNotFoundException {
-		final SimpleJSAP jsap = new SimpleJSAP(DeanonymizationCheck.class.getName(), "Deanonymization.", new Parameter[] {new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."), new FlaggedOption("seed", JSAP.INTEGER_PARSER, "123798", JSAP.REQUIRED, 's', "Random seed."), new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "Basename for the graph.")});
+		final SimpleJSAP jsap = new SimpleJSAP(DeanonymizationCheck.class.getName(), "Deanonymization.", new Parameter[] {new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."), new FlaggedOption("seed", JSAP.LONG_PARSER, "123798", JSAP.REQUIRED, 's', "Random seed."), new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "Basename for the graph.")});
 
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
