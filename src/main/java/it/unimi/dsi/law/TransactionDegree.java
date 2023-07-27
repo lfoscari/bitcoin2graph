@@ -30,7 +30,7 @@ public class TransactionDegree {
 		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute for each address the number of transactions in which it was involved.",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the labelled transaction graph."),
-						new UnflaggedOption("outputBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the output files."),
+						new UnflaggedOption("outputBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The optional basename of the output files storing the cardinalities for the amounts of inputs and outputs where at line x there is the number of nodes with x in/outputs."),
 				}
 		);
 
@@ -65,19 +65,21 @@ public class TransactionDegree {
 
 		pl.start("Computing counts for the cardinalities");
 
-		int[] inputCardinality = computeCardinalities(transactionInput);
-		TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
-
-		int[] outputCardinality = computeCardinalities(transactionOutput);
-		TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
-
 		double sum = 0;
-		for (int c: inputCardinality) sum += c;
+		for (int in: transactionInput) sum += in;
 		System.out.println("Average inputs per node: " + sum / g.numNodes());
 
 		sum = 0;
-		for (int c: outputCardinality) sum += c;
+		for (int out: transactionOutput) sum += out;
 		System.out.println("Average outputs per node: " + sum / g.numNodes());
+
+		if (jsapResult.contains("outputBasename")) {
+			int[] inputCardinality = computeCardinalities(transactionInput);
+			TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
+
+			int[] outputCardinality = computeCardinalities(transactionOutput);
+			TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
+		}
 
 		pl.done();
 	}
