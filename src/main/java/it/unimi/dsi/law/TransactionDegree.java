@@ -57,13 +57,8 @@ public class TransactionDegree {
 
 		System.out.println(Arrays.equals(transactionInput, transactionOutput));
 
-		double sum = 0;
-		for (int in: transactionInput) sum += in;
-		System.out.println("Average inputs per node: " + sum / g.numNodes());
-
-		sum = 0;
-		for (int out: transactionOutput) sum += out;
-		System.out.println("Average outputs per node: " + sum / g.numNodes());
+		System.out.println("Average inputs per node: " + mean(transactionInput));
+		System.out.println("Average outputs per node: " + mean(transactionOutput));
 
 		if (jsapResult.contains("outputBasename")) {
 			pl.start("Computing counts for the cardinalities");
@@ -76,6 +71,12 @@ public class TransactionDegree {
 
 			pl.done();
 		}
+	}
+
+	private static double mean(final int[] transactionData) {
+		double sum = 0;
+		for (int in: transactionData) sum += in;
+		return sum / transactionData.length;
 	}
 
 	private static int[] computeCardinalities(final int[] transactionData) {
