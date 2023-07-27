@@ -63,8 +63,6 @@ public class TransactionDegree {
 
 		pl.done();
 
-		pl.start("Computing counts for the cardinalities");
-
 		double sum = 0;
 		for (int in: transactionInput) sum += in;
 		System.out.println("Average inputs per node: " + sum / g.numNodes());
@@ -74,14 +72,16 @@ public class TransactionDegree {
 		System.out.println("Average outputs per node: " + sum / g.numNodes());
 
 		if (jsapResult.contains("outputBasename")) {
+			pl.start("Computing counts for the cardinalities");
+
 			int[] inputCardinality = computeCardinalities(transactionInput);
 			TextIO.storeInts(inputCardinality, jsapResult.getString("outputBasename") + ".input");
 
 			int[] outputCardinality = computeCardinalities(transactionOutput);
 			TextIO.storeInts(outputCardinality, jsapResult.getString("outputBasename") + ".output");
-		}
 
-		pl.done();
+			pl.done();
+		}
 	}
 
 	private static int[] computeCardinalities(final int[] transactionData) {
