@@ -1,26 +1,18 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
-import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.io.BinIO;
-import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import it.unimi.dsi.fastutil.io.TextIO;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledNodeIterator;
 import it.unimi.dsi.webgraph.labelling.Label;
 import it.unimi.dsi.webgraph.labelling.MergeableFixedWidthLongListLabel;
-import org.checkerframework.common.value.qual.IntRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Text;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.Arrays;
 
 public class TransactionDegree {
 	private static final Logger logger = LoggerFactory.getLogger(TransactionDegree.class);
@@ -62,6 +54,8 @@ public class TransactionDegree {
 		}
 
 		pl.done();
+
+		System.out.println(Arrays.equals(transactionInput, transactionOutput));
 
 		double sum = 0;
 		for (int in: transactionInput) sum += in;
