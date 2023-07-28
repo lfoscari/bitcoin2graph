@@ -39,7 +39,7 @@ public class HeavyHitters {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		double[] rank;
-		if (jsapResult.contains("floats")) {
+		if (jsapResult.getBoolean("floats")) {
 			pl.logger.info("Loading ranking as floats");
 			float[] floatRank = BinIO.loadFloats(jsapResult.getString("ranking"));
 			rank = new double[floatRank.length];
