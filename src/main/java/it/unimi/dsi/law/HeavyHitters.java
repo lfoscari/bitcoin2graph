@@ -19,8 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import static it.unimi.dsi.io.FileLinesMutableStringIterable.*;
-import static org.apache.commons.lang3.ArrayUtils.INDEX_NOT_FOUND;
-import static org.apache.commons.lang3.ArrayUtils.add;
 
 public class HeavyHitters {
 	private static final Logger logger = LoggerFactory.getLogger(HeavyHitters.class);
@@ -31,6 +29,7 @@ public class HeavyHitters {
 				new Parameter[] {
 						new FlaggedOption("amount", JSAP.INTEGER_PARSER, "10", JSAP.NOT_REQUIRED, 'a', "The number of heavy-hitters to retrieve."),
 						new FlaggedOption("ranking", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'r', "A ranking on the graph as doubles in binary form."),
+						new Switch("float", 'f', "Use this option if the ranking is a list of floats."),
 						new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."),
 						new UnflaggedOption("outputFile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "File where the heavy-hitters will be written, otherwise stdout.")
 				}
@@ -39,7 +38,15 @@ public class HeavyHitters {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		double[] rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
+		double[] rank;
+		if (jsapResult.contains("float")) {
+			float[] floatRank = BinIO.loadFloats(jsapResult.getString("ranking"));
+			rank = new double[floatRank.length];
+			for (int i = 0; i < floatRank.length; i++) rank[i] = floatRank[i];
+		} else {
+			rank = BinIO.loadDoubles(jsapResult.getString("ranking"));
+		}
+
 		final int amount = jsapResult.getInt("amount");
 		final int numNodes = rank.length;
 
