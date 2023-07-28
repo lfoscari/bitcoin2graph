@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.TextIO;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledNodeIterator;
@@ -22,6 +23,7 @@ public class TransactionDegree {
 		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute for each address the number of transactions in which it was involved.",
 				new Parameter[]{
 						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the labelled transaction graph."),
+						new UnflaggedOption("basenameTransposed", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The basename of the transposed of the labelled transaction graph."),
 						new UnflaggedOption("outputBasename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "The optional basename of the output files storing the cardinalities for the amounts of inputs and outputs where at line x there is the number of nodes with x in/outputs."),
 				}
 		);
@@ -29,34 +31,17 @@ public class TransactionDegree {
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
 
-		final ArcLabelledImmutableGraph g = ArcLabelledImmutableGraph.load(jsapResult.getString("basename"), pl);
-		final int[] transactionInput = new int[g.numNodes()], transactionOutput = new int[g.numNodes()];
+		final ArcLabelledImmutableGraph graph = ArcLabelledImmutableGraph.load(jsapResult.getString("basename"), pl);
+		pl.start("Computing transaction inputs cardinality");
+		final int[] transactionInput = transactionsPerNode(graph);
+		pl.done();
 
-		pl.start("Computing transaction cardinality");
-		pl.expectedUpdates = g.numNodes();
-		pl.itemsName = "nodes";
-
-		final ArcLabelledNodeIterator it = g.nodeIterator();
-		for (int i = 0; i < g.numNodes(); i++) {
-			final int node = it.nextInt();
-			final int[] neighbours = it.successorArray();
-			final Label[] labels = it.labelArray();
-
-			int outputAmount = 0;
-			for (int j = 0; j < it.outdegree(); j++) {
-				final int length = ((MergeableFixedWidthLongListLabel) labels[j]).value.length;
-				outputAmount += length;
-				transactionInput[neighbours[j]] += length;
-			}
-
-			transactionOutput[node] = outputAmount;
-			pl.lightUpdate();
-		}
-
+		final ArcLabelledImmutableGraph transposed = ArcLabelledImmutableGraph.load(jsapResult.getString("basenameTransposed"), pl);
+		pl.start("Computing transaction inputs cardinality");
+		final int[] transactionOutput = transactionsPerNode(transposed);
 		pl.done();
 
 		System.out.println(Arrays.equals(transactionInput, transactionOutput));
-
 		System.out.println("Average inputs per node: " + mean(transactionInput));
 		System.out.println("Average outputs per node: " + mean(transactionOutput));
 
@@ -71,6 +56,31 @@ public class TransactionDegree {
 
 			pl.done();
 		}
+	}
+
+	private static int[] transactionsPerNode(ArcLabelledImmutableGraph graph) {
+		pl.expectedUpdates = graph.numNodes();
+		pl.itemsName = "nodes";
+
+		final int[] transactionAmount = new int[graph.numNodes()];
+		final ArcLabelledNodeIterator it = graph.nodeIterator();
+		LongOpenHashSet transactionIds = new LongOpenHashSet();
+
+		for (int i = 0; i < transactionAmount.length; i++) {
+			transactionIds.clear();
+			final int node = it.nextInt();
+			final Label[] labels = it.labelArray();
+
+			for (int j = 0; j < it.outdegree(); j++) {
+				for (long transactionId: ((MergeableFixedWidthLongListLabel) labels[j]).value)
+					transactionIds.add(transactionId);
+			}
+
+			transactionAmount[node] = transactionIds.size();
+			pl.lightUpdate();
+		}
+
+		return transactionAmount;
 	}
 
 	private static double mean(final int[] transactionData) {
