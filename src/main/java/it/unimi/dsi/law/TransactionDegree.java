@@ -45,6 +45,9 @@ public class TransactionDegree {
 		System.out.println("Average inputs per node: " + mean(transactionInput));
 		System.out.println("Average outputs per node: " + mean(transactionOutput));
 
+		System.out.println("Addresses with one input: " + onePercentage(transactionInput) + "%");
+		System.out.println("Addresses with one output: " + onePercentage(transactionOutput) + "%");
+
 		if (jsapResult.contains("outputBasename")) {
 			pl.start("Computing counts for the cardinalities");
 
@@ -56,6 +59,12 @@ public class TransactionDegree {
 
 			pl.done();
 		}
+	}
+
+	private static double onePercentage(int[] transactionData) {
+		double ones = 0;
+		for (int n: transactionData) if (n == 1) ones++;
+		return (ones / transactionData.length) * 100;
 	}
 
 	private static int[] transactionsPerNode(ArcLabelledImmutableGraph graph) {
