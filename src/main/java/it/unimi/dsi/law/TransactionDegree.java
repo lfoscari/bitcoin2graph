@@ -37,7 +37,7 @@ public class TransactionDegree {
 		pl.done();
 
 		final ArcLabelledImmutableGraph transposed = ArcLabelledImmutableGraph.load(jsapResult.getString("basenameTransposed"), pl);
-		pl.start("Computing transaction inputs cardinality");
+		pl.start("Computing transaction outputs cardinality");
 		final int[] transactionOutput = transactionsPerNode(transposed);
 		pl.done();
 
