@@ -3,6 +3,7 @@ package it.unimi.dsi.law;
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.io.TextIO;
+import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.logging.ProgressLogger;
 import it.unimi.dsi.webgraph.labelling.ArcLabelledImmutableGraph;
@@ -73,23 +74,40 @@ public class TransactionDegree {
 
 		final int[] transactionAmount = new int[graph.numNodes()];
 		final ArcLabelledNodeIterator it = graph.nodeIterator();
-		LongOpenHashSet transactionIds = new LongOpenHashSet();
+
+		int t_index;
+		long[] transactionIds = new long[1024];
 
 		for (int i = 0; i < transactionAmount.length; i++) {
-			transactionIds.clear();
+			t_index = 0;
 			final int node = it.nextInt();
 			final Label[] labels = it.labelArray();
 
 			for (int j = 0; j < it.outdegree(); j++) {
-				for (long transactionId: ((MergeableFixedWidthLongListLabel) labels[j]).value)
-					transactionIds.add(transactionId);
+				MergeableFixedWidthLongListLabel l = ((MergeableFixedWidthLongListLabel) labels[j]);
+				transactionIds = LongArrays.grow(transactionIds, transactionIds.length + l.value.length);
+
+				for (long transactionId: l.value) {
+					transactionIds[t_index++] = transactionId;
+				}
 			}
 
-			transactionAmount[node] = transactionIds.size();
+			LongArrays.quickSort(transactionIds, 0, t_index);
+			transactionAmount[node] = countDuplicates(transactionIds, t_index);
+
 			pl.lightUpdate();
 		}
 
 		return transactionAmount;
+	}
+
+	private static int countDuplicates(long[] data, int to) {
+		if (data.length == 0) return 0;
+
+		int dups = 0;
+		for (int i = 0; i < to - 1; i++)
+			if (data[i] == data[i + 1]) dups++;
+		return dups;
 	}
 
 	private static double mean(final int[] transactionData) {
