@@ -85,7 +85,7 @@ public class TransactionDegree {
 
 			for (int j = 0; j < it.outdegree(); j++) {
 				MergeableFixedWidthLongListLabel l = ((MergeableFixedWidthLongListLabel) labels[j]);
-				transactionIds = LongArrays.grow(transactionIds, transactionIds.length + l.value.length);
+				transactionIds = LongArrays.grow(transactionIds, t_index + l.value.length);
 
 				for (long transactionId: l.value) {
 					transactionIds[t_index++] = transactionId;
