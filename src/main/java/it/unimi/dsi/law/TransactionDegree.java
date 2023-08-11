@@ -97,7 +97,7 @@ public class TransactionDegree {
 			}
 
 			LongArrays.quickSort(transactionIds, 0, t_index);
-			transactionAmount[node] = countDuplicates(transactionIds, t_index);
+			transactionAmount[node] = countUnique(transactionIds, t_index);
 
 			pl.lightUpdate();
 		}
@@ -105,13 +105,13 @@ public class TransactionDegree {
 		return transactionAmount;
 	}
 
-	private static int countDuplicates(long[] data, int to) {
-		if (data.length == 0) return 0;
+	public static int countUnique(long[] array, int to) {
+		if (array.length == 0)  return 0;
 
-		int dups = 0;
+		int unique = 1;
 		for (int i = 0; i < to - 1; i++)
-			if (data[i] == data[i + 1]) dups++;
-		return dups;
+			if (array[i] != array[i + 1]) unique++;
+		return unique;
 	}
 
 	private static double mean(final int[] transactionData) {
