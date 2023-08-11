@@ -42,9 +42,13 @@ public class TransactionDegree {
 		final int[] transactionOutput = transactionsPerNode(transposed);
 		pl.done();
 
-		System.out.println(Arrays.equals(transactionInput, transactionOutput));
+		final int[] totalTransactions = new int[transactionInput.length];
+		for (int i = 0; i < transactionInput.length; i++)
+			totalTransactions[i] = transactionInput[i] + transactionOutput[i];
+
 		System.out.println("Average inputs per node: " + mean(transactionInput));
 		System.out.println("Average outputs per node: " + mean(transactionOutput));
+		System.out.println("Average transactions per node: " + mean(totalTransactions));
 
 		System.out.println("Addresses with one input: " + onePercentage(transactionInput) + "%");
 		System.out.println("Addresses with one output: " + onePercentage(transactionOutput) + "%");
