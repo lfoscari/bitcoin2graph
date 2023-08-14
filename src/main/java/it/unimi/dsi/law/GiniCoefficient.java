@@ -29,6 +29,6 @@ public class GiniCoefficient {
 			sum += values[i];
 			sum_i += i * values[i];
 		}
-		return (2 / n) * (sum_i / sum) + ((n + 1) / n);
+		return (2 / n) * (sum_i / sum) - ((n + 1) / n);
 	}
 }
