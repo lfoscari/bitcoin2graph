@@ -1,6 +1,7 @@
 package it.unimi.dsi.law;
 
 import com.martiansoftware.jsap.*;
+import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.io.BinIO;
 
 import java.io.IOException;
@@ -17,19 +18,17 @@ public class GiniCoefficient {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		final double[] values = BinIO.loadDoubles(jsapResult.getString("values"));
+		DoubleArrays.parallelRadixSort(values);
 		System.out.println(gini(values));
 	}
 
 	static double gini(double[] values) {
-		double sumOfDifference = 0;
-		for (double a: values) for (double b: values)
-			sumOfDifference += Math.abs(a - b);
-		return sumOfDifference / (2 * values.length * values.length * mean(values));
-	}
-
-	static double mean(double[] values) {
-		double sum = 0;
-		for (double d: values) sum += d;
-		return sum / values.length;
+		double n = values.length;
+		double sum = 0, sum_i = 0;
+		for (int i = 0; i < n; i++) {
+			sum += values[i];
+			sum_i += i * values[i];
+		}
+		return (2 / n) * (sum_i / sum) + ((n + 1) / n);
 	}
 }
