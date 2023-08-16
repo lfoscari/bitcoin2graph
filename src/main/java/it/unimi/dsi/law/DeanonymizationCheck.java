@@ -16,24 +16,28 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public class DeanonymizationCheck {
+	private static final XoRoShiRo128PlusPlusRandom r = new XoRoShiRo128PlusPlusRandom();
 	private static final Logger logger = LoggerFactory.getLogger(DeanonymizationCheck.class);
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
 	public static void main(String[] args) throws JSAPException, IOException, ClassNotFoundException {
-		final SimpleJSAP jsap = new SimpleJSAP(DeanonymizationCheck.class.getName(), "Deanonymization.", new Parameter[] {new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."), new FlaggedOption("seed", JSAP.LONG_PARSER, "123798", JSAP.REQUIRED, 's', "Random seed."), new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "Basename for the graph.")});
+		final SimpleJSAP jsap = new SimpleJSAP(DeanonymizationCheck.class.getName(), "Picks a random node in the graph and prints its neighbours as full addresses instead of node identifiers, this tool can be used to empirically check the correctness of the graph by confirming the results online (using something like blockchair.com).",
+				new Parameter[] {
+						new FlaggedOption("addresses", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "A file with all the addresses in string form."),
+						new FlaggedOption("seed", JSAP.LONG_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, 's', "Random seed."),
+						new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "Basename for the graph.")
+		});
 
 		final JSAPResult jsapResult = jsap.parse(args);
 		if (jsap.messagePrinted()) System.exit(1);
+		if (jsapResult.contains("seed")) r.setSeed(jsapResult.getLong("seed"));
 
-		final XoRoShiRo128PlusPlusRandom r = new XoRoShiRo128PlusPlusRandom(jsapResult.getLong("seed"));
 		ImmutableGraph g = ImmutableGraph.load(jsapResult.getString("basename"), pl);
-
 		NodeIterator nodeIt = g.nodeIterator(r.nextInt(g.numNodes()));
 		int node = nodeIt.nextInt();
 		int[] successors = nodeIt.successorArray();
 
 		successors = IntArrays.trim(successors, nodeIt.outdegree());
-
 		System.out.println(node + ": " + Arrays.toString(successors));
 
 		int[] nodes = IntArrays.ensureCapacity(successors, successors.length + 1);

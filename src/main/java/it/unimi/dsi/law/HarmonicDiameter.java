@@ -22,10 +22,10 @@ public class HarmonicDiameter {
 		if (jsap.messagePrinted()) System.exit(1);
 
 		final float[] harmonics = BinIO.loadFloats(jsapResult.getString("harmonic"));
-
 		double sum = 0;
 		for (double f: harmonics) sum += f;
+		double diameter = harmonics.length * (harmonics.length - 1.0d) / sum;
 
-		System.out.printf("%,f\n", harmonics.length * (harmonics.length - 1.0d) / sum);
+		System.out.printf("%,f\n", diameter);
 	}
 }

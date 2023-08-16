@@ -18,7 +18,7 @@ import static it.unimi.dsi.law.graph.Parameters.logInterval;
 import static it.unimi.dsi.law.graph.Parameters.logTimeUnit;
 
 public class Utils {
-	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {
+	public static ProgressLogger getProgressLogger(Class<?> cls, String itemsName) {
 		Logger logger = LoggerFactory.getLogger(cls);
 		ProgressLogger progress = new ProgressLogger(logger, logInterval, logTimeUnit, itemsName);
 		progress.displayFreeMemory = true;
@@ -37,10 +37,7 @@ public class Utils {
 		}
 
 		int end = line.indexOf('\t', start);
-
-		if (end == -1) {
-			end = line.length();
-		}
+		if (end == -1) end = line.length();
 
 		return line.subSequence(start, end);
 	}
@@ -60,10 +57,8 @@ public class Utils {
 	public static Iterator<MutableString> readTSVs(File[] files, LineFilter filter) {
 		Iterator<MutableString> iterator = new TSVIterator(files);
 
-		if (filter != null) {
+		if (filter != null)
 			iterator = Iterators.filter(iterator, filter::accept);
-		}
-
 		return iterator;
 	}
 
@@ -77,9 +72,8 @@ public class Utils {
 		private File currentFile;
 
 		public TSVIterator(File[] files) {
-			if (files.length == 0) {
+			if (files.length == 0)
 				throw new IllegalArgumentException("Files list must be non empty");
-			}
 
 			this.files = Arrays.stream(files).iterator();
 			this.loadNextFile();
@@ -98,14 +92,11 @@ public class Utils {
 
 		@Override
 		public MutableString next() {
-			if (!this.hasNext()) {
+			if (!this.hasNext())
 				throw new NoSuchElementException();
-			}
 
-			while (!this.iterator.hasNext()) {
+			while (!this.iterator.hasNext())
 				this.loadNextFile();
-			}
-
 			return this.iterator.next();
 		}
 

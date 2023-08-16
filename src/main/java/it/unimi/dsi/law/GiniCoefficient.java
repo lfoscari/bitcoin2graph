@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class GiniCoefficient {
 	public static void main(String[] args) throws IOException, JSAPException {
-		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute the Gini coefficient for the given double values.",
+		final SimpleJSAP jsap = new SimpleJSAP(TransactionDegree.class.getName(), "Compute the Gini coefficient for the given double values. Note that this implementation works in parallel to initially sort the given values and then uses an alternative formula for the Gini coefficient which works in linear time.",
 				new Parameter[]{
 						new UnflaggedOption("values", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, false, "The values of which to compute the gini coefficient as doubles."),
 				}
@@ -19,7 +19,7 @@ public class GiniCoefficient {
 
 		final double[] values = BinIO.loadDoubles(jsapResult.getString("values"));
 		DoubleArrays.parallelRadixSort(values);
-		System.out.println(gini(values));
+		System.out.printf("%,f\n", gini(values));
 	}
 
 	static double gini(double[] values) {
