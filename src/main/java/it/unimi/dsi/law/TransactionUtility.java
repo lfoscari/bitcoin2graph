@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.graph.Parameters.*;
 
 public class TransactionUtility {
 	public static final Logger logger = LoggerFactory.getLogger(TransactionUtility.class);

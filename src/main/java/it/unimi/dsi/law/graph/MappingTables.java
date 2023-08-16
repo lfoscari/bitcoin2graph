@@ -12,7 +12,7 @@ import java.nio.file.Path;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.graph.Parameters.*;
 
 /** Note: you can simply use <code>java it.unimi.dsi.sux4j.mph.GOV3Function -s 10 -b -T . address.map addresses.tsv</code>
  * and will likely be faster */

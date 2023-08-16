@@ -1,4 +1,4 @@
-package it.unimi.dsi.law;
+package it.unimi.dsi.law.graph;
 
 import java.io.File;
 import java.nio.file.Path;

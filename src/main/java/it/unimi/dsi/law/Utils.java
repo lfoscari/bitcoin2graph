@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import static it.unimi.dsi.law.Parameters.logInterval;
-import static it.unimi.dsi.law.Parameters.logTimeUnit;
+import static it.unimi.dsi.law.graph.Parameters.logInterval;
+import static it.unimi.dsi.law.graph.Parameters.logTimeUnit;
 
 public class Utils {
 	public static ProgressLogger getProgressLogger(Class cls, String itemsName) {

@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.BitSet;
 
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.graph.Parameters.*;
 
 public class APISanityCheck {
 	/** Check the correctness of the graph by checking with the output

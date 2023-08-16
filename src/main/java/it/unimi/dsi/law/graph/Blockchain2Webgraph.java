@@ -15,7 +15,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.graph.Parameters.*;
 
 public class Blockchain2Webgraph implements Iterator<long[]>, Iterable<long[]> {
 	private final TransactionsDatabase transactionsDatabase;

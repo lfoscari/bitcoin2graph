@@ -19,8 +19,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
-import static it.unimi.dsi.law.Parameters.BitcoinColumn.*;
-import static it.unimi.dsi.law.Parameters.*;
+import static it.unimi.dsi.law.graph.Parameters.BitcoinColumn.*;
+import static it.unimi.dsi.law.graph.Parameters.*;
 
 public class LocalSanityCheck {
 	private static final XoRoShiRo128PlusRandom random = new XoRoShiRo128PlusRandom();
