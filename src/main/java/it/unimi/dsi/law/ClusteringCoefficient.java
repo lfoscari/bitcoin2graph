@@ -73,11 +73,11 @@ public class ClusteringCoefficient {
 	}
 
 	private static int[][] collectNodePairs(NodeIterator nodeIterator, int numNodes, double samplingFactor, Int2BooleanFunction nodeFilter) {
-		pl.start("Sampling node pairs");
-		pl.expectedUpdates = numNodes;
-
 		int index = 0;
 		int[][] triangleNodes = new int[(int) (numNodes * samplingFactor)][2];
+
+		pl.start("Sampling node pairs");
+		pl.expectedUpdates = numNodes;
 
 		while (nodeIterator.hasNext()) {
 			final int node = nodeIterator.nextInt();
