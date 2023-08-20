@@ -75,8 +75,6 @@ public class ClusteringCoefficient {
 
 		int index = 0;
 		int[][] triangleNodes = new int[(int) (numNodes * samplingFactor)][2];
-		for (int i = 0; i < triangleNodes.length; i++)
-			triangleNodes[i] = new int[2];
 
 		while (nodeIterator.hasNext()) {
 			final int node = nodeIterator.nextInt();
