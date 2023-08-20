@@ -105,7 +105,7 @@ public class ClusteringCoefficient {
 		pl.done();
 
 		ObjectArrays.trim(triangleNodes, index);
-		ObjectArrays.unstableSort(triangleNodes, Comparator.comparingInt(a -> a[0]));
+		ObjectArrays.parallelQuickSort(triangleNodes, Comparator.comparingInt(a -> a[0]));
 
 		return triangleNodes;
 	}
