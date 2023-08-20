@@ -38,6 +38,9 @@ public class ClusteringCoefficient {
 		if (samplingFactor < 0 || samplingFactor > 1)
 			throw new JSAPException("Sampling factor must be between 0 and 1");
 
+		if (samplingFactor == 1)
+			pl.logger.info("Not using sampling");
+
 		if (jsapResult.contains("seed"))
 			r.setSeed(jsapResult.getLong("seed"));
 
