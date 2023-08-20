@@ -79,6 +79,7 @@ public class ClusteringCoefficient {
 		while (nodeIterator.hasNext()) {
 			final int node = nodeIterator.nextInt();
 			final int outdegree = nodeIterator.outdegree();
+			pl.lightUpdate();
 
 			if (outdegree < 2 || samplingFactor != 1.0 && !nodeFilter.get(node))
 				continue;
@@ -97,7 +98,6 @@ public class ClusteringCoefficient {
 			triangleNodes[index][1] = neighbours[secondIndex];
 
 			index++;
-			pl.lightUpdate();
 		}
 
 		pl.done();
