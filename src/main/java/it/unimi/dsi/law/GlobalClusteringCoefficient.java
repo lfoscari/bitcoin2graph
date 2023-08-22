@@ -59,6 +59,7 @@ public class GlobalClusteringCoefficient {
 		ObjectArrayList<File> batches = new ObjectArrayList<>();
 
 		pl.itemsName = "arcs";
+		pl.expectedUpdates = g.numNodes();
 		pl.start("Creating sorted batches...");
 
 		NodeIterator nodeIterator = g.nodeIterator();
@@ -80,9 +81,10 @@ public class GlobalClusteringCoefficient {
 					target[j] = neighbours[v];
 					j++;
 
-					pl.lightUpdate();
 				}
 			}
+
+			pl.lightUpdate();
 		}
 
 		if (j != 0) pairs += Transform.processBatch(j, source, target, null, batches);
