@@ -15,8 +15,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class GlobalClusteringCoefficient {
-	private static final XoRoShiRo128PlusPlusRandom r = new XoRoShiRo128PlusPlusRandom();
-	private static final Logger logger = LoggerFactory.getLogger(ClusteringCoefficient.class);
+	private static final Logger logger = LoggerFactory.getLogger(GlobalClusteringCoefficient.class);
 	private static final ProgressLogger pl = new ProgressLogger(logger);
 
 	public static void main(String[] args) throws JSAPException, IOException {
@@ -32,7 +31,6 @@ public class GlobalClusteringCoefficient {
 
 		String basename = jsapResult.getString("basename");
 		ImmutableGraph g = ImmutableGraph.load(basename, pl);
-		IntArrayList arcs = new IntArrayList(g.numNodes());
 
 		// idea: costruisco un nuovo grafo
 		// partendo dal grafo G
@@ -58,7 +56,7 @@ public class GlobalClusteringCoefficient {
 		OutputBitStream obs = new OutputBitStream(fbos);
 		ObjectArrayList<File> batches = new ObjectArrayList<>();
 
-		pl.itemsName = "arcs";
+		pl.itemsName = "nodes";
 		pl.expectedUpdates = g.numNodes();
 		pl.start("Creating sorted batches...");
 
