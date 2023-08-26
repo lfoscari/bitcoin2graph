@@ -12,22 +12,37 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.5.1</version>
-                <configuration>
-                    <groupId>it.unimi.dsi</groupId>
-                    <artifactId>webgraph</artifactId>
-                    <version>3.6.11</version>
-                    <packaging>jar</packaging>
-                    <file>${basedir}/webgraph.jar</file>
-                    <generatePom>false</generatePom>
-                    <pomFile>${basedir}/webgraph.xml</pomFile>
-                </configuration>
                 <executions>
                     <execution>
-                        <id>install-jar-lib</id>
+                        <id>install-webgraph</id>
                         <goals>
                             <goal>install-file</goal>
                         </goals>
                         <phase>validate</phase>
+                        <configuration>
+                            <groupId>it.unimi.dsi</groupId>
+                            <artifactId>webgraph</artifactId>
+                            <version>3.6.11</version>
+                            <packaging>jar</packaging>
+                            <file>${basedir}/webgraph.jar</file>
+                            <generatePom>false</generatePom>
+                            <pomFile>${basedir}/webgraph.xml</pomFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>install-triangles</id>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <groupId>es.yrbcn.graph</groupId>
+                            <artifactId>triangles</artifactId>
+                            <version>1.1</version>
+                            <packaging>jar</packaging>
+                            <file>${basedir}/triangles-1.1.jar</file>
+                            <generatePom>true</generatePom>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -48,6 +63,11 @@
             <groupId>it.unimi.dsi</groupId>
             <artifactId>webgraph</artifactId>
             <version>3.6.11</version>
+        </dependency>
+        <dependency>
+            <groupId>es.yrbcn.graph</groupId>
+            <artifactId>triangles</artifactId>
+            <version>1.1</version>
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
