@@ -58,6 +58,13 @@ public class LocalClusteringCoefficient {
 		}
 		pl.done();
 
+		pl.logger.info("Storing results in " + basename + "-clustering.doubles...");
 		BinIO.storeDoubles(localClusteringCoefficient, basename + "-clustering.doubles");
+
+		double globalClusteringCoefficient = 0;
+		for (double c: localClusteringCoefficient) globalClusteringCoefficient += c;
+		globalClusteringCoefficient /= localClusteringCoefficient.length;
+
+		System.out.print("Global clustering coefficient: " + globalClusteringCoefficient);
 	}
 }
