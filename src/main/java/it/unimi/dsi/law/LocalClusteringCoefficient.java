@@ -56,8 +56,16 @@ public class LocalClusteringCoefficient {
 				continue;
 			}
 
+			int sep = triangleLine.indexOf(' ') + 1;
+
+			// Check that the node id is equal to the node in the file
+			if (!triangleLine.subSequence(0, sep).equals(Integer.toString(node))) {
+				pl.logger.error("Mismatch: checking node " + node + ", but got line:\n\t" + triangleLine);
+				System.exit(-1);
+			}
+
 			// Extract number of triangles
-			triangleLine.delete(0, triangleLine.indexOf(' ') + 1);
+			triangleLine.delete(0, sep);
 
 			final double triangleAmount = Double.parseDouble(triangleLine.toString());
 			localClusteringCoefficient[node] = 2 * triangleAmount / (outdegree * (outdegree - 1));
