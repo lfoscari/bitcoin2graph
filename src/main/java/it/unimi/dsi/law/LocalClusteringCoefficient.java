@@ -37,7 +37,6 @@ public class LocalClusteringCoefficient {
 		final NodeIterator nodeIterator = g.nodeIterator();
 		final FileLinesMutableStringIterable.FileLinesIterator nodeTriangles = new FileLinesMutableStringIterable(triangles).iterator();
 
-		final boolean[] lonely = new boolean[g.numNodes()]; // Keep track of which nodes have an outdegree <= 1
 		final double[] localClusteringCoefficient = new double[g.numNodes()];
 		MutableString triangleLine;
 
@@ -51,8 +50,7 @@ public class LocalClusteringCoefficient {
 			triangleLine = nodeTriangles.next();
 
 			if (outdegree <= 1) {
-				localClusteringCoefficient[node] = 0;
-				lonely[node] = true;
+				localClusteringCoefficient[node] = Double.NaN;
 				continue;
 			}
 
@@ -68,7 +66,14 @@ public class LocalClusteringCoefficient {
 			triangleLine.delete(0, sep + 1);
 
 			final double triangleAmount = Double.parseDouble(triangleLine.toString());
-			localClusteringCoefficient[node] = 2 * triangleAmount / (outdegree * (outdegree - 1));
+
+			if (outdegree * (outdegree - 1) < 2 * triangleAmount) {
+				pl.logger.warn("Overestimation on node " + node);
+				localClusteringCoefficient[node] = Double.NaN;
+			} else {
+				localClusteringCoefficient[node] = 2 * triangleAmount / (outdegree * (outdegree - 1));
+			}
+
 
 			pl.lightUpdate();
 		}
@@ -80,17 +85,17 @@ public class LocalClusteringCoefficient {
 		double average = 0;
 		int count = 0;
         for (int node = 0; node < localClusteringCoefficient.length; node++) {
-            if (!lonely[node]) {
+			if (!Double.isNaN(localClusteringCoefficient[node])) {
 				average += localClusteringCoefficient[node];
 				count++;
-            }
+			}
         }
 		average /= count;
 		System.out.println("Average clustering coefficient: " + average);
 
 		double harmonic = 0;
         for (double v : localClusteringCoefficient)
-            if (v != 0) harmonic += 1 / v;
+            if (v != 0 && !Double.isNaN(v)) harmonic += 1 / v;
 		harmonic = localClusteringCoefficient.length / harmonic;
 		System.out.println("Harmonic clustering coefficient: " + harmonic);
 	}
