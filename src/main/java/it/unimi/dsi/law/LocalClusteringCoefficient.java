@@ -67,10 +67,10 @@ public class LocalClusteringCoefficient {
 		pl.logger.info("Storing results in " + basename + CLUSTERING_EXTENSION + "...");
 		BinIO.storeDoubles(localClusteringCoefficient, basename + CLUSTERING_EXTENSION);
 
-		double mean = 0;
-		for (int node = 0; node < localClusteringCoefficient.length; node++)
-			mean += (localClusteringCoefficient[node] - mean) / (node + 1);
+		double sum = 0;
+		for (double local: localClusteringCoefficient) sum += local;
+		final double globalClusteringCoefficient = sum / localClusteringCoefficient.length;
 
-		System.out.println("Global clustering coefficient: " + mean);
+		System.out.println("Global clustering coefficient: " + globalClusteringCoefficient);
 	}
 }
