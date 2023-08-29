@@ -37,6 +37,7 @@ public class LocalClusteringCoefficient {
 		final NodeIterator nodeIterator = g.nodeIterator();
 		final FileLinesMutableStringIterable.FileLinesIterator nodeTriangles = new FileLinesMutableStringIterable(triangles).iterator();
 
+		final boolean[] lonely = new boolean[g.numNodes()]; // Keep track of which nodes have an outdegree <= 1
 		final double[] localClusteringCoefficient = new double[g.numNodes()];
 		MutableString triangleLine;
 
@@ -51,6 +52,7 @@ public class LocalClusteringCoefficient {
 
 			if (outdegree <= 1) {
 				localClusteringCoefficient[node] = 0;
+				lonely[node] = true;
 				continue;
 			}
 
@@ -68,9 +70,14 @@ public class LocalClusteringCoefficient {
 		BinIO.storeDoubles(localClusteringCoefficient, basename + CLUSTERING_EXTENSION);
 
 		double sum = 0;
-		for (double local: localClusteringCoefficient) sum += local;
-		final double globalClusteringCoefficient = sum / localClusteringCoefficient.length;
+		int count = 0;
+        for (int node = 0; node < localClusteringCoefficient.length; node++) {
+            if (!lonely[node]) {
+                sum += localClusteringCoefficient[node];
+				count++;
+            }
+        }
 
-		System.out.println("Global clustering coefficient: " + globalClusteringCoefficient);
+		System.out.println("Global clustering coefficient: " + sum / count);
 	}
 }
