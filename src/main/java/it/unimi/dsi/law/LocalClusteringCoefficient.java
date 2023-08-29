@@ -71,7 +71,7 @@ public class LocalClusteringCoefficient {
 			final double possibleTriangles = outdegree * (outdegree - 1);
 
 			if (effectiveTriangles > possibleTriangles) {
-				localClusteringCoefficient[node] = Double.NaN;
+				localClusteringCoefficient[node] = 1;
 				overestimates++;
 			} else {
 				localClusteringCoefficient[node] = effectiveTriangles / possibleTriangles;
