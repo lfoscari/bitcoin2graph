@@ -10,7 +10,6 @@ import it.unimi.dsi.webgraph.NodeIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.concurrent.Immutable;
 import java.io.IOException;
 
 public class LocalClusteringCoefficient {
@@ -47,8 +46,14 @@ public class LocalClusteringCoefficient {
 		while (nodeIterator.hasNext()) {
 			final int node = nodeIterator.nextInt();
 			final int outdegree = nodeIterator.outdegree();
-
 			triangleLine = nodeTriangles.next();
+
+			if (outdegree <= 1) {
+				localClusteringCoefficient[node] = 0;
+				continue;
+			}
+
+			// Extract number of triangles
 			triangleLine.delete(0, triangleLine.indexOf(' ') + 1);
 
 			final double triangleAmount = Double.parseDouble(triangleLine.toString());
