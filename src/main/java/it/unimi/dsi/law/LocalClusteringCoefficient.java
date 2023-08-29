@@ -40,6 +40,8 @@ public class LocalClusteringCoefficient {
 		final double[] localClusteringCoefficient = new double[g.numNodes()];
 		MutableString triangleLine;
 
+		int overestimates = 0;
+
 		pl.start("Estimating local clustering coefficient");
 		pl.expectedUpdates = g.numNodes();
 		pl.itemsName = "nodes";
@@ -70,6 +72,7 @@ public class LocalClusteringCoefficient {
 			if (outdegree * (outdegree - 1) < 2 * triangleAmount) {
 				pl.logger.warn("Overestimation on node " + node);
 				localClusteringCoefficient[node] = Double.NaN;
+				overestimates++;
 			} else {
 				localClusteringCoefficient[node] = 2 * triangleAmount / (outdegree * (outdegree - 1));
 			}
@@ -98,5 +101,7 @@ public class LocalClusteringCoefficient {
             if (v != 0 && !Double.isNaN(v)) harmonic += 1 / v;
 		harmonic = localClusteringCoefficient.length / harmonic;
 		System.out.println("Harmonic clustering coefficient: " + harmonic);
+
+		pl.logger.info(overestimates + " overestimates in total over " + localClusteringCoefficient.length + " nodes");
 	}
 }
