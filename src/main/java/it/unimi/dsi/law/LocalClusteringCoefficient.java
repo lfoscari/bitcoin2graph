@@ -69,15 +69,21 @@ public class LocalClusteringCoefficient {
 		pl.logger.info("Storing results in " + basename + CLUSTERING_EXTENSION + "...");
 		BinIO.storeDoubles(localClusteringCoefficient, basename + CLUSTERING_EXTENSION);
 
-		double sum = 0;
+		double average = 0;
 		int count = 0;
         for (int node = 0; node < localClusteringCoefficient.length; node++) {
             if (!lonely[node]) {
-                sum += localClusteringCoefficient[node];
+				average += localClusteringCoefficient[node];
 				count++;
             }
         }
+		average /= count;
+		System.out.println("Average clustering coefficient: " + average);
 
-		System.out.println("Global clustering coefficient: " + sum / count);
+		double harmonic = 0;
+        for (double v : localClusteringCoefficient)
+            if (v != 0) harmonic += 1 / v;
+		harmonic = localClusteringCoefficient.length / harmonic;
+		System.out.println("Harmonic clustering coefficient: " + harmonic);
 	}
 }
