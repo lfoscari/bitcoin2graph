@@ -80,6 +80,7 @@ public class LocalClusteringCoefficient {
 			pl.lightUpdate();
 		}
 		pl.done();
+		pl.logger.info(overestimates + " total overestimates over " + localClusteringCoefficient.length + " nodes");
 
 		pl.logger.info("Storing results in " + basename + CLUSTERING_EXTENSION + "...");
 		BinIO.storeDoubles(localClusteringCoefficient, basename + CLUSTERING_EXTENSION);
@@ -105,7 +106,5 @@ public class LocalClusteringCoefficient {
 		}
 		harmonic = count / harmonic;
 		System.out.println("Harmonic clustering coefficient: " + harmonic);
-
-		pl.logger.info(overestimates + " overestimates in total over " + localClusteringCoefficient.length + " nodes");
 	}
 }
