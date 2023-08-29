@@ -70,13 +70,10 @@ public class LocalClusteringCoefficient {
 			final double effectiveTriangles = 2 * Double.parseDouble(triangleLine.toString());
 			final double possibleTriangles = outdegree * (outdegree - 1);
 
-			if (effectiveTriangles > possibleTriangles) {
-				localClusteringCoefficient[node] = 1;
+			if (effectiveTriangles > possibleTriangles)
 				overestimates++;
-			} else {
-				localClusteringCoefficient[node] = effectiveTriangles / possibleTriangles;
-			}
 
+			localClusteringCoefficient[node] = Math.min(1, effectiveTriangles / possibleTriangles);
 			pl.lightUpdate();
 		}
 		pl.done();
