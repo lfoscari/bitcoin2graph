@@ -69,7 +69,7 @@ public class LocalClusteringCoefficient {
 
 		double mean = 0;
 		for (int node = 0; node < localClusteringCoefficient.length; node++)
-			mean += (localClusteringCoefficient[node] - mean) / node;
+			mean += (localClusteringCoefficient[node] - mean) / (node + 1);
 
 		System.out.println("Global clustering coefficient: " + mean);
 	}
