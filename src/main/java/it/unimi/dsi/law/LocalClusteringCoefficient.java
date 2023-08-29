@@ -67,16 +67,15 @@ public class LocalClusteringCoefficient {
 			// Extract number of triangles
 			triangleLine.delete(0, sep + 1);
 
-			final double triangleAmount = Double.parseDouble(triangleLine.toString());
+			final double effectiveTriangles = 2 * Double.parseDouble(triangleLine.toString());
+			final double possibleTriangles = outdegree * (outdegree - 1);
 
-			if (outdegree * (outdegree - 1) < 2 * triangleAmount) {
-				pl.logger.warn("Overestimation on node " + node);
+			if (effectiveTriangles > possibleTriangles) {
 				localClusteringCoefficient[node] = Double.NaN;
 				overestimates++;
 			} else {
-				localClusteringCoefficient[node] = 2 * triangleAmount / (outdegree * (outdegree - 1));
+				localClusteringCoefficient[node] = effectiveTriangles / possibleTriangles;
 			}
-
 
 			pl.lightUpdate();
 		}
@@ -87,19 +86,24 @@ public class LocalClusteringCoefficient {
 
 		double average = 0;
 		int count = 0;
-        for (int node = 0; node < localClusteringCoefficient.length; node++) {
-			if (!Double.isNaN(localClusteringCoefficient[node])) {
-				average += localClusteringCoefficient[node];
-				count++;
-			}
+        for (double value : localClusteringCoefficient) {
+            if (!Double.isNaN(value)) {
+                average += value;
+                count++;
+            }
         }
 		average /= count;
 		System.out.println("Average clustering coefficient: " + average);
 
 		double harmonic = 0;
-        for (double v : localClusteringCoefficient)
-            if (v != 0 && !Double.isNaN(v)) harmonic += 1 / v;
-		harmonic = localClusteringCoefficient.length / harmonic;
+		count = 0;
+        for (double v : localClusteringCoefficient) {
+			if (v != 0 && !Double.isNaN(v)) {
+                harmonic += 1 / v;
+            	count++;
+			}
+		}
+		harmonic = count / harmonic;
 		System.out.println("Harmonic clustering coefficient: " + harmonic);
 
 		pl.logger.info(overestimates + " overestimates in total over " + localClusteringCoefficient.length + " nodes");
