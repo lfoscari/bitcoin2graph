@@ -7,6 +7,7 @@ import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
 import org.apache.commons.lang3.ArrayUtils;
+import org.checkerframework.common.reflection.qual.ClassValBottom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,39 +36,42 @@ public class ExperimentalClusteringCoefficient {
 
         int[] labels = new int[(int) graph.numArcs() * 2];
 
+        int[] permutation = new int[labels.length];
+        Arrays.setAll(permutation, (i) -> i);
+
         /* First propagation */
+        pl.start("Starting first propagation");
         propagateLabels(graph, labels);
-        int[] firstPermutation = computePermutation(labels);
+        pl.start("Sorting labels");
+        IntArrays.parallelQuickSortIndirect(permutation, labels);
 
         /* Second propagation */
+        pl.start("Starting second propagation");
         propagateLabels(graph, labels);
-        int[] secondPermutation = computePermutation(labels);
+        pl.start("Sorting labels");
+        IntArrays.parallelQuickSortIndirect(permutation, labels);
 
         /* Third propagation */
+        pl.start("Starting third propagation");
         propagateLabels(graph, labels);
 
         /* Summing up */
-
+        pl.start("Counting triangles");
         for (NodeIterator it = graph.nodeIterator(); it.hasNext(); ) {
             int node = it.nextInt();
-            int outdegree = it.outdegree();
-            int[] successors = it.successorArray();
 
-            for (int i = 0; i < outdegree; i++) {
-                labels[i] = successors[i];
+            for (int i = 0; i < it.outdegree(); i++) {
+                if (labels[permutation[i]] == node) {
+                    System.out.println(node + " is in a triangle");
+                }
             }
         }
 
-    }
-
-    private static int[] computePermutation(int[] labels) {
-        int[] permutation = new int[labels.length];
-        Arrays.setAll(permutation, (i) -> i);
-        IntArrays.parallelQuickSortIndirect(permutation, labels);
-        return permutation;
+        pl.done();
     }
 
     private static void propagateLabels(ImmutableGraph graph, int[] labels) {
+        pl.expectedUpdates = labels.length;
         int index = 0;
         for (NodeIterator it = graph.nodeIterator(); it.hasNext(); it.nextInt()) {
             int outdegree = it.outdegree();
@@ -75,6 +79,7 @@ public class ExperimentalClusteringCoefficient {
 
             for (int i = 0; i < outdegree; i++) {
                 labels[index + i] = successors[i];
+                pl.lightUpdate();
             }
 
             index += outdegree;
