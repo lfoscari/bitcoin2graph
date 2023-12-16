@@ -3,24 +3,20 @@ package it.unimi.dsi.law;
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
-import org.apache.commons.lang3.ArrayUtils;
-import org.checkerframework.common.reflection.qual.ClassValBottom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
 
-public class ExperimentalClusteringCoefficient {
-    private static final XoRoShiRo128PlusPlusRandom r = new XoRoShiRo128PlusPlusRandom();
-    private static final Logger logger = LoggerFactory.getLogger(ExperimentalClusteringCoefficient.class);
+public class ExperimentalTriangleCounting {
+    private static final Logger logger = LoggerFactory.getLogger(ExperimentalTriangleCounting.class);
     private static final ProgressLogger pl = new ProgressLogger(logger);
 
     public static void main(String[] args) throws JSAPException, IOException {
-        final SimpleJSAP jsap = new SimpleJSAP(ExperimentalClusteringCoefficient.class.getName(), "Magical clustering coefficient computation",
+        final SimpleJSAP jsap = new SimpleJSAP(ExperimentalTriangleCounting.class.getName(), "Magical clustering coefficient computation",
             new Parameter[] {
                 new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.NOT_REQUIRED, false, "Basename for the graph.")
         });
