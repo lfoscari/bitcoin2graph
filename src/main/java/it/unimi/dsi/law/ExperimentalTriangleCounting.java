@@ -35,7 +35,7 @@ public class ExperimentalTriangleCounting {
         String basename = jsapResult.getString("basename");
         ImmutableGraph graph = ImmutableGraph.load(basename);
 
-        int[] triangles = countTriangles(graph);
+        int[] triangles = triangles(graph);
 
         for (int node = 0; node < triangles.length; node++) {
             System.out.println(node + ": " + triangles[node]);
@@ -43,73 +43,83 @@ public class ExperimentalTriangleCounting {
     }
 
     private static void runTests() {
-        ImmutableGraph g = ArrayListMutableGraph.newCompleteGraph(5, false).immutableView();
-        System.out.println(g.toString());
+        ImmutableGraph graph = ArrayListMutableGraph.newCompleteGraph(3, false).immutableView();
+        System.out.println(graph);
 
-        int[] triangles = countTriangles(g);
-        for (int node = 0; node < triangles.length; node++) {
-            System.out.println(node + ": " + triangles[node]);
-        }
-    }
-
-    static int[] countTriangles(ImmutableGraph graph) {
-        /* Initialization */
-        // TODO: use IntArrays
-
-        int[] triangles = new int[graph.numNodes()];
-        int[] labels = new int[(int) graph.numArcs() * 2];
-
-        int[] permutation = new int[labels.length];
-        Arrays.setAll(permutation, (i) -> i);
-
-        /* First propagation */
-        pl.start("Starting first propagation");
-        propagateLabels(graph, labels);
-
-        pl.start("Sorting labels");
-        IntArrays.parallelQuickSortIndirect(permutation, labels);
-
-        /* Second propagation */
-        pl.start("Starting second propagation");
-        propagateLabels(graph, labels);
-
-        pl.start("Sorting labels");
-        IntArrays.parallelQuickSortIndirect(permutation, labels);
-
-        /* Third propagation */
-        pl.start("Starting third propagation");
-        propagateLabels(graph, labels);
-
-        /* Summing up */
-        pl.start("Counting triangles");
-        for (NodeIterator it = graph.nodeIterator(); it.hasNext(); ) {
-            int node = it.nextInt();
-
-            for (int i = 0; i < it.outdegree(); i++) {
-                if (labels[permutation[node + i]] == node) {
-                    triangles[node]++;
-                }
-            }
-        }
-
-        pl.done();
-        return triangles;
-    }
-
-    private static void propagateLabels(ImmutableGraph graph, int[] labels) {
-        pl.expectedUpdates = labels.length;
+        int[] triangles = triangles(graph);
+        int[] count = new int[graph.numNodes()];
 
         int index = 0;
-        for (NodeIterator it = graph.nodeIterator(); it.hasNext(); ) {
+        NodeIterator it = graph.nodeIterator();
+        while (it.hasNext()) {
             int node = it.nextInt();
             int outdegree = it.outdegree();
-            if (outdegree <= 0) continue;
 
-            int[] successors = it.successorArray();
-            System.arraycopy(successors, 0, labels, index, outdegree);
+            for (int i = 0; i < outdegree; i++) {
+                if (triangles[index + i] == node) {
+                    count[node]++;
+                }
+            }
 
-            pl.update(outdegree);
             index += outdegree;
         }
+
+        System.out.println("count " + Arrays.toString(count));
+    }
+
+    static int[] triangles(ImmutableGraph graph) {
+        int[] permutation = new int[(int) graph.numArcs()];
+        Arrays.setAll(permutation, (i) -> i);
+
+        int[] neighbourhood = initNeighbourhood(graph);
+        System.out.println("neighbours " + Arrays.toString(neighbourhood));
+
+        IntArrays.parallelQuickSortIndirect(permutation, neighbourhood);
+
+        int[] labels = propagateLabels(graph, neighbourhood, permutation);
+        System.out.println("labels " + Arrays.toString(labels));
+
+        return labels;
+    }
+
+    private static int[] propagateLabels(ImmutableGraph graph, int[] neighbourhood, int[] permutation) {
+        int[] labels = new int[(int) graph.numArcs()];
+
+        int index = 0;
+        NodeIterator it = graph.nodeIterator();
+
+        while (it.hasNext()) {
+            int node = it.nextInt();
+            int outdegree = it.outdegree();
+
+            for (int i = 0; i < outdegree; i++) {
+                labels[index + i] = neighbourhood[permutation[permutation[permutation[index + i]]]];
+            }
+
+            index += outdegree;
+        }
+
+        return labels;
+    }
+
+    private static int[] initNeighbourhood(ImmutableGraph graph) {
+        int[] neighbour = new int[(int) graph.numArcs()];
+
+        int index = 0;
+        NodeIterator it = graph.nodeIterator();
+
+        while (it.hasNext()) {
+            it.nextInt();
+            int outdegree = it.outdegree();
+            int[] successors = it.successorArray();
+
+            for (int i = 0; i < outdegree; i++) {
+                neighbour[index + i] = successors[i];
+            }
+
+            index += outdegree;
+        }
+
+        return neighbour;
     }
 }
