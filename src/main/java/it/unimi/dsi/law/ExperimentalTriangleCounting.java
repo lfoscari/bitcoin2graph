@@ -3,13 +3,13 @@ package it.unimi.dsi.law;
 import com.martiansoftware.jsap.*;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.logging.ProgressLogger;
-import it.unimi.dsi.webgraph.ArrayListMutableGraph;
-import it.unimi.dsi.webgraph.ImmutableGraph;
-import it.unimi.dsi.webgraph.NodeIterator;
+import it.unimi.dsi.webgraph.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 public class ExperimentalTriangleCounting {
@@ -42,8 +42,10 @@ public class ExperimentalTriangleCounting {
         }
     }
 
-    private static void runTests() {
-        ImmutableGraph graph = ArrayListMutableGraph.newCompleteGraph(3, false).immutableView();
+    private static void runTests() throws IOException {
+        // ImmutableGraph graph = ArrayListMutableGraph.newCompleteGraph(3, false).immutableView();
+        ImmutableGraph graph = new ScatteredArcsASCIIGraph(new ByteArrayInputStream("0 1\n1 2\n1 3\n2 3".getBytes()),
+                true);
         System.out.println(graph);
 
         int[] triangles = triangles(graph);
@@ -68,58 +70,99 @@ public class ExperimentalTriangleCounting {
     }
 
     static int[] triangles(ImmutableGraph graph) {
-        int[] permutation = new int[(int) graph.numArcs()];
-        Arrays.setAll(permutation, (i) -> i);
+        int[] v = new int[(int) graph.numArcs()];
 
-        int[] neighbourhood = initNeighbourhood(graph);
-        System.out.println("neighbours " + Arrays.toString(neighbourhood));
-
-        IntArrays.parallelQuickSortIndirect(permutation, neighbourhood);
-
-        int[] labels = propagateLabels(graph, neighbourhood, permutation);
-        System.out.println("labels " + Arrays.toString(labels));
-
-        return labels;
-    }
-
-    private static int[] propagateLabels(ImmutableGraph graph, int[] neighbourhood, int[] permutation) {
-        int[] labels = new int[(int) graph.numArcs()];
-
-        int index = 0;
         NodeIterator it = graph.nodeIterator();
+        int index = 0;
 
         while (it.hasNext()) {
             int node = it.nextInt();
             int outdegree = it.outdegree();
 
             for (int i = 0; i < outdegree; i++) {
-                labels[index + i] = neighbourhood[permutation[permutation[permutation[index + i]]]];
+                v[index + i] = node;
             }
 
             index += outdegree;
         }
 
-        return labels;
-    }
+        System.out.println("0) v " + Arrays.toString(v));
 
-    private static int[] initNeighbourhood(ImmutableGraph graph) {
-        int[] neighbour = new int[(int) graph.numArcs()];
+        // First propagation
 
-        int index = 0;
-        NodeIterator it = graph.nodeIterator();
+        it = graph.nodeIterator();
+        index = 0;
 
         while (it.hasNext()) {
-            it.nextInt();
+            int node = it.nextInt();
             int outdegree = it.outdegree();
             int[] successors = it.successorArray();
 
             for (int i = 0; i < outdegree; i++) {
-                neighbour[index + i] = successors[i];
+                v[index + i] = successors[i];
             }
 
             index += outdegree;
         }
 
-        return neighbour;
+        int[] firstPermutation = new int[(int) graph.numArcs()];
+        Arrays.setAll(firstPermutation, (i) -> i);
+
+        IntArrays.quickSortIndirect(firstPermutation, v);
+        for (int i = 0; i < v.length; i++) v[i] = v[firstPermutation[i]];
+
+        System.out.println("1) v " + Arrays.toString(v));
+
+        // Second propagation
+
+        it = graph.nodeIterator();
+        index = 0;
+
+        while (it.hasNext()) {
+            int node = it.nextInt();
+            int outdegree = it.outdegree();
+            int[] successors = it.successorArray();
+
+            for (int i = 0; i < outdegree; i++) {
+                v[index + i] = successors[i];
+            }
+
+            index += outdegree;
+        }
+
+        int[] secondPermutation = new int[(int) graph.numArcs()];
+        Arrays.setAll(secondPermutation, (i) -> i);
+
+        IntArrays.quickSortIndirect(secondPermutation, v);
+        for (int i = 0; i < v.length; i++) v[i] = v[secondPermutation[i]];
+
+        System.out.println("2) v " + Arrays.toString(v));
+
+        // Third propagation
+
+        it = graph.nodeIterator();
+        index = 0;
+
+        while (it.hasNext()) {
+            int node = it.nextInt();
+            int outdegree = it.outdegree();
+            int[] successors = it.successorArray();
+
+            for (int i = 0; i < outdegree; i++) {
+                v[index + i] = successors[i];
+            }
+
+            index += outdegree;
+        }
+
+        int[] thirdPermutation = new int[(int) graph.numArcs()];
+        Arrays.setAll(thirdPermutation, (i) -> i);
+
+        IntArrays.quickSortIndirect(thirdPermutation, v);
+        for (int i = 0; i < v.length; i++) v[i] = v[thirdPermutation[i]];
+
+        System.out.println("3) v " + Arrays.toString(v));
+
+        return v;
     }
 }
